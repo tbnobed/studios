@@ -95,7 +95,7 @@ export function StudioCarousel({ studios, onStudioSelect }: StudioCarouselProps)
   return (
     <div className="w-full h-full flex flex-col">
       {/* STUDIO CARD SECTION - 75% of total height */}
-      <div className="flex-none flex items-center justify-center px-2 py-2 relative z-10" style={{ height: '75vh' }}>
+      <div className="flex-none flex items-center justify-center px-2 py-2 relative z-10" style={{ height: 'calc(75vh - 60px)' }}>
         <GestureHandler
           onSwipeLeft={handleNext}
           onSwipeRight={handlePrevious}
@@ -188,7 +188,7 @@ export function StudioCarousel({ studios, onStudioSelect }: StudioCarouselProps)
       </div>
 
       {/* PREVIEW SECTION - 25% of total height */}
-      <div className="flex-none p-2 relative z-10" style={{ height: '25vh' }}>
+      <div className="flex-none p-2 relative z-10" style={{ height: 'calc(25vh + 60px)' }}>
         {/* Studio Indicators */}
         <div className="flex justify-center space-x-2 mb-2">
           {studios.map((_, index) => (
