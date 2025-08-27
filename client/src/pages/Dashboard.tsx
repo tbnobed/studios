@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { StreamPlayer } from "@/components/StreamPlayer";
 import { GestureHandler } from "@/components/GestureHandler";
+import { StudioCarousel } from "@/components/StudioCarousel";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { StudioWithStreams, Stream } from "@shared/schema";
@@ -275,15 +276,27 @@ export default function Dashboard() {
         <main className="flex-1 relative">
           {/* Studio Header */}
           {selectedStudio && (
-            <div className="bg-card border-b border-border px-6 py-4">
+            <div className="bg-card border-b border-border px-4 lg:px-6 py-4">
               <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="text-xl font-bold" data-testid="current-studio-name">
-                    {selectedStudio.name}
-                  </h2>
-                  <p className="text-sm text-muted-foreground">
-                    {selectedStudio.streams.length} streams available
-                  </p>
+                <div className="flex items-center space-x-3">
+                  {/* Mobile Back Button */}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="lg:hidden touch-area"
+                    onClick={() => setSelectedStudio(null)}
+                    data-testid="button-back-to-studios"
+                  >
+                    <ChevronLeft size={20} />
+                  </Button>
+                  <div>
+                    <h2 className="text-xl font-bold" data-testid="current-studio-name">
+                      {selectedStudio.name}
+                    </h2>
+                    <p className="text-sm text-muted-foreground">
+                      {selectedStudio.streams.length} streams available
+                    </p>
+                  </div>
                 </div>
                 <div className="flex items-center space-x-3">
                   {/* View Mode Toggle */}
@@ -325,24 +338,30 @@ export default function Dashboard() {
           {/* Video Content */}
           <div className="flex-1 p-4 overflow-y-auto custom-scrollbar" style={{ maxHeight: 'calc(100vh - 140px)' }}>
             {!selectedStudio ? (
-              // Welcome State
-              <div className="h-full flex items-center justify-center">
-                <div className="text-center">
-                  <div className="w-24 h-24 mx-auto mb-6 bg-muted rounded-2xl flex items-center justify-center">
-                    <Play className="text-4xl text-muted-foreground" size={48} />
+              <div className="h-full">
+                {/* Mobile Studio Carousel */}
+                <div className="lg:hidden">
+                  <div className="mb-6 text-center">
+                    <h2 className="text-2xl font-bold mb-2">OBTV Studios</h2>
+                    <p className="text-muted-foreground">Select a studio to view live streams</p>
                   </div>
-                  <h3 className="text-xl font-semibold mb-2">Welcome to OBTV Studio Manager</h3>
-                  <p className="text-muted-foreground mb-6">
-                    Select a studio from the sidebar to view live streams
-                  </p>
-                  <Button
-                    onClick={() => setSidebarOpen(true)}
-                    className="touch-area lg:hidden"
-                    data-testid="button-choose-studio"
-                  >
-                    <Menu className="mr-2" size={16} />
-                    Choose Studio
-                  </Button>
+                  <StudioCarousel
+                    studios={studios}
+                    onStudioSelect={handleSelectStudio}
+                  />
+                </div>
+
+                {/* Desktop Welcome State */}
+                <div className="hidden lg:flex h-full items-center justify-center">
+                  <div className="text-center">
+                    <div className="w-24 h-24 mx-auto mb-6 bg-muted rounded-2xl flex items-center justify-center">
+                      <Play className="text-4xl text-muted-foreground" size={48} />
+                    </div>
+                    <h3 className="text-xl font-semibold mb-2">Welcome to OBTV Studio Manager</h3>
+                    <p className="text-muted-foreground mb-6">
+                      Select a studio from the sidebar to view live streams
+                    </p>
+                  </div>
                 </div>
               </div>
             ) : viewMode === 'grid' ? (

@@ -64,14 +64,7 @@ export function StreamPlayer({
               const hasData = videoRef.current.readyState >= 2; // At least HAVE_CURRENT_DATA
               const isPlaying = !videoRef.current.paused && !videoRef.current.ended && videoRef.current.currentTime > 0;
               
-              console.log(`Stream ${stream.name} check:`, {
-                videoWidth: videoRef.current.videoWidth,
-                videoHeight: videoRef.current.videoHeight,
-                readyState: videoRef.current.readyState,
-                currentTime: videoRef.current.currentTime,
-                paused: videoRef.current.paused,
-                ended: videoRef.current.ended
-              });
+              // Removed debug logging for cleaner console output
               
               if (hasVideo && hasData && (isPlaying || videoRef.current.readyState >= 3)) {
                 setCurrentStatus('online');
@@ -94,7 +87,6 @@ export function StreamPlayer({
             }
           };
           
-          console.log(`Starting video validation for: ${stream.name}`);
           setTimeout(checkVideoData, 500); // Start checking after 500ms
         } else {
           console.error('SRS SDK not loaded');
