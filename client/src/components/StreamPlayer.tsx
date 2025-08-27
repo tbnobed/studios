@@ -31,8 +31,12 @@ export function StreamPlayer({
 
     // Reset status when stream changes
     setCurrentStatus('offline');
+    
+    let isComponentMounted = true;
 
     const initializeStream = async () => {
+      if (!isComponentMounted) return;
+      
       try {
         // Clean up existing connection
         if (sdkRef.current) {
@@ -44,11 +48,13 @@ export function StreamPlayer({
           sdkRef.current = null;
         }
 
-        // Add small delay to prevent conflicts
-        await new Promise(resolve => setTimeout(resolve, Math.random() * 200));
+        // Add delay to prevent too many simultaneous connections
+        await new Promise(resolve => setTimeout(resolve, Math.random() * 1000 + 500));
+        
+        if (!isComponentMounted) return;
 
         // Initialize SRS SDK
-        if (window.SrsRtcWhipWhepAsync) {
+        if (window.SrsRtcWhipWhepAsync && isComponentMounted) {
           sdkRef.current = new window.SrsRtcWhipWhepAsync();
           
           if (videoRef.current) {
@@ -73,23 +79,30 @@ export function StreamPlayer({
             }, 500);
           }
 
-          setCurrentStatus('online');
-          onStatusChange?.('online');
+          if (isComponentMounted) {
+            setCurrentStatus('online');
+            onStatusChange?.('online');
+          }
         } else {
           console.error('SRS SDK not loaded');
-          setCurrentStatus('error');
-          onStatusChange?.('error');
+          if (isComponentMounted) {
+            setCurrentStatus('error');
+            onStatusChange?.('error');
+          }
         }
       } catch (error) {
         console.error('Error initializing stream:', error);
-        setCurrentStatus('error');
-        onStatusChange?.('error');
+        if (isComponentMounted) {
+          setCurrentStatus('error');
+          onStatusChange?.('error');
+        }
       }
     };
 
     initializeStream();
 
     return () => {
+      isComponentMounted = false;
       if (sdkRef.current) {
         try {
           sdkRef.current.close();
@@ -102,7 +115,7 @@ export function StreamPlayer({
         videoRef.current.srcObject = null;
       }
     };
-  }, [stream.streamUrl, onStatusChange]);
+  }, [stream.streamUrl]);
 
   return (
     <div className={`relative ${className}`}>
