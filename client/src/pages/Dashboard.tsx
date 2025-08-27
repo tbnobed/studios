@@ -110,7 +110,7 @@ export default function Dashboard() {
   };
 
   const StudioSidebar = () => (
-    <div className={`${sidebarCollapsed ? 'w-16' : 'w-64'} h-full bg-card border-r border-border transition-all duration-300`}>
+    <div className={`${sidebarCollapsed ? 'w-16' : 'w-64'} h-full glossy-card pattern-overlay border-r border-border transition-all duration-300`}>
       <div className="p-4">
         <div className="flex items-center justify-between mb-4">
           {!sidebarCollapsed && (
@@ -219,7 +219,7 @@ export default function Dashboard() {
   return (
     <div className="h-screen flex flex-col bg-background">
       {/* Mobile Header */}
-      <header className="md:hidden px-4 py-3 flex items-center justify-between shrink-0 absolute top-0 left-0 right-0 z-10">
+      <header className="md:hidden px-4 py-3 flex items-center justify-between shrink-0 absolute top-0 left-0 right-0 z-10 glossy-card shimmer">
         <div className="flex items-center space-x-2">
           <span className="text-sm font-medium">
             {user?.firstName} {user?.lastName}
@@ -238,7 +238,7 @@ export default function Dashboard() {
       </header>
 
       {/* Desktop Header */}
-      <header className="hidden md:flex bg-card border-b border-border px-4 py-3 items-center justify-between shrink-0">
+      <header className="hidden md:flex glossy-card pattern-overlay border-b border-border px-4 py-3 items-center justify-between shrink-0">
         <div className="flex items-center space-x-3">
           <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
             <SheetTrigger asChild>
@@ -271,7 +271,7 @@ export default function Dashboard() {
             
             {/* User Menu Dropdown */}
             {userMenuOpen && (
-              <Card className="absolute top-12 right-0 w-48 z-50 shadow-xl">
+              <Card className="absolute top-12 right-0 w-48 z-50 shadow-xl glossy-card">
                 <CardContent className="p-2">
                   <div className="px-3 py-2 border-b border-border">
                     <p className="font-medium text-sm">{user?.username}</p>
