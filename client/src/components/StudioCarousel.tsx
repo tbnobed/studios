@@ -262,18 +262,7 @@ export function StudioCarousel({ studios, onStudioSelect }: StudioCarouselProps)
               </GestureHandler>
             </div>
             
-            {/* Next Button */}
-            {previewIndex + 3 < currentStudio.streams.length && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handlePreviewNext}
-                className="touch-area flex-shrink-0"
-                data-testid="button-preview-next"
-              >
-                <ChevronRight size={16} />
-              </Button>
-            )}
+            
           </div>
         </div>
 
