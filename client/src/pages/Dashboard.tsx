@@ -112,7 +112,7 @@ export default function Dashboard() {
               <div className="text-left">
                 <h3 className="font-semibold">{studio.name}</h3>
                 <p className="text-sm opacity-75">
-                  {studio.streams.filter(s => s.status === 'online').length} Active Streams
+                  {studio.streams.length} streams available
                 </p>
               </div>
               <div className="flex items-center space-x-1">
