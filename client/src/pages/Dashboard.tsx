@@ -13,7 +13,9 @@ import {
   ChevronLeft, 
   ChevronRight,
   Play,
-  Shield
+  Shield,
+  PanelLeftClose,
+  PanelLeftOpen
 } from "lucide-react";
 import { StreamPlayer } from "@/components/StreamPlayer";
 import { GestureHandler } from "@/components/GestureHandler";
@@ -32,6 +34,7 @@ export default function Dashboard() {
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const [currentStreamIndex, setCurrentStreamIndex] = useState(0);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [streamStatuses, setStreamStatuses] = useState<Record<string, 'online' | 'offline' | 'error'>>({});
 
@@ -107,31 +110,54 @@ export default function Dashboard() {
   };
 
   const StudioSidebar = () => (
-    <div className="w-64 h-full bg-card border-r border-border">
+    <div className={`${sidebarCollapsed ? 'w-16' : 'w-64'} h-full bg-card border-r border-border transition-all duration-300`}>
       <div className="p-4">
-        <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wider mb-4">
-          Studios
-        </h2>
+        <div className="flex items-center justify-between mb-4">
+          {!sidebarCollapsed && (
+            <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
+              Studios
+            </h2>
+          )}
+          <Button
+            variant="ghost"
+            size="sm"
+            className="touch-area"
+            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+            data-testid="button-toggle-sidebar"
+          >
+            {sidebarCollapsed ? <PanelLeftOpen size={16} /> : <PanelLeftClose size={16} />}
+          </Button>
+        </div>
         
         <div className="space-y-3">
           {studios.map((studio) => (
             <Button
               key={studio.id}
               variant="ghost"
-              className={`w-full p-4 h-auto justify-between ${getStudioGradientClass(studio.name)} hover:shadow-lg transition-all touch-area`}
+              className={`w-full ${sidebarCollapsed ? 'p-2 h-auto justify-center' : 'p-4 h-auto justify-between'} ${getStudioGradientClass(studio.name)} hover:shadow-lg transition-all touch-area`}
               onClick={() => handleSelectStudio(studio)}
               data-testid={`studio-card-${studio.name.toLowerCase()}`}
+              title={sidebarCollapsed ? `${studio.name} - ${studio.streams.length} streams available` : undefined}
             >
-              <div className="text-left">
-                <h3 className="font-semibold">{studio.name}</h3>
-                <p className="text-sm opacity-75">
-                  {studio.streams.length} streams available
-                </p>
-              </div>
-              <div className="flex items-center space-x-1">
-                <div className="w-2 h-2 bg-green-500 rounded-full live-indicator"></div>
-                <span className="text-xs font-medium">LIVE</span>
-              </div>
+              {sidebarCollapsed ? (
+                <div className="flex flex-col items-center space-y-1">
+                  <span className="text-lg font-bold">{studio.name.charAt(0)}</span>
+                  <div className="w-2 h-2 bg-green-500 rounded-full live-indicator"></div>
+                </div>
+              ) : (
+                <>
+                  <div className="text-left">
+                    <h3 className="font-semibold">{studio.name}</h3>
+                    <p className="text-sm opacity-75">
+                      {studio.streams.length} streams available
+                    </p>
+                  </div>
+                  <div className="flex items-center space-x-1">
+                    <div className="w-2 h-2 bg-green-500 rounded-full live-indicator"></div>
+                    <span className="text-xs font-medium">LIVE</span>
+                  </div>
+                </>
+              )}
             </Button>
           ))}
         </div>
@@ -139,22 +165,25 @@ export default function Dashboard() {
         {/* Admin Section */}
         {user?.role === 'admin' && (
           <div className="border-t border-border mt-6 pt-4">
-            <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wider mb-3">
-              Admin
-            </h3>
+            {!sidebarCollapsed && (
+              <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wider mb-3">
+                Admin
+              </h3>
+            )}
             <div className="space-y-2">
               <Button
                 variant="secondary"
-                className="w-full touch-area"
+                className={`w-full touch-area ${sidebarCollapsed ? 'p-2 justify-center' : ''}`}
                 onClick={() => window.location.href = '/admin'}
                 data-testid="button-manage-users"
+                title={sidebarCollapsed ? 'Manage Users' : undefined}
               >
-                <Settings className="mr-2" size={16} />
-                Manage Users
+                <Settings className={sidebarCollapsed ? '' : 'mr-2'} size={16} />
+                {!sidebarCollapsed && 'Manage Users'}
               </Button>
               <Button
                 variant="secondary"
-                className="w-full touch-area"
+                className={`w-full touch-area ${sidebarCollapsed ? 'p-2 justify-center' : ''}`}
                 onClick={() => {
                   window.location.href = '/admin';
                   // Set the active tab to streams when navigating
@@ -164,9 +193,10 @@ export default function Dashboard() {
                   }, 100);
                 }}
                 data-testid="button-manage-streams"
+                title={sidebarCollapsed ? 'Manage Streams' : undefined}
               >
-                <Shield className="mr-2" size={16} />
-                Manage Streams
+                <Shield className={sidebarCollapsed ? '' : 'mr-2'} size={16} />
+                {!sidebarCollapsed && 'Manage Streams'}
               </Button>
             </div>
           </div>
