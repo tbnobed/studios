@@ -127,6 +127,10 @@
   }
   
   /* Custom scrollbar */
+  .custom-scrollbar {
+    touch-action: pan-y pan-x; /* Enable native touch scrolling */
+  }
+  
   .custom-scrollbar::-webkit-scrollbar {
     width: 6px;
     height: 6px;
