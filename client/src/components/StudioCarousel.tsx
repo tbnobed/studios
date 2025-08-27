@@ -13,14 +13,29 @@ interface StudioCarouselProps {
 
 export function StudioCarousel({ studios, onStudioSelect }: StudioCarouselProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [previewIndex, setPreviewIndex] = useState(0);
   const [streamStatuses, setStreamStatuses] = useState<Record<string, 'loading' | 'online' | 'offline' | 'error'>>({});
 
   const handlePrevious = () => {
     setCurrentIndex((prev) => (prev === 0 ? studios.length - 1 : prev - 1));
+    setPreviewIndex(0); // Reset preview index when changing studios
   };
 
   const handleNext = () => {
     setCurrentIndex((prev) => (prev === studios.length - 1 ? 0 : prev + 1));
+    setPreviewIndex(0); // Reset preview index when changing studios
+  };
+
+  const handlePreviewPrevious = () => {
+    const streamsPerView = 4;
+    const maxIndex = Math.max(0, currentStudio.streams.length - streamsPerView);
+    setPreviewIndex((prev) => Math.max(0, prev - streamsPerView));
+  };
+
+  const handlePreviewNext = () => {
+    const streamsPerView = 4;
+    const maxIndex = Math.max(0, currentStudio.streams.length - streamsPerView);
+    setPreviewIndex((prev) => Math.min(maxIndex, prev + streamsPerView));
   };
 
   const handleStreamStatusChange = (streamId: string, status: 'loading' | 'online' | 'offline' | 'error') => {
@@ -175,9 +190,28 @@ export function StudioCarousel({ studios, onStudioSelect }: StudioCarouselProps)
       {/* Small Horizontal Stream Preview Carousel - Bottom */}
       <div className="flex-shrink-0 pb-4">
         <div className="px-4">
-          <div className="overflow-hidden">
-            <div className="flex space-x-3 justify-center">
-              {currentStudio.streams.slice(0, 4).map((stream) => (
+          <div className="flex items-center space-x-2">
+            {/* Previous Button */}
+            {previewIndex > 0 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handlePreviewPrevious}
+                className="touch-area flex-shrink-0"
+                data-testid="button-preview-previous"
+              >
+                <ChevronLeft size={16} />
+              </Button>
+            )}
+            
+            {/* Stream Previews */}
+            <div className="flex-1 overflow-hidden">
+              <GestureHandler
+                onSwipeLeft={handlePreviewNext}
+                onSwipeRight={handlePreviewPrevious}
+                className="flex space-x-3 justify-center"
+              >
+                {currentStudio.streams.slice(previewIndex, previewIndex + 4).map((stream) => (
                 <div
                   key={stream.id}
                   className="flex-shrink-0 cursor-pointer hover:scale-105 transition-transform"
@@ -225,7 +259,21 @@ export function StudioCarousel({ studios, onStudioSelect }: StudioCarouselProps)
                   </Card>
                 </div>
               ))}
+              </GestureHandler>
             </div>
+            
+            {/* Next Button */}
+            {previewIndex + 4 < currentStudio.streams.length && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handlePreviewNext}
+                className="touch-area flex-shrink-0"
+                data-testid="button-preview-next"
+              >
+                <ChevronRight size={16} />
+              </Button>
+            )}
           </div>
         </div>
 
