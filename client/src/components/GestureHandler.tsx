@@ -48,7 +48,7 @@ export function GestureHandler({
 
     const handleTouchMove = (e: TouchEvent) => {
       if (e.touches.length === 2 && onPinchZoom) {
-        // Pinch zoom
+        // Only prevent default for pinch zoom
         e.preventDefault();
         
         const dx = e.touches[0].clientX - e.touches[1].clientX;
@@ -60,6 +60,7 @@ export function GestureHandler({
           onPinchZoom(scale);
         }
       }
+      // Allow normal scrolling for single touch
     };
 
     const handleTouchEnd = (e: TouchEvent) => {
@@ -97,7 +98,7 @@ export function GestureHandler({
       initialDistanceRef.current = 0;
     };
 
-    container.addEventListener('touchstart', handleTouchStart, { passive: false });
+    container.addEventListener('touchstart', handleTouchStart, { passive: true });
     container.addEventListener('touchmove', handleTouchMove, { passive: false });
     container.addEventListener('touchend', handleTouchEnd, { passive: true });
 
