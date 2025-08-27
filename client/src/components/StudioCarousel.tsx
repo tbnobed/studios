@@ -273,17 +273,7 @@ export function StudioCarousel({ studios, onStudioSelect }: StudioCarouselProps)
           </div>
         </div>
 
-        {/* Enter Studio Button */}
-        <div className="text-center mt-2">
-          <Button
-            onClick={() => onStudioSelect(currentStudio)}
-            className="touch-area"
-            data-testid="button-enter-studio"
-          >
-            Enter {currentStudio.name} Studio
-            <ChevronRight size={16} className="ml-2" />
-          </Button>
-        </div>
+        
       </div>
     </div>
   );
