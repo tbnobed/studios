@@ -190,16 +190,16 @@ export function StudioCarousel({ studios, onStudioSelect }: StudioCarouselProps)
         ))}
       </div>
 
-      {/* Stream Previews Below (when studio is selected) */}
-      {selectedStudio && (
+      {/* Stream Previews Below (always show for current studio) */}
+      {currentStudio && (
         <div className="mt-8 animate-in fade-in-50 slide-in-from-bottom-4 duration-300">
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h3 className="text-2xl font-bold">Preview: {selectedStudio.name}</h3>
-              <p className="text-muted-foreground">{selectedStudio.streams.length} streams available</p>
+              <h3 className="text-2xl font-bold">Preview: {currentStudio.name}</h3>
+              <p className="text-muted-foreground">{currentStudio.streams.length} streams available</p>
             </div>
             <Button
-              onClick={() => onStudioSelect(selectedStudio)}
+              onClick={() => onStudioSelect(currentStudio)}
               className="touch-area"
               data-testid="button-enter-studio"
             >
@@ -209,7 +209,7 @@ export function StudioCarousel({ studios, onStudioSelect }: StudioCarouselProps)
           </div>
           
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {selectedStudio.streams.map((stream) => (
+            {currentStudio.streams.map((stream) => (
               <Card key={stream.id} className="overflow-hidden hover:shadow-lg transition-all">
                 <div className="aspect-video relative bg-black">
                   <StreamPlayer
@@ -255,12 +255,12 @@ export function StudioCarousel({ studios, onStudioSelect }: StudioCarouselProps)
           {/* Enter Studio Button (Mobile) */}
           <div className="mt-6 text-center lg:hidden">
             <Button
-              onClick={() => onStudioSelect(selectedStudio)}
+              onClick={() => onStudioSelect(currentStudio)}
               size="lg"
               className="touch-area"
               data-testid="button-enter-studio-mobile"
             >
-              Enter {selectedStudio.name} Studio
+              Enter {currentStudio.name} Studio
               <ChevronRight size={20} className="ml-2" />
             </Button>
           </div>
