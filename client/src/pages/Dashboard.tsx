@@ -32,6 +32,7 @@ export default function Dashboard() {
   const [currentStreamIndex, setCurrentStreamIndex] = useState(0);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [streamStatuses, setStreamStatuses] = useState<Record<string, 'online' | 'offline' | 'error'>>({});
 
   // Fetch user's accessible studios
   const { data: studios = [], isLoading: studiosLoading, error: studiosError } = useQuery<StudioWithStreams[]>({
@@ -91,6 +92,17 @@ export default function Dashboard() {
       case 'nashville': return 'studio-gradient-nashville text-white';
       default: return 'bg-card text-card-foreground';
     }
+  };
+
+  const getStreamStatus = (stream: Stream) => {
+    return streamStatuses[stream.id] || stream.status;
+  };
+
+  const handleStreamStatusChange = (streamId: string, status: 'online' | 'offline' | 'error') => {
+    setStreamStatuses(prev => ({
+      ...prev,
+      [streamId]: status
+    }));
   };
 
   const StudioSidebar = () => (
@@ -349,6 +361,7 @@ export default function Dashboard() {
                           className="w-full h-full"
                           controls={true}
                           autoPlay={true}
+                          onStatusChange={(status) => handleStreamStatusChange(stream.id, status)}
                         />
                         
                         <Button
@@ -375,14 +388,14 @@ export default function Dashboard() {
                           </span>
                           <div className="flex items-center space-x-1">
                             <div className={`w-1 h-1 rounded-full ${
-                              stream.status === 'online' ? 'bg-green-500' : 
-                              stream.status === 'error' ? 'bg-red-500' : 'bg-yellow-500'
+                              getStreamStatus(stream) === 'online' ? 'bg-green-500' : 
+                              getStreamStatus(stream) === 'error' ? 'bg-red-500' : 'bg-yellow-500'
                             }`}></div>
                             <span className={`text-xs font-medium capitalize ${
-                              stream.status === 'online' ? 'text-green-500' : 
-                              stream.status === 'error' ? 'text-red-500' : 'text-yellow-500'
+                              getStreamStatus(stream) === 'online' ? 'text-green-500' : 
+                              getStreamStatus(stream) === 'error' ? 'text-red-500' : 'text-yellow-500'
                             }`}>
-                              {stream.status}
+                              {getStreamStatus(stream)}
                             </span>
                           </div>
                         </div>
@@ -413,6 +426,7 @@ export default function Dashboard() {
                         className="w-full h-full"
                         controls={true}
                         autoPlay={true}
+                        onStatusChange={(status) => handleStreamStatusChange(selectedStudio.streams[currentStreamIndex].id, status)}
                       />
                       
                       {/* Video Controls Overlay */}

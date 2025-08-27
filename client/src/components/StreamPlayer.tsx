@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Stream } from "@shared/schema";
 
 interface StreamPlayerProps {
@@ -24,6 +24,7 @@ export function StreamPlayer({
 }: StreamPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const sdkRef = useRef<any>(null);
+  const [currentStatus, setCurrentStatus] = useState<'online' | 'offline' | 'error'>(stream.status as 'online' | 'offline' | 'error');
 
   useEffect(() => {
     if (!videoRef.current || !stream.streamUrl) return;
@@ -61,13 +62,16 @@ export function StreamPlayer({
             }, 500);
           }
 
+          setCurrentStatus('online');
           onStatusChange?.('online');
         } else {
           console.error('SRS SDK not loaded');
+          setCurrentStatus('error');
           onStatusChange?.('error');
         }
       } catch (error) {
         console.error('Error initializing stream:', error);
+        setCurrentStatus('error');
         onStatusChange?.('error');
       }
     };
@@ -97,10 +101,10 @@ export function StreamPlayer({
       <div className="absolute top-2 left-2 flex items-center space-x-2">
         <span className="bg-black/60 text-white px-2 py-1 rounded text-xs font-medium">
           <span className={`w-2 h-2 rounded-full inline-block mr-1 ${
-            stream.status === 'online' ? 'bg-green-500 live-indicator' : 
-            stream.status === 'error' ? 'bg-red-500' : 'bg-yellow-500'
+            currentStatus === 'online' ? 'bg-green-500 live-indicator' : 
+            currentStatus === 'error' ? 'bg-red-500' : 'bg-yellow-500'
           }`}></span>
-          {stream.status === 'online' ? 'LIVE' : stream.status.toUpperCase()}
+          {currentStatus === 'online' ? 'LIVE' : currentStatus.toUpperCase()}
         </span>
       </div>
       
