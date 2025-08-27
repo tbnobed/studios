@@ -117,12 +117,26 @@ export function StudioCarousel({ studios, onStudioSelect }: StudioCarouselProps)
             onClick={() => onStudioSelect(currentStudio)}
             data-testid={`studio-card-${currentStudio.id}`}
           >
-            <div className={`w-full h-full bg-gradient-to-br ${theme.gradient} relative flex flex-col items-center justify-center text-white`}>
-              {/* Studio Icon and Name */}
-              <div className="flex flex-col items-center space-y-4 z-10">
-                <div className="text-6xl opacity-90">
-                  {theme.icon}
+            <div className={`w-full h-full ${currentStudio.imageUrl ? 'bg-black' : `bg-gradient-to-br ${theme.gradient}`} relative flex flex-col items-center justify-center text-white`}>
+              {currentStudio.imageUrl ? (
+                /* Studio Background Image */
+                <div className="absolute inset-0 w-full h-full">
+                  <img 
+                    src={currentStudio.imageUrl} 
+                    alt={currentStudio.name}
+                    className="w-full h-full object-cover"
+                  />
+                  <div className="absolute inset-0 bg-black/20"></div>
                 </div>
+              ) : null}
+              
+              {/* Studio Icon and Name */}
+              <div className="flex flex-col items-center space-y-4 z-10 relative">
+                {!currentStudio.imageUrl && (
+                  <div className="text-6xl opacity-90">
+                    {theme.icon}
+                  </div>
+                )}
                 
                 <div className="text-center">
                   <h2 className="text-4xl font-bold text-shadow-lg tracking-wide mb-2">
