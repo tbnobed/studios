@@ -217,28 +217,10 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="h-screen flex flex-col bg-background">
-      {/* Mobile Header */}
-      <header className="md:hidden px-4 py-3 flex items-center justify-between shrink-0 absolute top-0 left-0 right-0 z-10 glossy-card shimmer">
-        <div className="flex items-center space-x-2">
-          <span className="text-sm font-medium">
-            {user?.firstName} {user?.lastName}
-          </span>
-        </div>
-        
-        <Button
-          variant="ghost"
-          size="sm"
-          className="touch-area text-destructive hover:text-destructive"
-          onClick={handleLogout}
-          data-testid="button-mobile-logout"
-        >
-          <LogOut size={16} />
-        </Button>
-      </header>
+    <div className="h-screen flex flex-col">
 
       {/* Desktop Header */}
-      <header className="hidden md:flex glossy-card pattern-overlay border-b border-border px-4 py-3 items-center justify-between shrink-0">
+      <header className="hidden md:flex bg-card border-b border-border px-4 py-3 items-center justify-between shrink-0">
         <div className="flex items-center space-x-3">
           <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
             <SheetTrigger asChild>
@@ -315,7 +297,7 @@ export default function Dashboard() {
         </div>
       </header>
 
-      <div className="flex-1 flex pt-16 md:pt-0">
+      <div className="flex-1 flex">
         {/* Desktop Sidebar */}
         <div className="hidden lg:block">
           <StudioSidebar />
