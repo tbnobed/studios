@@ -33,6 +33,9 @@ COPY --from=builder --chown=obtv:nodejs /app/dist ./dist
 COPY --from=builder --chown=obtv:nodejs /app/node_modules ./node_modules
 COPY --from=builder --chown=obtv:nodejs /app/package*.json ./
 
+# Create uploads directory with proper permissions
+RUN mkdir -p uploads/studios && chown -R obtv:nodejs uploads
+
 # Switch to non-root user
 USER obtv
 
