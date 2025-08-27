@@ -27,13 +27,13 @@ export function StudioCarousel({ studios, onStudioSelect }: StudioCarouselProps)
   };
 
   const handlePreviewPrevious = () => {
-    const streamsPerView = 4;
+    const streamsPerView = 3;
     const maxIndex = Math.max(0, currentStudio.streams.length - streamsPerView);
     setPreviewIndex((prev) => Math.max(0, prev - streamsPerView));
   };
 
   const handlePreviewNext = () => {
-    const streamsPerView = 4;
+    const streamsPerView = 3;
     const maxIndex = Math.max(0, currentStudio.streams.length - streamsPerView);
     setPreviewIndex((prev) => Math.min(maxIndex, prev + streamsPerView));
   };
@@ -211,7 +211,7 @@ export function StudioCarousel({ studios, onStudioSelect }: StudioCarouselProps)
                 onSwipeRight={handlePreviewPrevious}
                 className="flex space-x-3 justify-center"
               >
-                {currentStudio.streams.slice(previewIndex, previewIndex + 4).map((stream) => (
+                {currentStudio.streams.slice(previewIndex, previewIndex + 3).map((stream) => (
                 <div
                   key={stream.id}
                   className="flex-shrink-0 cursor-pointer hover:scale-105 transition-transform"
@@ -263,7 +263,7 @@ export function StudioCarousel({ studios, onStudioSelect }: StudioCarouselProps)
             </div>
             
             {/* Next Button */}
-            {previewIndex + 4 < currentStudio.streams.length && (
+            {previewIndex + 3 < currentStudio.streams.length && (
               <Button
                 variant="ghost"
                 size="sm"
