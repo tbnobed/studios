@@ -347,63 +347,57 @@ export default function Dashboard() {
               </div>
             ) : viewMode === 'grid' ? (
               // Grid View
-              <GestureHandler
-                onSwipeLeft={handleNextStream}
-                onSwipeRight={handlePreviousStream}
-                className="h-full"
-              >
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 h-full auto-rows-fr">
-                  {selectedStudio.streams.map((stream) => (
-                    <Card key={stream.id} className="overflow-hidden hover:border-accent transition-colors">
-                      <div className="video-container relative">
-                        <StreamPlayer
-                          stream={stream}
-                          className="w-full h-full"
-                          controls={true}
-                          autoPlay={true}
-                          onStatusChange={(status) => handleStreamStatusChange(stream.id, status)}
-                        />
-                        
-                        <Button
-                          variant="secondary"
-                          size="sm"
-                          className="absolute top-2 right-2 bg-black/60 hover:bg-black/80 text-white touch-area"
-                          onClick={() => {
-                            setCurrentStreamIndex(selectedStudio.streams.indexOf(stream));
-                            setViewMode('single');
-                          }}
-                          data-testid={`button-fullscreen-${stream.id}`}
-                        >
-                          <Maximize size={12} />
-                        </Button>
-                      </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 h-full auto-rows-fr">
+                {selectedStudio.streams.map((stream) => (
+                  <Card key={stream.id} className="overflow-hidden hover:border-accent transition-colors">
+                    <div className="video-container relative">
+                      <StreamPlayer
+                        stream={stream}
+                        className="w-full h-full"
+                        controls={true}
+                        autoPlay={true}
+                        onStatusChange={(status) => handleStreamStatusChange(stream.id, status)}
+                      />
                       
-                      <CardContent className="p-3">
-                        <h4 className="font-medium text-sm" data-testid={`stream-name-${stream.id}`}>
-                          {stream.name}
-                        </h4>
-                        <div className="flex items-center justify-between mt-2">
-                          <span className="text-xs text-muted-foreground">
-                            {stream.resolution}
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        className="absolute top-2 right-2 bg-black/60 hover:bg-black/80 text-white touch-area"
+                        onClick={() => {
+                          setCurrentStreamIndex(selectedStudio.streams.indexOf(stream));
+                          setViewMode('single');
+                        }}
+                        data-testid={`button-fullscreen-${stream.id}`}
+                      >
+                        <Maximize size={12} />
+                      </Button>
+                    </div>
+                    
+                    <CardContent className="p-3">
+                      <h4 className="font-medium text-sm" data-testid={`stream-name-${stream.id}`}>
+                        {stream.name}
+                      </h4>
+                      <div className="flex items-center justify-between mt-2">
+                        <span className="text-xs text-muted-foreground">
+                          {stream.resolution}
+                        </span>
+                        <div className="flex items-center space-x-1">
+                          <div className={`w-1 h-1 rounded-full ${
+                            getStreamStatus(stream) === 'online' ? 'bg-green-500' : 
+                            getStreamStatus(stream) === 'error' ? 'bg-red-500' : 'bg-yellow-500'
+                          }`}></div>
+                          <span className={`text-xs font-medium capitalize ${
+                            getStreamStatus(stream) === 'online' ? 'text-green-500' : 
+                            getStreamStatus(stream) === 'error' ? 'text-red-500' : 'text-yellow-500'
+                          }`}>
+                            {getStreamStatus(stream)}
                           </span>
-                          <div className="flex items-center space-x-1">
-                            <div className={`w-1 h-1 rounded-full ${
-                              getStreamStatus(stream) === 'online' ? 'bg-green-500' : 
-                              getStreamStatus(stream) === 'error' ? 'bg-red-500' : 'bg-yellow-500'
-                            }`}></div>
-                            <span className={`text-xs font-medium capitalize ${
-                              getStreamStatus(stream) === 'online' ? 'text-green-500' : 
-                              getStreamStatus(stream) === 'error' ? 'text-red-500' : 'text-yellow-500'
-                            }`}>
-                              {getStreamStatus(stream)}
-                            </span>
-                          </div>
                         </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              </GestureHandler>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
             ) : (
               // Single View Mode
               <GestureHandler
