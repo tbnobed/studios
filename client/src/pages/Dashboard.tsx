@@ -189,7 +189,7 @@ export default function Dashboard() {
   return (
     <div className="h-screen flex flex-col bg-background">
       {/* Header */}
-      <header className="hidden lg:flex bg-card border-b border-border px-4 py-3 items-center justify-between shrink-0">
+      <header className="bg-card border-b border-border px-4 py-3 flex items-center justify-between shrink-0">
         <div className="flex items-center space-x-3">
           <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
             <SheetTrigger asChild>
@@ -342,6 +342,7 @@ export default function Dashboard() {
                 {/* Mobile Studio Carousel */}
                 <div className="lg:hidden h-full flex flex-col">
                   <div className="text-center mb-4">
+                    <h2 className="text-xl font-bold mb-1">OBTV Studios</h2>
                     <p className="text-sm text-muted-foreground">Select a studio to view live streams</p>
                   </div>
                   <div className="flex-1 flex items-center">
