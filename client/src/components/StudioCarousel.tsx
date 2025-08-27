@@ -27,13 +27,13 @@ export function StudioCarousel({ studios, onStudioSelect }: StudioCarouselProps)
   };
 
   const handlePreviewPrevious = () => {
-    const streamsPerView = 3;
+    const streamsPerView = 6;
     const maxIndex = Math.max(0, currentStudio.streams.length - streamsPerView);
     setPreviewIndex((prev) => Math.max(0, prev - streamsPerView));
   };
 
   const handlePreviewNext = () => {
-    const streamsPerView = 3;
+    const streamsPerView = 6;
     const maxIndex = Math.max(0, currentStudio.streams.length - streamsPerView);
     setPreviewIndex((prev) => Math.min(maxIndex, prev + streamsPerView));
   };
@@ -218,43 +218,57 @@ export function StudioCarousel({ studios, onStudioSelect }: StudioCarouselProps)
               </Button>
             )}
             
-            {/* Stream Previews */}
+            {/* Stream Previews - 2x3 Grid */}
             <div className="flex-1 overflow-hidden">
               <GestureHandler
                 onSwipeLeft={handlePreviewNext}
                 onSwipeRight={handlePreviewPrevious}
-                className="flex space-x-3 justify-center"
+                className="w-full flex justify-center"
               >
-                {currentStudio.streams.slice(previewIndex, previewIndex + 3).map((stream) => (
-                <div
-                  key={stream.id}
-                  className="flex-shrink-0 cursor-pointer hover:scale-105 transition-transform"
-                  onClick={() => handleStreamClick(stream)}
-                  data-testid={`stream-preview-${stream.id}`}
-                >
-                  <Card className="w-28 overflow-hidden border-2 hover:border-primary/50">
-                    <div className="aspect-video relative bg-black">
-                      <StreamPlayer
-                        stream={stream}
-                        className="w-full h-full"
-                        controls={false}
-                        autoPlay={true}
-                        showOverlay={false}
-                        onStatusChange={(status) => handleStreamStatusChange(stream.id, status)}
-                      />
+                <div className="grid grid-cols-3 gap-2 max-w-xs">
+                  {currentStudio.streams.slice(previewIndex, previewIndex + 6).map((stream) => (
+                    <div
+                      key={stream.id}
+                      className="cursor-pointer hover:scale-105 transition-transform"
+                      onClick={() => handleStreamClick(stream)}
+                      data-testid={`stream-preview-${stream.id}`}
+                    >
+                      <Card className="w-24 overflow-hidden border-2 hover:border-primary/50">
+                        <div className="aspect-video relative bg-black">
+                          <StreamPlayer
+                            stream={stream}
+                            className="w-full h-full"
+                            controls={false}
+                            autoPlay={true}
+                            showOverlay={false}
+                            onStatusChange={(status) => handleStreamStatusChange(stream.id, status)}
+                          />
+                        </div>
+                        
+                        <CardContent className="p-1">
+                          <h4 className="font-medium text-xs truncate" data-testid={`stream-name-${stream.id}`}>
+                            {stream.name}
+                          </h4>
+                        </CardContent>
+                      </Card>
                     </div>
-                    
-                    <CardContent className="p-2">
-                      <h4 className="font-medium text-xs truncate" data-testid={`stream-name-${stream.id}`}>
-                        {stream.name}
-                      </h4>
-                    </CardContent>
-                  </Card>
+                  ))}
                 </div>
-              ))}
               </GestureHandler>
             </div>
             
+            {/* Next Button */}
+            {previewIndex + 6 < currentStudio.streams.length && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handlePreviewNext}
+                className="touch-area flex-shrink-0"
+                data-testid="button-preview-next"
+              >
+                <ChevronRight size={16} />
+              </Button>
+            )}
             
           </div>
         </div>
