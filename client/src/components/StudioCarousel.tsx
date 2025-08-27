@@ -241,16 +241,16 @@ export function StudioCarousel({ studios, onStudioSelect }: StudioCarouselProps)
               onSwipeRight={handlePreviewPrevious}
               className="w-full h-full flex justify-center"
             >
-              <div className="grid grid-cols-3 grid-rows-2 gap-1 w-full max-w-xl mx-auto h-full">
+              <div className="grid grid-cols-3 grid-rows-2 gap-1 w-full max-w-xl mx-auto">
                 {currentStudio.streams.slice(previewIndex, previewIndex + 6).map((stream) => (
                   <div
                     key={stream.id}
-                    className="cursor-pointer hover:scale-105 transition-transform h-full"
+                    className="cursor-pointer hover:scale-105 transition-transform"
                     onClick={() => handleStreamClick(stream)}
                     data-testid={`stream-preview-${stream.id}`}
                   >
-                    <Card className="w-full h-full overflow-hidden border-2 hover:border-primary/50 flex flex-col">
-                      <div className="flex-1 relative bg-black">
+                    <Card className="w-full overflow-hidden border-2 hover:border-primary/50">
+                      <div className="aspect-video relative bg-black">
                         <StreamPlayer
                           stream={stream}
                           className="w-full h-full"
@@ -261,7 +261,7 @@ export function StudioCarousel({ studios, onStudioSelect }: StudioCarouselProps)
                         />
                       </div>
                       
-                      <CardContent className="p-0.5 flex-none">
+                      <CardContent className="p-0.5">
                         <h4 className="font-medium text-xs truncate text-center" data-testid={`stream-name-${stream.id}`}>
                           {stream.name}
                         </h4>
