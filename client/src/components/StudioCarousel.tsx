@@ -175,9 +175,9 @@ export function StudioCarousel({ studios, onStudioSelect }: StudioCarouselProps)
       {/* Small Horizontal Stream Preview Carousel - Bottom */}
       <div className="flex-shrink-0 pb-4">
         <div className="px-4">
-          <div className="overflow-x-auto scrollbar-hide">
-            <div className="flex space-x-3" style={{ minWidth: 'max-content' }}>
-              {currentStudio.streams.map((stream) => (
+          <div className="overflow-hidden">
+            <div className="flex space-x-3 justify-center">
+              {currentStudio.streams.slice(0, 4).map((stream) => (
                 <div
                   key={stream.id}
                   className="flex-shrink-0 cursor-pointer hover:scale-105 transition-transform"
