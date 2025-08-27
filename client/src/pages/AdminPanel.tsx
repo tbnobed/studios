@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Trash2, Edit, Plus, UserPlus, Video, Monitor, Settings2 } from "lucide-react";
+import { Trash2, Edit, Plus, UserPlus, Video, Monitor, Settings2, ArrowLeft } from "lucide-react";
 import { UserWithPermissions, Studio, StudioWithStreams, Stream, InsertStream } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -305,6 +305,18 @@ export default function AdminPanel() {
     <div className="min-h-screen bg-background p-4">
       <div className="max-w-7xl mx-auto">
         <div className="mb-8">
+          <div className="flex items-center gap-4 mb-4">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => window.location.href = '/'}
+              className="touch-area"
+              data-testid="button-back-to-dashboard"
+            >
+              <ArrowLeft className="mr-2" size={16} />
+              Back to Dashboard
+            </Button>
+          </div>
           <h1 className="text-3xl font-bold mb-2">Admin Panel</h1>
           <p className="text-muted-foreground">Manage users, studios, and streaming configuration</p>
         </div>
