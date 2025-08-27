@@ -347,7 +347,7 @@ export default function Dashboard() {
               </div>
             ) : viewMode === 'grid' ? (
               // Grid View
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 h-full auto-rows-fr">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 pb-4">
                 {selectedStudio.streams.map((stream) => (
                   <Card key={stream.id} className="overflow-hidden hover:border-accent transition-colors">
                     <div className="video-container relative">
