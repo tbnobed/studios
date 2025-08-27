@@ -29,48 +29,28 @@ export function StreamPlayer({
   useEffect(() => {
     if (!videoRef.current || !stream.streamUrl) return;
 
-    // Reset status when stream changes
-    setCurrentStatus('offline');
-    
-    let isComponentMounted = true;
-
     const initializeStream = async () => {
-      if (!isComponentMounted) return;
-      
       try {
         // Clean up existing connection
         if (sdkRef.current) {
-          try {
-            sdkRef.current.close();
-          } catch (e) {
-            console.warn('Error closing existing connection:', e);
-          }
+          sdkRef.current.close();
           sdkRef.current = null;
         }
 
-        // Add delay to prevent too many simultaneous connections
-        await new Promise(resolve => setTimeout(resolve, Math.random() * 1000 + 500));
-        
-        if (!isComponentMounted) return;
-
         // Initialize SRS SDK
-        if (window.SrsRtcWhipWhepAsync && isComponentMounted) {
+        if (window.SrsRtcWhipWhepAsync) {
           sdkRef.current = new window.SrsRtcWhipWhepAsync();
           
           if (videoRef.current) {
             videoRef.current.srcObject = sdkRef.current.stream;
             
-            // Ensure video plays when stream is ready
             if (autoPlay) {
               videoRef.current.play().catch(console.error);
             }
           }
 
           // Start playing the stream
-          await sdkRef.current.play(stream.streamUrl, {
-            videoOnly: false,
-            audioOnly: false
-          });
+          await sdkRef.current.play(stream.streamUrl);
 
           // Try to play video again after WebRTC connection
           if (videoRef.current && autoPlay) {
@@ -79,40 +59,26 @@ export function StreamPlayer({
             }, 500);
           }
 
-          if (isComponentMounted) {
-            setCurrentStatus('online');
-            onStatusChange?.('online');
-          }
+          setCurrentStatus('online');
+          onStatusChange?.('online');
         } else {
           console.error('SRS SDK not loaded');
-          if (isComponentMounted) {
-            setCurrentStatus('error');
-            onStatusChange?.('error');
-          }
-        }
-      } catch (error) {
-        console.error('Error initializing stream:', error);
-        if (isComponentMounted) {
           setCurrentStatus('error');
           onStatusChange?.('error');
         }
+      } catch (error) {
+        console.error('Error initializing stream:', error);
+        setCurrentStatus('error');
+        onStatusChange?.('error');
       }
     };
 
     initializeStream();
 
     return () => {
-      isComponentMounted = false;
       if (sdkRef.current) {
-        try {
-          sdkRef.current.close();
-        } catch (e) {
-          console.warn('Error during cleanup:', e);
-        }
+        sdkRef.current.close();
         sdkRef.current = null;
-      }
-      if (videoRef.current) {
-        videoRef.current.srcObject = null;
       }
     };
   }, [stream.streamUrl]);
