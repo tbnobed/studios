@@ -188,7 +188,26 @@ export default function Dashboard() {
 
   return (
     <div className="h-screen flex flex-col bg-background">
-      {/* Header */}
+      {/* Mobile Header */}
+      <header className="md:hidden bg-card border-b border-border px-4 py-3 flex items-center justify-between shrink-0">
+        <div className="flex items-center space-x-2">
+          <span className="text-sm font-medium">
+            {user?.firstName} {user?.lastName}
+          </span>
+        </div>
+        
+        <Button
+          variant="ghost"
+          size="sm"
+          className="touch-area text-destructive hover:text-destructive"
+          onClick={handleLogout}
+          data-testid="button-mobile-logout"
+        >
+          <LogOut size={16} />
+        </Button>
+      </header>
+
+      {/* Desktop Header */}
       <header className="hidden md:flex bg-card border-b border-border px-4 py-3 items-center justify-between shrink-0">
         <div className="flex items-center space-x-3">
           <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
