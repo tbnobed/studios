@@ -95,7 +95,7 @@ export function StudioCarousel({ studios, onStudioSelect }: StudioCarouselProps)
   return (
     <div className="h-full flex flex-col overflow-hidden">
       {/* Large Portrait Studio Card - Top Center */}
-      <div className="flex-[5] flex items-center justify-center px-2 py-1 relative z-10 min-h-0">
+      <div className="flex-[3] flex items-center justify-center px-2 py-1 relative z-10 min-h-0">
         <GestureHandler
           onSwipeLeft={handleNext}
           onSwipeRight={handlePrevious}
@@ -113,8 +113,7 @@ export function StudioCarousel({ studios, onStudioSelect }: StudioCarouselProps)
 
           {/* Large Portrait Card (9:16 aspect ratio) */}
           <Card 
-            className="overflow-hidden cursor-pointer hover:border-primary/50 border-2"
-            style={{ width: 'clamp(20rem, 40vw, 35rem)', height: 'clamp(30rem, 60vh, 50rem)' }}
+            className="overflow-hidden cursor-pointer hover:border-primary/50 border-2 w-full max-w-sm h-full max-h-[80%] aspect-[9/16]"
             onClick={() => onStudioSelect(currentStudio)}
             data-testid={`studio-card-${currentStudio.id}`}
           >
@@ -203,7 +202,7 @@ export function StudioCarousel({ studios, onStudioSelect }: StudioCarouselProps)
       </div>
 
       {/* Small Horizontal Stream Preview Carousel - Bottom */}
-      <div className="flex-1 pb-2 pt-4 relative z-10 min-h-0">
+      <div className="flex-1 pb-2 pt-2 relative z-10 min-h-0">
         <div className="px-2">
           <div className="flex items-center space-x-2">
             {/* Previous Button */}
@@ -226,7 +225,7 @@ export function StudioCarousel({ studios, onStudioSelect }: StudioCarouselProps)
                 onSwipeRight={handlePreviewPrevious}
                 className="w-full flex justify-center"
               >
-                <div className="grid grid-cols-3 gap-2 w-full max-w-2xl mx-auto h-full">
+                <div className="grid grid-cols-3 grid-rows-2 gap-2 w-full max-w-2xl mx-auto h-full">
                   {currentStudio.streams.slice(previewIndex, previewIndex + 6).map((stream) => (
                     <div
                       key={stream.id}
