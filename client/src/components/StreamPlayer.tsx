@@ -41,6 +41,11 @@ export function StreamPlayer({
           
           if (videoRef.current) {
             videoRef.current.srcObject = sdkRef.current.stream;
+            
+            // Ensure video plays when stream is ready
+            if (autoPlay) {
+              videoRef.current.play().catch(console.error);
+            }
           }
 
           // Start playing the stream
@@ -48,6 +53,13 @@ export function StreamPlayer({
             videoOnly: false,
             audioOnly: false
           });
+
+          // Try to play video again after WebRTC connection
+          if (videoRef.current && autoPlay) {
+            setTimeout(() => {
+              videoRef.current?.play().catch(console.error);
+            }, 500);
+          }
 
           onStatusChange?.('online');
         } else {

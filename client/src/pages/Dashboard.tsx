@@ -348,7 +348,7 @@ export default function Dashboard() {
                           stream={stream}
                           className="w-full h-full"
                           controls={true}
-                          autoPlay={false}
+                          autoPlay={true}
                         />
                         
                         <Button
