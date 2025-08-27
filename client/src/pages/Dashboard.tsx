@@ -387,7 +387,7 @@ export default function Dashboard() {
           )}
 
           {/* Video Content */}
-          <div className="flex-1 p-4 overflow-y-auto custom-scrollbar" style={{ maxHeight: 'calc(100vh - 140px)' }}>
+          <div className="flex-1 p-4 overflow-hidden" style={{ maxHeight: 'calc(100vh - 140px)' }}>
             {!selectedStudio ? (
               <div className="h-full">
                 {/* Mobile Studio Carousel */}
