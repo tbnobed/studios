@@ -134,7 +134,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "No image file provided" });
       }
 
-      const imageUrl = `/uploads/${req.file.filename}`;
+      const imageUrl = `/uploads/studios/${req.file.filename}`;
       res.json({ imageUrl });
     } catch (error) {
       console.error("Image upload error:", error);
