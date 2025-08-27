@@ -265,7 +265,7 @@ export default function Dashboard() {
         </div>
       </header>
 
-      <div className="flex-1 flex overflow-hidden">
+      <div className="flex-1 flex">
         {/* Desktop Sidebar */}
         <div className="hidden lg:block">
           <StudioSidebar />
@@ -323,7 +323,7 @@ export default function Dashboard() {
           )}
 
           {/* Video Content */}
-          <div className="flex-1 p-4 overflow-auto custom-scrollbar">
+          <div className="flex-1 p-4 overflow-y-auto custom-scrollbar" style={{ maxHeight: 'calc(100vh - 140px)' }}>
             {!selectedStudio ? (
               // Welcome State
               <div className="h-full flex items-center justify-center">
