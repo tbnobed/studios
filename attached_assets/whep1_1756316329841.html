@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>OBTV Player</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="css/bootstrap.min.css">
+  <style>
+    body {
+      background-color: #121212;
+      color: #e0e0e0;
+      font-family: 'Segoe UI', sans-serif;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+
+    .navbar {
+      background-color: #1e1e1e;
+      border-bottom: 1px solid #333;
+      height: 60px;
+      display: flex;
+      align-items: center;
+      padding: 0 20px;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 1000;
+    }
+
+    .navbar img {
+      height: 40px;
+      margin-right: 10px;
+    }
+
+    .navbar .brand {
+      color: #00d084;
+      font-weight: bold;
+      font-size: 20px;
+      text-decoration: none;
+    }
+
+    .container {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding-top: 70px;
+      padding-bottom: 30px;
+    }
+
+    .video-wrapper {
+      position: relative;
+      width: 90vw;
+      max-width: 100%;
+      aspect-ratio: 16 / 9;
+      background-color: #000;
+      border-radius: 10px;
+      overflow: hidden;
+    }
+
+    video {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      background-color: #000;
+    }
+
+    .form-inline {
+      display: none; /* Hide this input section */
+    }
+
+    footer {
+      text-align: center;
+      color: #777;
+      padding: 20px 0;
+    }
+
+    a {
+      color: #00d084;
+    }
+  </style>
+
+  <script src="js/jquery-1.12.2.min.js"></script>
+  <script src="js/adapter-7.4.0.min.js"></script>
+  <script src="js/srs.sdk.js"></script>
+  <script src="js/winlin.utility.js"></script>
+  <script src="js/srs.page.js"></script>
+</head>
+<body>
+
+  <!-- Navbar with logo -->
+  <div class="navbar navbar-fixed-top">
+    <img src="https://cdn2.obedtv.live:8088/obedtv.png" alt="OBTV Logo">
+    <a class="brand" href="https://www.tbn.tv" target="_blank">Player</a>
+  </div>
+
+  <!-- Hidden input form -->
+  <div class="form-inline">
+    <label for="txt_url">URL:</label>
+    <input type="text" id="txt_url" class="input-xxlarge" value="">
+    <button class="btn btn-primary" id="btn_play">Play</button>
+  </div>
+
+  <!-- Video player -->
+  <div class="container">
+    <div class="video-wrapper">
+      <video id="rtc_media_player" controls autoplay muted></video>
+    </div>
+  </div>
+
+  <!-- Stream info -->
+  <div style="text-align: center;">
+    <p>Session ID: <span id="sessionid"></span></p>
+    <p>Audio: <span id="acodecs"></span></p>
+    <p>Video: <span id="vcodecs"></span></p>
+    <p>Simulator: <a href="#" id="simulator-drop">Drop</a></p>
+  </div>
+
+  <!-- Footer -->
+  <footer>
+    <p><a href="https://www.tbn.tv">OBTV Team &copy; 2025</a></p>
+  </footer>
+
+  <!-- JavaScript -->
+  <script>
+    $(function () {
+      var sdk = null;
+      var statsTimer = null;
+
+      function startPlay() {
+        $('#rtc_media_player').show();
+
+        if (statsTimer) clearInterval(statsTimer);
+        if (sdk) sdk.close();
+
+        sdk = new SrsRtcWhipWhepAsync();
+        $('#rtc_media_player').prop('srcObject', sdk.stream);
+
+        statsTimer = setInterval(() => {
+          sdk.pc.getStats(null).then((stats) => {
+            const audioStatsOutput = SrsRtcFormatStats(stats, 'audio');
+            const videoStatsOutput = SrsRtcFormatStats(stats, 'video');
+
+            document.querySelector("#acodecs").innerHTML = audioStatsOutput;
+            document.querySelector("#vcodecs").innerHTML = videoStatsOutput;
+
+            if (audioStatsOutput && videoStatsOutput) clearInterval(statsTimer);
+          });
+        }, 1000);
+
+        const url = $("#txt_url").val();
+        sdk.play(url, {
+          videoOnly: false,
+          audioOnly: false
+        }).then((session) => {
+          $('#sessionid').html(session.sessionid);
+          $('#simulator-drop').attr('href', session.simulator + '?drop=1&username=' + session.sessionid);
+        }).catch((reason) => {
+          sdk.close();
+          $('#rtc_media_player').hide();
+          console.error(reason);
+        });
+      }
+
+      $('#rtc_media_player').hide();
+      const query = parse_query_string();
+      srs_init_whep("#txt_url", query);
+
+      // Autoplay config
+      const defaultStream = "webrtc://yourserver/live/yourstream"; // ? Set this to your actual stream
+      if (!$("#txt_url").val()) {
+        $("#txt_url").val(defaultStream);
+      }
+
+      $("#btn_play").click(startPlay);
+
+      // Start playback on load
+      $('#rtc_media_player').prop('muted', true);
+      window.addEventListener("load", function () {
+        startPlay();
+      });
+    });
+  </script>
+</body>
+</html>
