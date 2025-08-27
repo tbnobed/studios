@@ -61,9 +61,19 @@ export function StreamPlayer({
             
             if (videoRef.current) {
               const hasVideo = videoRef.current.videoWidth > 0 && videoRef.current.videoHeight > 0;
+              const hasData = videoRef.current.readyState >= 2; // At least HAVE_CURRENT_DATA
               const isPlaying = !videoRef.current.paused && !videoRef.current.ended && videoRef.current.currentTime > 0;
               
-              if (hasVideo && (isPlaying || videoRef.current.readyState >= 3)) {
+              console.log(`Stream ${stream.name} check:`, {
+                videoWidth: videoRef.current.videoWidth,
+                videoHeight: videoRef.current.videoHeight,
+                readyState: videoRef.current.readyState,
+                currentTime: videoRef.current.currentTime,
+                paused: videoRef.current.paused,
+                ended: videoRef.current.ended
+              });
+              
+              if (hasVideo && hasData && (isPlaying || videoRef.current.readyState >= 3)) {
                 setCurrentStatus('online');
                 onStatusChange?.('online');
                 
