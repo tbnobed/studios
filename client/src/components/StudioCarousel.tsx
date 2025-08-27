@@ -113,7 +113,7 @@ export function StudioCarousel({ studios, onStudioSelect }: StudioCarouselProps)
 
           {/* Large Portrait Card (9:16 aspect ratio) */}
           <Card 
-            className="w-72 md:w-80 lg:w-96 h-[400px] md:h-[440px] lg:h-[500px] overflow-hidden cursor-pointer hover:border-primary/50 border-2 flex-shrink-0"
+            className="w-72 h-[420px] overflow-hidden cursor-pointer hover:border-primary/50 border-2 flex-shrink-0"
             onClick={() => onStudioSelect(currentStudio)}
             data-testid={`studio-card-${currentStudio.id}`}
           >
@@ -139,10 +139,10 @@ export function StudioCarousel({ studios, onStudioSelect }: StudioCarouselProps)
                 )}
                 
                 <div className="text-center">
-                  <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-shadow-lg tracking-wide mb-2">
+                  <h2 className="text-4xl font-bold text-shadow-lg tracking-wide mb-2">
                     {currentStudio.name}
                   </h2>
-                  <p className="text-lg md:text-xl lg:text-2xl opacity-90 font-medium">STUDIOS</p>
+                  <p className="text-lg opacity-90 font-medium">STUDIOS</p>
                 </div>
               </div>
               
@@ -202,7 +202,7 @@ export function StudioCarousel({ studios, onStudioSelect }: StudioCarouselProps)
       </div>
 
       {/* Small Horizontal Stream Preview Carousel - Bottom */}
-      <div className="flex-shrink-0 pb-2 pt-4 md:pt-8 lg:pt-12 relative z-10">
+      <div className="flex-shrink-0 pb-2 pt-8 relative z-10">
         <div className="px-2">
           <div className="flex items-center space-x-2">
             {/* Previous Button */}
@@ -225,7 +225,7 @@ export function StudioCarousel({ studios, onStudioSelect }: StudioCarouselProps)
                 onSwipeRight={handlePreviewPrevious}
                 className="w-full flex justify-center"
               >
-                <div className="grid grid-cols-3 gap-2 md:gap-3 lg:gap-4 w-full max-w-lg md:max-w-xl lg:max-w-3xl mx-auto">
+                <div className="grid grid-cols-3 gap-2 w-full max-w-lg mx-auto">
                   {currentStudio.streams.slice(previewIndex, previewIndex + 6).map((stream) => (
                     <div
                       key={stream.id}
