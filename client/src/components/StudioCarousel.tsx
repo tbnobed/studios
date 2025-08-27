@@ -93,9 +93,9 @@ export function StudioCarousel({ studios, onStudioSelect }: StudioCarouselProps)
   }
 
   return (
-    <div className="h-full flex flex-col overflow-hidden">
+    <div className="h-full flex flex-col overflow-hidden" style={{ height: '100%' }}>
       {/* Large Portrait Studio Card - Top Center */}
-      <div className="flex items-center justify-center px-2 py-1 relative z-10" style={{ height: '75vh' }}>
+      <div className="flex items-center justify-center px-2 py-1 relative z-10" style={{ height: '75%' }}>
         <GestureHandler
           onSwipeLeft={handleNext}
           onSwipeRight={handlePrevious}
@@ -202,7 +202,7 @@ export function StudioCarousel({ studios, onStudioSelect }: StudioCarouselProps)
       </div>
 
       {/* Small Horizontal Stream Preview Carousel - Bottom */}
-      <div className="pb-2 pt-1 relative z-10" style={{ height: '25vh' }}>
+      <div className="pb-2 pt-1 relative z-10" style={{ height: '25%' }}>
         <div className="px-2">
           <div className="flex items-center space-x-2">
             {/* Previous Button */}
