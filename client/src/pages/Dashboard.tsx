@@ -396,7 +396,7 @@ export default function Dashboard() {
                     <h2 className="text-xl font-bold mb-1">OBTV Studios</h2>
                     <p className="text-sm text-muted-foreground">Select a studio to view live streams</p>
                   </div>
-                  <div className="flex-1 flex items-center">
+                  <div className="flex-1 min-h-0">
                     <StudioCarousel
                       studios={studios}
                       onStudioSelect={handleSelectStudio}
