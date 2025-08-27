@@ -15,22 +15,6 @@ export function StudioCarousel({ studios, onStudioSelect }: StudioCarouselProps)
   const [currentIndex, setCurrentIndex] = useState(0);
   const [previewIndex, setPreviewIndex] = useState(0);
   const [streamStatuses, setStreamStatuses] = useState<Record<string, 'loading' | 'online' | 'offline' | 'error'>>({});
-  const [viewportHeight, setViewportHeight] = useState(window.innerHeight);
-
-  useEffect(() => {
-    const handleResize = () => {
-      setViewportHeight(window.innerHeight);
-    };
-    
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
-
-  // Calculate actual available heights
-  const headerHeight = 120; // Approximate header height
-  const availableHeight = viewportHeight - headerHeight;
-  const studioCardHeight = Math.floor(availableHeight * 0.75); // Card gets 75% of available space
-  const previewHeight = Math.floor(availableHeight * 0.25);   // Previews get 25% of available space
 
   const handlePrevious = () => {
     setCurrentIndex((prev) => (prev === 0 ? studios.length - 1 : prev - 1));
@@ -110,8 +94,8 @@ export function StudioCarousel({ studios, onStudioSelect }: StudioCarouselProps)
 
   return (
     <div className="w-full h-full flex flex-col">
-      {/* STUDIO CARD SECTION - 75% of total height */}
-      <div className="flex-none flex items-center justify-center px-2 py-2 relative z-10" style={{ height: `${studioCardHeight}px` }}>
+      {/* STUDIO CARD SECTION - 75% of container height */}
+      <div className="flex-[3] flex items-center justify-center px-2 py-2 relative z-10 min-h-0">
         <GestureHandler
           onSwipeLeft={handleNext}
           onSwipeRight={handlePrevious}
@@ -203,8 +187,8 @@ export function StudioCarousel({ studios, onStudioSelect }: StudioCarouselProps)
         </GestureHandler>
       </div>
 
-      {/* PREVIEW SECTION - 25% of total height */}
-      <div className="flex-none p-2 relative z-10" style={{ height: `${previewHeight}px`, minHeight: '120px' }}>
+      {/* PREVIEW SECTION - 25% of container height */}
+      <div className="flex-1 p-2 relative z-10 min-h-0">
         {/* Studio Indicators */}
         <div className="flex justify-center space-x-2 mb-2">
           {studios.map((_, index) => (
