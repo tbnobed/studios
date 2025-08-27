@@ -126,6 +126,8 @@ export function StreamPlayer({
         controls={controls}
         autoPlay={autoPlay}
         muted
+        playsInline
+        disablePictureInPicture
         data-testid={`stream-video-${stream.id}`}
       />
       
