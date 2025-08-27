@@ -137,6 +137,7 @@ export default function AdminPanel() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/studios-with-streams"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/studios"] });
       setNewStream({
         studioId: "",
         name: "",
@@ -170,6 +171,7 @@ export default function AdminPanel() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/studios-with-streams"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/studios"] });
       setIsEditStreamOpen(false);
       setEditingStream(null);
       toast({
@@ -195,6 +197,7 @@ export default function AdminPanel() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/studios-with-streams"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/studios"] });
       toast({
         title: "Stream Deleted",
         description: "Stream has been successfully deleted",
