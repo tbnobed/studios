@@ -189,7 +189,7 @@ export default function Dashboard() {
   return (
     <div className="h-screen flex flex-col bg-background">
       {/* Mobile Header */}
-      <header className="md:hidden bg-card border-b border-border px-4 py-3 flex items-center justify-between shrink-0">
+      <header className="md:hidden px-4 py-3 flex items-center justify-between shrink-0 absolute top-0 left-0 right-0 z-10">
         <div className="flex items-center space-x-2">
           <span className="text-sm font-medium">
             {user?.firstName} {user?.lastName}
