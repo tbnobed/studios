@@ -111,7 +111,7 @@ export function StudioCarousel({ studios, onStudioSelect }: StudioCarouselProps)
           </Button>
 
           <Card 
-            className="w-80 aspect-video overflow-hidden cursor-pointer transform transition-all duration-300 hover:scale-105 border-2 hover:border-primary/50"
+            className="w-64 aspect-[9/16] overflow-hidden cursor-pointer transform transition-all duration-300 hover:scale-105 border-2 hover:border-primary/50"
             onClick={() => handleCardClick(currentStudio)}
             data-testid={`studio-card-${currentStudio.id}`}
           >
