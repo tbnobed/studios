@@ -40,9 +40,13 @@ export default function AdminPanel() {
   const [isCreateUserOpen, setIsCreateUserOpen] = useState(false);
   const [isCreateStreamOpen, setIsCreateStreamOpen] = useState(false);
   const [isEditStreamOpen, setIsEditStreamOpen] = useState(false);
+  const [isEditStudioOpen, setIsEditStudioOpen] = useState(false);
   const [selectedStudioForStreams, setSelectedStudioForStreams] = useState<string>("");
   const [activeTab, setActiveTab] = useState("users");
   const [editingStream, setEditingStream] = useState<Stream | null>(null);
+  const [editingStudio, setEditingStudio] = useState<Studio | null>(null);
+  const [selectedImageFile, setSelectedImageFile] = useState<File | null>(null);
+  const [imageUploadPreview, setImageUploadPreview] = useState<string | null>(null);
 
   // Fetch all users (admin only)
   const { data: users = [], isLoading: usersLoading } = useQuery<UserWithPermissions[]>({
@@ -212,6 +216,55 @@ export default function AdminPanel() {
     },
   });
 
+  // Update studio mutation
+  const updateStudioMutation = useMutation({
+    mutationFn: async ({ studioId, updateData, imageFile }: { studioId: string; updateData: Partial<Studio>; imageFile?: File }) => {
+      // If there's an image file, upload it first
+      if (imageFile) {
+        const formData = new FormData();
+        formData.append('image', imageFile);
+        formData.append('studioId', studioId);
+        
+        const uploadResponse = await fetch('/api/admin/upload-studio-image', {
+          method: 'POST',
+          headers: getAuthHeaders(),
+          body: formData,
+        });
+        
+        if (!uploadResponse.ok) {
+          throw new Error('Failed to upload image');
+        }
+        
+        const { imageUrl } = await uploadResponse.json();
+        updateData.imageUrl = imageUrl;
+      }
+      
+      const response = await apiRequest("PATCH", `/api/admin/studios/${studioId}`, updateData, {
+        headers: getAuthHeaders(),
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/studios"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/studios"] });
+      setIsEditStudioOpen(false);
+      setEditingStudio(null);
+      setSelectedImageFile(null);
+      setImageUploadPreview(null);
+      toast({
+        title: "Studio Updated",
+        description: "Studio has been successfully updated",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Failed to Update Studio",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleCreateUser = () => {
     if (!newUser.username.trim() || !newUser.password.trim()) {
       toast({
@@ -253,6 +306,63 @@ export default function AdminPanel() {
     if (window.confirm("Are you sure you want to delete this user?")) {
       deleteUserMutation.mutate(userId);
     }
+  };
+
+  const handleEditStudio = (studio: Studio) => {
+    setEditingStudio(studio);
+    setIsEditStudioOpen(true);
+    setSelectedImageFile(null);
+    setImageUploadPreview(null);
+  };
+
+  const handleImageFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      // Validate file type and size
+      if (!file.type.startsWith('image/')) {
+        toast({
+          title: "Invalid File Type",
+          description: "Please select an image file (JPG, PNG, GIF, etc.)",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      if (file.size > 5 * 1024 * 1024) { // 5MB limit
+        toast({
+          title: "File Too Large",
+          description: "Please select an image smaller than 5MB",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      setSelectedImageFile(file);
+      
+      // Create preview URL
+      const reader = new FileReader();
+      reader.onload = () => {
+        setImageUploadPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleUpdateStudio = () => {
+    if (!editingStudio) return;
+    
+    const updateData: Partial<Studio> = {
+      name: editingStudio.name,
+      location: editingStudio.location,
+      description: editingStudio.description,
+      colorCode: editingStudio.colorCode,
+    };
+    
+    updateStudioMutation.mutate({
+      studioId: editingStudio.id,
+      updateData,
+      imageFile: selectedImageFile || undefined,
+    });
   };
 
   const handleEditStream = (stream: Stream) => {
@@ -325,10 +435,14 @@ export default function AdminPanel() {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="users" className="flex items-center gap-2" data-testid="tab-users">
               <UserPlus size={16} />
               Users
+            </TabsTrigger>
+            <TabsTrigger value="studios" className="flex items-center gap-2" data-testid="tab-studios">
+              <Monitor size={16} />
+              Studios
             </TabsTrigger>
             <TabsTrigger value="streams" className="flex items-center gap-2" data-testid="tab-streams">
               <Video size={16} />
@@ -521,6 +635,180 @@ export default function AdminPanel() {
                 </div>
               </CardContent>
             </Card>
+          </TabsContent>
+
+          {/* Studios Tab */}
+          <TabsContent value="studios" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Studio Management</CardTitle>
+                <CardDescription>Manage studio details and images</CardDescription>
+              </CardHeader>
+              
+              <CardContent>
+                <div className="space-y-4">
+                  {studios.map((studio) => (
+                    <div 
+                      key={studio.id}
+                      className="flex items-center justify-between p-4 border rounded-lg bg-card hover:bg-accent/50 transition-colors"
+                    >
+                      <div className="flex items-center gap-4 flex-1">
+                        {/* Studio Image */}
+                        <div className="w-16 h-16 rounded-lg overflow-hidden bg-accent flex items-center justify-center">
+                          {studio.imageUrl ? (
+                            <img 
+                              src={studio.imageUrl} 
+                              alt={studio.name}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <Monitor size={24} className="text-muted-foreground" />
+                          )}
+                        </div>
+                        
+                        <div className="flex-1">
+                          <div className="flex items-center gap-3 mb-2">
+                            <h3 className="font-semibold">{studio.name}</h3>
+                            <div 
+                              className="w-3 h-3 rounded-full" 
+                              style={{ backgroundColor: studio.colorCode || '#4A5568' }}
+                            />
+                          </div>
+                          <p className="text-sm text-muted-foreground mb-1">{studio.location}</p>
+                          {studio.description && (
+                            <p className="text-sm text-muted-foreground">{studio.description}</p>
+                          )}
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center space-x-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="touch-area"
+                          onClick={() => handleEditStudio(studio)}
+                          data-testid={`button-edit-studio-${studio.name.toLowerCase().replace(/\s+/g, '-')}`}
+                        >
+                          <Edit size={16} />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                  
+                  {studios.length === 0 && (
+                    <div className="text-center py-8 text-muted-foreground">
+                      No studios found.
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Edit Studio Dialog */}
+            <Dialog open={isEditStudioOpen} onOpenChange={setIsEditStudioOpen}>
+              <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                  <DialogTitle>Edit Studio</DialogTitle>
+                </DialogHeader>
+                
+                {editingStudio && (
+                  <div className="space-y-4">
+                    <div>
+                      <Label htmlFor="studioName">Studio Name</Label>
+                      <Input
+                        id="studioName"
+                        value={editingStudio.name}
+                        onChange={(e) => setEditingStudio({ ...editingStudio, name: e.target.value })}
+                        placeholder="Studio Name"
+                        data-testid="input-studio-name"
+                      />
+                    </div>
+
+                    <div>
+                      <Label htmlFor="studioLocation">Location</Label>
+                      <Input
+                        id="studioLocation"
+                        value={editingStudio.location || ''}
+                        onChange={(e) => setEditingStudio({ ...editingStudio, location: e.target.value })}
+                        placeholder="Studio Location"
+                        data-testid="input-studio-location"
+                      />
+                    </div>
+
+                    <div>
+                      <Label htmlFor="studioDescription">Description</Label>
+                      <Input
+                        id="studioDescription"
+                        value={editingStudio.description || ''}
+                        onChange={(e) => setEditingStudio({ ...editingStudio, description: e.target.value })}
+                        placeholder="Studio Description"
+                        data-testid="input-studio-description"
+                      />
+                    </div>
+
+                    <div>
+                      <Label htmlFor="studioColor">Color Code</Label>
+                      <Input
+                        id="studioColor"
+                        type="color"
+                        value={editingStudio.colorCode || '#4A5568'}
+                        onChange={(e) => setEditingStudio({ ...editingStudio, colorCode: e.target.value })}
+                        data-testid="input-studio-color"
+                      />
+                    </div>
+
+                    <div>
+                      <Label htmlFor="studioImage">Studio Image</Label>
+                      <div className="space-y-2">
+                        <Input
+                          id="studioImage"
+                          type="file"
+                          accept="image/*"
+                          onChange={handleImageFileSelect}
+                          data-testid="input-studio-image"
+                        />
+                        {imageUploadPreview && (
+                          <div className="w-32 h-32 rounded-lg overflow-hidden bg-accent">
+                            <img 
+                              src={imageUploadPreview} 
+                              alt="Preview"
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                        )}
+                        {!imageUploadPreview && editingStudio.imageUrl && (
+                          <div className="w-32 h-32 rounded-lg overflow-hidden bg-accent">
+                            <img 
+                              src={editingStudio.imageUrl} 
+                              alt="Current"
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    
+                    <div className="flex gap-2 mt-6">
+                      <Button 
+                        onClick={handleUpdateStudio}
+                        disabled={updateStudioMutation.isPending}
+                        className="flex-1"
+                        data-testid="button-update-studio"
+                      >
+                        {updateStudioMutation.isPending ? "Updating..." : "Update Studio"}
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        onClick={() => setIsEditStudioOpen(false)}
+                        className="flex-1"
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </DialogContent>
+            </Dialog>
           </TabsContent>
 
           {/* Streams Tab */}

@@ -38,6 +38,7 @@ export const studios = pgTable("studios", {
   location: varchar("location", { length: 100 }),
   description: text("description"),
   colorCode: varchar("color_code", { length: 7 }), // hex color
+  imageUrl: varchar("image_url", { length: 500 }), // studio image path/url
   isActive: boolean("is_active").notNull().default(true),
   createdAt: timestamp("created_at").defaultNow(),
 });
