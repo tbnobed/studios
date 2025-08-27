@@ -113,7 +113,7 @@ export function StudioCarousel({ studios, onStudioSelect }: StudioCarouselProps)
 
           {/* Large Portrait Card (9:16 aspect ratio) */}
           <Card 
-            className="overflow-hidden cursor-pointer hover:border-primary/50 border-2 flex-shrink-0" style={{ width: 'clamp(18rem, 25vw, 30rem)', height: 'clamp(26rem, 35vw, 42rem)' }}
+            className="overflow-hidden cursor-pointer hover:border-primary/50 border-2 flex-shrink-0" style={{ width: 'clamp(14rem, 25vw, 30rem)', height: 'clamp(20rem, 35vw, 42rem)' }}
             onClick={() => onStudioSelect(currentStudio)}
             data-testid={`studio-card-${currentStudio.id}`}
           >
@@ -139,10 +139,10 @@ export function StudioCarousel({ studios, onStudioSelect }: StudioCarouselProps)
                 )}
                 
                 <div className="text-center">
-                  <h2 className="font-bold text-shadow-lg tracking-wide mb-2" style={{ fontSize: 'clamp(2rem, 5vw, 4rem)' }}>
+                  <h2 className="font-bold text-shadow-lg tracking-wide mb-2" style={{ fontSize: 'clamp(1.5rem, 5vw, 4rem)' }}>
                     {currentStudio.name}
                   </h2>
-                  <p className="opacity-90 font-medium" style={{ fontSize: 'clamp(1rem, 2.5vw, 2rem)' }}>STUDIOS</p>
+                  <p className="opacity-90 font-medium" style={{ fontSize: 'clamp(0.75rem, 2.5vw, 2rem)' }}>STUDIOS</p>
                 </div>
               </div>
               
@@ -225,7 +225,7 @@ export function StudioCarousel({ studios, onStudioSelect }: StudioCarouselProps)
                 onSwipeRight={handlePreviewPrevious}
                 className="w-full flex justify-center"
               >
-                <div className="grid grid-cols-3 w-full mx-auto" style={{ gap: 'clamp(0.5rem, 1.5vw, 1.5rem)', maxWidth: 'clamp(24rem, 70vw, 50rem)' }}>
+                <div className="grid grid-cols-3 w-full mx-auto" style={{ gap: 'clamp(0.25rem, 1.5vw, 1.5rem)', maxWidth: 'clamp(18rem, 70vw, 50rem)' }}>
                   {currentStudio.streams.slice(previewIndex, previewIndex + 6).map((stream) => (
                     <div
                       key={stream.id}
