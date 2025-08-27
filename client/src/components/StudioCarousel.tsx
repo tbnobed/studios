@@ -202,7 +202,7 @@ export function StudioCarousel({ studios, onStudioSelect }: StudioCarouselProps)
       </div>
 
       {/* Small Horizontal Stream Preview Carousel - Bottom */}
-      <div className="flex-shrink-0 pb-2 relative z-10">
+      <div className="flex-shrink-0 pb-2 pt-8 relative z-10">
         <div className="px-2">
           <div className="flex items-center space-x-2">
             {/* Previous Button */}
