@@ -113,7 +113,7 @@ export function StudioCarousel({ studios, onStudioSelect }: StudioCarouselProps)
 
           {/* Large Portrait Card (9:16 aspect ratio) */}
           <Card 
-            className="w-[min(85vw,20rem)] sm:w-80 lg:w-96 h-[min(60vh,28rem)] sm:h-[460px] lg:h-[560px] overflow-hidden cursor-pointer hover:border-primary/50 border-2 flex-shrink-0"
+            className="w-72 md:w-80 lg:w-96 h-[400px] md:h-[440px] lg:h-[500px] overflow-hidden cursor-pointer hover:border-primary/50 border-2 flex-shrink-0"
             onClick={() => onStudioSelect(currentStudio)}
             data-testid={`studio-card-${currentStudio.id}`}
           >
@@ -139,10 +139,10 @@ export function StudioCarousel({ studios, onStudioSelect }: StudioCarouselProps)
                 )}
                 
                 <div className="text-center">
-                  <h2 className="text-[min(8vw,3rem)] sm:text-4xl lg:text-6xl font-bold text-shadow-lg tracking-wide mb-2">
+                  <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-shadow-lg tracking-wide mb-2">
                     {currentStudio.name}
                   </h2>
-                  <p className="text-[min(4vw,1.25rem)] sm:text-xl lg:text-2xl opacity-90 font-medium">STUDIOS</p>
+                  <p className="text-lg md:text-xl lg:text-2xl opacity-90 font-medium">STUDIOS</p>
                 </div>
               </div>
               
@@ -202,7 +202,7 @@ export function StudioCarousel({ studios, onStudioSelect }: StudioCarouselProps)
       </div>
 
       {/* Small Horizontal Stream Preview Carousel - Bottom */}
-      <div className="flex-shrink-0 pb-2 pt-[min(4vh,1.5rem)] sm:pt-8 lg:pt-16 relative z-10">
+      <div className="flex-shrink-0 pb-2 pt-4 md:pt-8 lg:pt-12 relative z-10">
         <div className="px-2">
           <div className="flex items-center space-x-2">
             {/* Previous Button */}
@@ -225,7 +225,7 @@ export function StudioCarousel({ studios, onStudioSelect }: StudioCarouselProps)
                 onSwipeRight={handlePreviewPrevious}
                 className="w-full flex justify-center"
               >
-                <div className="grid grid-cols-3 gap-[min(2vw,0.5rem)] sm:gap-3 lg:gap-4 w-full max-w-[min(90vw,24rem)] sm:max-w-xl lg:max-w-4xl mx-auto">
+                <div className="grid grid-cols-3 gap-2 md:gap-3 lg:gap-4 w-full max-w-lg md:max-w-xl lg:max-w-3xl mx-auto">
                   {currentStudio.streams.slice(previewIndex, previewIndex + 6).map((stream) => (
                     <div
                       key={stream.id}
