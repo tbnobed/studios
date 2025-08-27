@@ -246,7 +246,7 @@ export function StudioCarousel({ studios, onStudioSelect }: StudioCarouselProps)
                         </div>
                         
                         <CardContent className="p-1">
-                          <h4 className="font-medium text-xs truncate" data-testid={`stream-name-${stream.id}`}>
+                          <h4 className="font-medium text-xs truncate text-center" data-testid={`stream-name-${stream.id}`}>
                             {stream.name}
                           </h4>
                         </CardContent>
