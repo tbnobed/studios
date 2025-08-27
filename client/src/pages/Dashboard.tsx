@@ -272,7 +272,7 @@ export default function Dashboard() {
         </div>
 
         {/* Main Content */}
-        <main className="flex-1 overflow-hidden relative">
+        <main className="flex-1 relative">
           {/* Studio Header */}
           {selectedStudio && (
             <div className="bg-card border-b border-border px-6 py-4">
