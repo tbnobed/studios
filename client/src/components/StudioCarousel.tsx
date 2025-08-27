@@ -227,35 +227,7 @@ export function StudioCarousel({ studios, onStudioSelect }: StudioCarouselProps)
                         autoPlay={true}
                         onStatusChange={(status) => handleStreamStatusChange(stream.id, status)}
                       />
-                      
-                      {/* Stream Status Overlay */}
-                      <div className="absolute top-1 right-1 bg-black bg-opacity-70 px-1 py-0.5 rounded">
-                        <div className="flex items-center space-x-1">
-                          <div className={`w-1 h-1 rounded-full ${
-                            streamStatuses[stream.id] === 'online' ? 'bg-green-500' : 
-                            streamStatuses[stream.id] === 'error' ? 'bg-red-500' : 'bg-yellow-500'
-                          }`}></div>
-                          <span className="text-xs text-white font-medium">
-                            {streamStatuses[stream.id] === 'online' ? 'LIVE' : 
-                             streamStatuses[stream.id] === 'error' ? 'ERR' : 'LOAD'}
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Play Button Overlay */}
-                      <div className="absolute inset-0 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity bg-black bg-opacity-30">
-                        <div className="w-8 h-8 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
-                          <Play size={12} className="text-white ml-0.5" />
-                        </div>
-                      </div>
                     </div>
-                    
-                    <CardContent className="p-2">
-                      <h4 className="font-medium text-xs truncate" data-testid={`stream-name-${stream.id}`}>
-                        {stream.name}
-                      </h4>
-                      <p className="text-xs text-muted-foreground">{stream.resolution}</p>
-                    </CardContent>
                   </Card>
                 </div>
               ))}
