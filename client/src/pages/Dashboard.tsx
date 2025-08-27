@@ -340,15 +340,17 @@ export default function Dashboard() {
             {!selectedStudio ? (
               <div className="h-full">
                 {/* Mobile Studio Carousel */}
-                <div className="lg:hidden">
-                  <div className="mb-6 text-center">
-                    <h2 className="text-2xl font-bold mb-2">OBTV Studios</h2>
-                    <p className="text-muted-foreground">Select a studio to view live streams</p>
+                <div className="lg:hidden h-full flex flex-col">
+                  <div className="text-center mb-4">
+                    <h2 className="text-xl font-bold mb-1">OBTV Studios</h2>
+                    <p className="text-sm text-muted-foreground">Select a studio to view live streams</p>
                   </div>
-                  <StudioCarousel
-                    studios={studios}
-                    onStudioSelect={handleSelectStudio}
-                  />
+                  <div className="flex-1 flex items-center">
+                    <StudioCarousel
+                      studios={studios}
+                      onStudioSelect={handleSelectStudio}
+                    />
+                  </div>
                 </div>
 
                 {/* Desktop Welcome State */}

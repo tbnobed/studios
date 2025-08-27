@@ -92,14 +92,14 @@ export function StudioCarousel({ studios, onStudioSelect }: StudioCarouselProps)
   }
 
   return (
-    <div className="w-full max-w-5xl mx-auto px-4">
+    <div className="w-full h-full flex flex-col justify-center px-4 max-h-screen overflow-hidden">
       {/* Studio Cards Carousel */}
       <GestureHandler
         onSwipeLeft={handleNext}
         onSwipeRight={handlePrevious}
         className="relative"
       >
-        <div className="flex items-center justify-center space-x-4 mb-6">
+        <div className="flex items-center justify-center space-x-4 mb-4">
           <Button
             variant="ghost"
             size="sm"
@@ -107,11 +107,11 @@ export function StudioCarousel({ studios, onStudioSelect }: StudioCarouselProps)
             className="touch-area"
             data-testid="button-previous-studio"
           >
-            <ChevronLeft size={24} />
+            <ChevronLeft size={20} />
           </Button>
 
           <Card 
-            className="w-96 h-64 overflow-hidden cursor-pointer transform transition-all duration-300 hover:scale-105 border-2 hover:border-primary/50"
+            className="w-80 h-48 overflow-hidden cursor-pointer transform transition-all duration-300 hover:scale-105 border-2 hover:border-primary/50"
             onClick={() => handleCardClick(currentStudio)}
             data-testid={`studio-card-${currentStudio.id}`}
           >
@@ -124,16 +124,16 @@ export function StudioCarousel({ studios, onStudioSelect }: StudioCarouselProps)
               </div>
               
               {/* Studio Icon/Logo */}
-              <div className="text-7xl mb-4 opacity-90 z-10">
+              <div className="text-5xl mb-3 opacity-90 z-10">
                 {theme.icon}
               </div>
               
               {/* Studio Name */}
-              <h2 className="text-4xl font-bold mb-2 text-center text-shadow-lg tracking-wide z-10">
+              <h2 className="text-3xl font-bold mb-1 text-center text-shadow-lg tracking-wide z-10">
                 {currentStudio.name}
               </h2>
               
-              <p className="text-lg opacity-90 font-medium z-10">STUDIOS</p>
+              <p className="text-sm opacity-90 font-medium z-10">STUDIOS</p>
               
               {/* Status Badge */}
               <div className="absolute top-4 right-4 bg-black bg-opacity-50 px-3 py-1 rounded-full">
@@ -177,11 +177,11 @@ export function StudioCarousel({ studios, onStudioSelect }: StudioCarouselProps)
       </GestureHandler>
 
       {/* Studio Indicators */}
-      <div className="flex justify-center space-x-2 mb-8">
+      <div className="flex justify-center space-x-2 mb-4">
         {studios.map((_, index) => (
           <button
             key={index}
-            className={`w-3 h-3 rounded-full transition-all touch-area ${
+            className={`w-2 h-2 rounded-full transition-all touch-area ${
               index === currentIndex ? 'bg-primary' : 'bg-muted-foreground/30'
             }`}
             onClick={() => setCurrentIndex(index)}
