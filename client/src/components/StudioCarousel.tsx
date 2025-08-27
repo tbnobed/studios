@@ -95,7 +95,7 @@ export function StudioCarousel({ studios, onStudioSelect }: StudioCarouselProps)
   return (
     <div className="h-full flex flex-col overflow-hidden">
       {/* Large Portrait Studio Card - Top Center */}
-      <div className="flex-1 flex items-center justify-center px-4 pt-4">
+      <div className="flex-1 flex items-center justify-center px-4 py-2">
         <GestureHandler
           onSwipeLeft={handleNext}
           onSwipeRight={handlePrevious}
@@ -113,7 +113,7 @@ export function StudioCarousel({ studios, onStudioSelect }: StudioCarouselProps)
 
           {/* Large Portrait Card (9:16 aspect ratio) */}
           <Card 
-            className="w-72 h-[420px] overflow-hidden cursor-pointer hover:border-primary/50 border-2 flex-shrink-0"
+            className="w-64 h-80 sm:w-72 sm:h-[420px] overflow-hidden cursor-pointer hover:border-primary/50 border-2 flex-shrink-0 max-h-[60vh]"
             onClick={() => onStudioSelect(currentStudio)}
             data-testid={`studio-card-${currentStudio.id}`}
           >
