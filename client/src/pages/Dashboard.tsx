@@ -387,12 +387,12 @@ export default function Dashboard() {
           )}
 
           {/* Video Content */}
-          <div className="flex-1 p-4 overflow-hidden" style={{ maxHeight: 'calc(100vh - 140px)' }}>
+          <div className="flex-1 p-2 overflow-hidden" style={{ maxHeight: 'calc(100vh - 140px)' }}>
             {!selectedStudio ? (
               <div className="h-full">
                 {/* Mobile Studio Carousel */}
                 <div className="lg:hidden h-full flex flex-col">
-                  <div className="text-center mb-4">
+                  <div className="text-center mb-2">
                     <h2 className="text-xl font-bold mb-1">OBTV Studios</h2>
                     <p className="text-sm text-muted-foreground">Select a studio to view live streams</p>
                   </div>

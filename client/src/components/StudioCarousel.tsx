@@ -225,7 +225,7 @@ export function StudioCarousel({ studios, onStudioSelect }: StudioCarouselProps)
                 onSwipeRight={handlePreviewPrevious}
                 className="w-full flex justify-center"
               >
-                <div className="grid grid-cols-3 gap-1 w-full max-w-xs mx-auto">
+                <div className="grid grid-cols-3 gap-2 w-full max-w-lg mx-auto">
                   {currentStudio.streams.slice(previewIndex, previewIndex + 6).map((stream) => (
                     <div
                       key={stream.id}
@@ -245,7 +245,7 @@ export function StudioCarousel({ studios, onStudioSelect }: StudioCarouselProps)
                           />
                         </div>
                         
-                        <CardContent className="p-1">
+                        <CardContent className="p-0.5">
                           <h4 className="font-medium text-xs truncate text-center" data-testid={`stream-name-${stream.id}`}>
                             {stream.name}
                           </h4>
