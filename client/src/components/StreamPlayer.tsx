@@ -24,7 +24,7 @@ export function StreamPlayer({
 }: StreamPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const sdkRef = useRef<any>(null);
-  const [currentStatus, setCurrentStatus] = useState<'online' | 'offline' | 'error'>(stream.status as 'online' | 'offline' | 'error');
+  const [currentStatus, setCurrentStatus] = useState<'online' | 'offline' | 'error'>('offline');
 
   useEffect(() => {
     if (!videoRef.current || !stream.streamUrl) return;
@@ -94,6 +94,7 @@ export function StreamPlayer({
             }
           };
           
+          console.log(`Starting video validation for: ${stream.name}`);
           setTimeout(checkVideoData, 500); // Start checking after 500ms
         } else {
           console.error('SRS SDK not loaded');
