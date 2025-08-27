@@ -311,15 +311,15 @@ export default function AdminPanel() {
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="users" className="flex items-center gap-2">
+            <TabsTrigger value="users" className="flex items-center gap-2" data-testid="tab-users">
               <UserPlus size={16} />
               Users
             </TabsTrigger>
-            <TabsTrigger value="streams" className="flex items-center gap-2">
+            <TabsTrigger value="streams" className="flex items-center gap-2" data-testid="tab-streams">
               <Video size={16} />
               Streams
             </TabsTrigger>
-            <TabsTrigger value="settings" className="flex items-center gap-2">
+            <TabsTrigger value="settings" className="flex items-center gap-2" data-testid="tab-settings">
               <Settings2 size={16} />
               Settings
             </TabsTrigger>
@@ -872,7 +872,7 @@ export default function AdminPanel() {
                           <div className="flex items-center gap-3">
                             <div 
                               className="w-4 h-4 rounded-full" 
-                              style={{ backgroundColor: studio.primaryColor }}
+                              style={{ backgroundColor: studio.colorCode || '#4A5568' }}
                             />
                             <div>
                               <h3 className="font-semibold">{studio.name}</h3>

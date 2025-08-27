@@ -129,14 +129,33 @@ export default function Dashboard() {
             <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wider mb-3">
               Admin
             </h3>
-            <Button
-              variant="secondary"
-              className="w-full touch-area"
-              data-testid="button-admin-panel"
-            >
-              <Settings className="mr-2" size={16} />
-              Manage Users
-            </Button>
+            <div className="space-y-2">
+              <Button
+                variant="secondary"
+                className="w-full touch-area"
+                onClick={() => window.location.href = '/admin'}
+                data-testid="button-manage-users"
+              >
+                <Settings className="mr-2" size={16} />
+                Manage Users
+              </Button>
+              <Button
+                variant="secondary"
+                className="w-full touch-area"
+                onClick={() => {
+                  window.location.href = '/admin';
+                  // Set the active tab to streams when navigating
+                  setTimeout(() => {
+                    const streamsTab = document.querySelector('[data-testid="tab-streams"]') as HTMLElement;
+                    if (streamsTab) streamsTab.click();
+                  }, 100);
+                }}
+                data-testid="button-manage-streams"
+              >
+                <Shield className="mr-2" size={16} />
+                Manage Streams
+              </Button>
+            </div>
           </div>
         )}
       </div>
