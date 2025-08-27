@@ -1,0 +1,187 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* OBTV Studio Manager Custom Color Palette */
+  --background: hsl(210, 20%, 8%);
+  --foreground: hsl(210, 40%, 90%);
+  --card: hsl(210, 20%, 12%);
+  --card-foreground: hsl(210, 40%, 85%);
+  --popover: hsl(210, 20%, 8%);
+  --popover-foreground: hsl(210, 40%, 90%);
+  
+  /* Primary: #033F63 - Indigo Dye */
+  --primary: hsl(204, 100%, 19%);
+  --primary-foreground: hsl(210, 40%, 98%);
+  
+  /* Secondary: #28666E - Dark Slate Gray */
+  --secondary: hsl(188, 43%, 29%);
+  --secondary-foreground: hsl(210, 40%, 98%);
+  
+  --muted: hsl(210, 20%, 15%);
+  --muted-foreground: hsl(210, 20%, 60%);
+  
+  /* Accent: #7C9885 - Cambridge Blue */
+  --accent: hsl(142, 14%, 51%);
+  --accent-foreground: hsl(210, 40%, 98%);
+  
+  --destructive: hsl(0, 84%, 60%);
+  --destructive-foreground: hsl(210, 40%, 98%);
+  --border: hsl(210, 20%, 20%);
+  --input: hsl(210, 20%, 15%);
+  --ring: hsl(204, 100%, 19%);
+  
+  /* Studio-specific colors */
+  --socal: hsl(48, 92%, 79%); /* #FEDC97 - Peach Yellow */
+  --plex: hsl(142, 14%, 51%); /* #7C9885 - Cambridge Blue */
+  --irving: hsl(65, 16%, 61%); /* #B5B682 - Sage */
+  --nashville: hsl(188, 43%, 29%); /* #28666E - Dark Slate Gray */
+  
+  --radius: 0.75rem;
+  --font-sans: 'Inter', system-ui, sans-serif;
+}
+
+.dark {
+  --background: hsl(210, 20%, 8%);
+  --foreground: hsl(210, 40%, 90%);
+  --card: hsl(210, 20%, 12%);
+  --card-foreground: hsl(210, 40%, 85%);
+  --popover: hsl(210, 20%, 8%);
+  --popover-foreground: hsl(210, 40%, 90%);
+  --primary: hsl(204, 100%, 19%);
+  --primary-foreground: hsl(210, 40%, 98%);
+  --secondary: hsl(188, 43%, 29%);
+  --secondary-foreground: hsl(210, 40%, 98%);
+  --muted: hsl(210, 20%, 15%);
+  --muted-foreground: hsl(210, 20%, 60%);
+  --accent: hsl(142, 14%, 51%);
+  --accent-foreground: hsl(210, 40%, 98%);
+  --destructive: hsl(0, 62%, 30%);
+  --destructive-foreground: hsl(210, 40%, 98%);
+  --border: hsl(210, 20%, 20%);
+  --input: hsl(210, 20%, 15%);
+  --ring: hsl(204, 100%, 19%);
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    font-family: var(--font-sans);
+  }
+}
+
+@layer components {
+  /* Studio gradient classes */
+  .studio-gradient-socal {
+    background: linear-gradient(135deg, hsl(48, 92%, 79%) 0%, hsl(48, 80%, 70%) 100%);
+  }
+  
+  .studio-gradient-plex {
+    background: linear-gradient(135deg, hsl(142, 14%, 51%) 0%, hsl(142, 20%, 45%) 100%);
+  }
+  
+  .studio-gradient-irving {
+    background: linear-gradient(135deg, hsl(65, 16%, 61%) 0%, hsl(65, 20%, 55%) 100%);
+  }
+  
+  .studio-gradient-nashville {
+    background: linear-gradient(135deg, hsl(188, 43%, 29%) 0%, hsl(188, 50%, 25%) 100%);
+  }
+  
+  /* Touch-friendly areas */
+  .touch-area {
+    @apply min-h-11 min-w-11;
+  }
+  
+  /* Video container aspect ratio */
+  .video-container {
+    aspect-ratio: 16 / 9;
+  }
+  
+  /* Live indicator animation */
+  .live-indicator {
+    animation: pulse-dot 2s ease-in-out infinite;
+  }
+  
+  @keyframes pulse-dot {
+    0%, 100% { opacity: 0.4; }
+    50% { opacity: 1; }
+  }
+  
+  /* Gesture hint animations */
+  .gesture-hint {
+    pointer-events: none;
+    opacity: 0.6;
+    animation: fadeInOut 3s ease-in-out infinite;
+  }
+  
+  @keyframes fadeInOut {
+    0%, 100% { opacity: 0.3; }
+    50% { opacity: 0.8; }
+  }
+  
+  /* Custom scrollbar */
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar-track {
+    @apply bg-muted rounded-full;
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    @apply bg-border rounded-full hover:bg-accent;
+  }
+}
+
+@layer utilities {
+  /* Studio color utilities */
+  .text-socal {
+    color: hsl(48, 92%, 79%);
+  }
+  
+  .text-plex {
+    color: hsl(142, 14%, 51%);
+  }
+  
+  .text-irving {
+    color: hsl(65, 16%, 61%);
+  }
+  
+  .text-nashville {
+    color: hsl(188, 43%, 29%);
+  }
+  
+  .bg-socal {
+    background-color: hsl(48, 92%, 79%);
+  }
+  
+  .bg-plex {
+    background-color: hsl(142, 14%, 51%);
+  }
+  
+  .bg-irving {
+    background-color: hsl(65, 16%, 61%);
+  }
+  
+  .bg-nashville {
+    background-color: hsl(188, 43%, 29%);
+  }
+  
+  /* Hide scrollbar but keep functionality */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+}
