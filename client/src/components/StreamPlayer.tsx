@@ -29,12 +29,23 @@ export function StreamPlayer({
   useEffect(() => {
     if (!videoRef.current || !stream.streamUrl) return;
 
+    // Reset status when stream changes
+    setCurrentStatus('offline');
+
     const initializeStream = async () => {
       try {
         // Clean up existing connection
         if (sdkRef.current) {
-          sdkRef.current.close();
+          try {
+            sdkRef.current.close();
+          } catch (e) {
+            console.warn('Error closing existing connection:', e);
+          }
+          sdkRef.current = null;
         }
+
+        // Add small delay to prevent conflicts
+        await new Promise(resolve => setTimeout(resolve, Math.random() * 200));
 
         // Initialize SRS SDK
         if (window.SrsRtcWhipWhepAsync) {
@@ -80,8 +91,15 @@ export function StreamPlayer({
 
     return () => {
       if (sdkRef.current) {
-        sdkRef.current.close();
+        try {
+          sdkRef.current.close();
+        } catch (e) {
+          console.warn('Error during cleanup:', e);
+        }
         sdkRef.current = null;
+      }
+      if (videoRef.current) {
+        videoRef.current.srcObject = null;
       }
     };
   }, [stream.streamUrl, onStatusChange]);
