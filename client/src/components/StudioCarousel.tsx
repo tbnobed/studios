@@ -29,8 +29,8 @@ export function StudioCarousel({ studios, onStudioSelect }: StudioCarouselProps)
   // Calculate actual available heights
   const headerHeight = 120; // Approximate header height
   const availableHeight = viewportHeight - headerHeight;
-  const studioCardHeight = Math.floor(availableHeight * 0.75);
-  const previewHeight = Math.floor(availableHeight * 0.25);
+  const studioCardHeight = Math.floor(availableHeight * 0.6);  // Card gets 60% of available space
+  const previewHeight = Math.floor(availableHeight * 0.4);    // Previews get 40% of available space
 
   const handlePrevious = () => {
     setCurrentIndex((prev) => (prev === 0 ? studios.length - 1 : prev - 1));
