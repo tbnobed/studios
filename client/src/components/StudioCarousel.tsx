@@ -93,9 +93,11 @@ export function StudioCarousel({ studios, onStudioSelect }: StudioCarouselProps)
   }
 
   return (
-    <div className="h-full flex flex-col overflow-hidden">
+    <div className="h-full flex flex-col overflow-hidden bg-gradient-to-br from-gray-900 via-slate-800 to-black relative">
+      {/* Glossy overlay effect */}
+      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent pointer-events-none"></div>
       {/* Large Portrait Studio Card - Top Center */}
-      <div className="flex-1 flex items-center justify-center px-2 py-1">
+      <div className="flex-1 flex items-center justify-center px-2 py-1 relative z-10">
         <GestureHandler
           onSwipeLeft={handleNext}
           onSwipeRight={handlePrevious}
@@ -188,7 +190,7 @@ export function StudioCarousel({ studios, onStudioSelect }: StudioCarouselProps)
       </div>
 
       {/* Studio Indicators */}
-      <div className="flex justify-center space-x-2 py-1 flex-shrink-0">
+      <div className="flex justify-center space-x-2 py-1 flex-shrink-0 relative z-10">
         {studios.map((_, index) => (
           <button
             key={index}
@@ -202,7 +204,7 @@ export function StudioCarousel({ studios, onStudioSelect }: StudioCarouselProps)
       </div>
 
       {/* Small Horizontal Stream Preview Carousel - Bottom */}
-      <div className="flex-shrink-0 pb-2">
+      <div className="flex-shrink-0 pb-2 relative z-10">
         <div className="px-2">
           <div className="flex items-center space-x-2">
             {/* Previous Button */}
