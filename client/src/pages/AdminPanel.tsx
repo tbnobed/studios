@@ -39,8 +39,10 @@ export default function AdminPanel() {
 
   const [isCreateUserOpen, setIsCreateUserOpen] = useState(false);
   const [isCreateStreamOpen, setIsCreateStreamOpen] = useState(false);
+  const [isEditStreamOpen, setIsEditStreamOpen] = useState(false);
   const [selectedStudioForStreams, setSelectedStudioForStreams] = useState<string>("");
   const [activeTab, setActiveTab] = useState("users");
+  const [editingStream, setEditingStream] = useState<Stream | null>(null);
 
   // Fetch all users (admin only)
   const { data: users = [], isLoading: usersLoading } = useQuery<UserWithPermissions[]>({
@@ -158,6 +160,32 @@ export default function AdminPanel() {
     },
   });
 
+  // Update stream mutation
+  const updateStreamMutation = useMutation({
+    mutationFn: async ({ streamId, updateData }: { streamId: string; updateData: Partial<Stream> }) => {
+      const response = await apiRequest("PATCH", `/api/admin/streams/${streamId}`, updateData, {
+        headers: getAuthHeaders(),
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/studios-with-streams"] });
+      setIsEditStreamOpen(false);
+      setEditingStream(null);
+      toast({
+        title: "Stream Updated",
+        description: "Stream has been successfully updated",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Failed to Update Stream",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   // Delete stream mutation
   const deleteStreamMutation = useMutation({
     mutationFn: async (streamId: string) => {
@@ -222,6 +250,29 @@ export default function AdminPanel() {
     if (window.confirm("Are you sure you want to delete this user?")) {
       deleteUserMutation.mutate(userId);
     }
+  };
+
+  const handleEditStream = (stream: Stream) => {
+    setEditingStream(stream);
+    setIsEditStreamOpen(true);
+  };
+
+  const handleUpdateStream = () => {
+    if (!editingStream) return;
+
+    const updateData = {
+      name: editingStream.name,
+      description: editingStream.description,
+      streamUrl: editingStream.streamUrl,
+      resolution: editingStream.resolution,
+      fps: editingStream.fps,
+      isActive: editingStream.isActive,
+    };
+
+    updateStreamMutation.mutate({ 
+      streamId: editingStream.id, 
+      updateData 
+    });
   };
 
   const handleDeleteStream = (streamId: string) => {
@@ -594,6 +645,119 @@ export default function AdminPanel() {
                 </div>
               </CardHeader>
               
+              {/* Edit Stream Dialog */}
+              <Dialog open={isEditStreamOpen} onOpenChange={setIsEditStreamOpen}>
+                <DialogContent className="sm:max-w-md">
+                  <DialogHeader>
+                    <DialogTitle>Edit Stream</DialogTitle>
+                  </DialogHeader>
+                  
+                  {editingStream && (
+                    <div className="space-y-4">
+                      <div>
+                        <Label htmlFor="editStreamName">Stream Name</Label>
+                        <Input
+                          id="editStreamName"
+                          value={editingStream.name}
+                          onChange={(e) => setEditingStream({ ...editingStream, name: e.target.value })}
+                          placeholder="Main Camera"
+                          data-testid="input-edit-stream-name"
+                        />
+                      </div>
+
+                      <div>
+                        <Label htmlFor="editStreamDescription">Description</Label>
+                        <Input
+                          id="editStreamDescription"
+                          value={editingStream.description || ""}
+                          onChange={(e) => setEditingStream({ ...editingStream, description: e.target.value })}
+                          placeholder="Primary studio stream"
+                          data-testid="input-edit-stream-description"
+                        />
+                      </div>
+
+                      <div>
+                        <Label htmlFor="editStreamUrl">Stream URL</Label>
+                        <Input
+                          id="editStreamUrl"
+                          value={editingStream.streamUrl}
+                          onChange={(e) => setEditingStream({ ...editingStream, streamUrl: e.target.value })}
+                          placeholder="http://cdn1.obedtv.live:2022/rtc/v1/whep/?app=live&stream=..."
+                          data-testid="input-edit-stream-url"
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label htmlFor="editResolution">Resolution</Label>
+                          <Select 
+                            value={editingStream.resolution || "1080p"} 
+                            onValueChange={(value) => setEditingStream({ ...editingStream, resolution: value })}
+                          >
+                            <SelectTrigger data-testid="select-edit-resolution">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="720p">720p HD</SelectItem>
+                              <SelectItem value="1080p">1080p Full HD</SelectItem>
+                              <SelectItem value="1440p">1440p QHD</SelectItem>
+                              <SelectItem value="4K">4K Ultra HD</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        
+                        <div>
+                          <Label htmlFor="editFps">Frame Rate</Label>
+                          <Select 
+                            value={(editingStream.fps || 30).toString()} 
+                            onValueChange={(value) => setEditingStream({ ...editingStream, fps: parseInt(value) })}
+                          >
+                            <SelectTrigger data-testid="select-edit-fps">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="24">24 fps</SelectItem>
+                              <SelectItem value="30">30 fps</SelectItem>
+                              <SelectItem value="60">60 fps</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center space-x-2">
+                        <input
+                          type="checkbox"
+                          id="editIsActive"
+                          checked={editingStream.isActive}
+                          onChange={(e) => setEditingStream({ ...editingStream, isActive: e.target.checked })}
+                          className="rounded"
+                          data-testid="checkbox-edit-stream-active"
+                        />
+                        <Label htmlFor="editIsActive">Active Stream</Label>
+                      </div>
+                    </div>
+                  )}
+                  
+                  <div className="flex gap-2 mt-6">
+                    <Button 
+                      onClick={handleUpdateStream}
+                      disabled={updateStreamMutation.isPending}
+                      className="flex-1"
+                      data-testid="button-update-stream"
+                    >
+                      {updateStreamMutation.isPending ? "Updating..." : "Update Stream"}
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      onClick={() => setIsEditStreamOpen(false)}
+                      className="flex-1"
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
+              
               <CardContent>
                 <div className="space-y-4">
                   {studiosWithStreams.map((studio) => (
@@ -650,6 +814,7 @@ export default function AdminPanel() {
                                     variant="ghost"
                                     size="sm"
                                     className="touch-area"
+                                    onClick={() => handleEditStream(stream)}
                                     data-testid={`button-edit-stream-${stream.id}`}
                                   >
                                     <Edit size={16} />
