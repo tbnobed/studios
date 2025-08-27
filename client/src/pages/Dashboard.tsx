@@ -110,7 +110,7 @@ export default function Dashboard() {
   };
 
   const StudioSidebar = () => (
-    <div className={`${sidebarCollapsed ? 'w-16' : 'w-64'} h-full glossy-card pattern-overlay border-r border-border transition-all duration-300`}>
+    <div className={`${sidebarCollapsed ? 'w-16' : 'w-64'} h-full bg-card border-r border-border transition-all duration-300`}>
       <div className="p-4">
         <div className="flex items-center justify-between mb-4">
           {!sidebarCollapsed && (
@@ -217,7 +217,25 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="h-screen flex flex-col">
+    <div className="h-screen flex flex-col bg-background">
+      {/* Mobile Header */}
+      <header className="md:hidden px-4 py-3 flex items-center justify-between shrink-0 absolute top-0 left-0 right-0 z-10">
+        <div className="flex items-center space-x-2">
+          <span className="text-sm font-medium">
+            {user?.firstName} {user?.lastName}
+          </span>
+        </div>
+        
+        <Button
+          variant="ghost"
+          size="sm"
+          className="touch-area text-destructive hover:text-destructive"
+          onClick={handleLogout}
+          data-testid="button-mobile-logout"
+        >
+          <LogOut size={16} />
+        </Button>
+      </header>
 
       {/* Desktop Header */}
       <header className="hidden md:flex bg-card border-b border-border px-4 py-3 items-center justify-between shrink-0">
@@ -253,7 +271,7 @@ export default function Dashboard() {
             
             {/* User Menu Dropdown */}
             {userMenuOpen && (
-              <Card className="absolute top-12 right-0 w-48 z-50 shadow-xl glossy-card">
+              <Card className="absolute top-12 right-0 w-48 z-50 shadow-xl">
                 <CardContent className="p-2">
                   <div className="px-3 py-2 border-b border-border">
                     <p className="font-medium text-sm">{user?.username}</p>
@@ -297,7 +315,7 @@ export default function Dashboard() {
         </div>
       </header>
 
-      <div className="flex-1 flex">
+      <div className="flex-1 flex pt-16 md:pt-0">
         {/* Desktop Sidebar */}
         <div className="hidden lg:block">
           <StudioSidebar />
