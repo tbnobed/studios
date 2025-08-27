@@ -189,7 +189,7 @@ export default function Dashboard() {
   return (
     <div className="h-screen flex flex-col bg-background">
       {/* Header */}
-      <header className="bg-card border-b border-border px-4 py-3 flex items-center justify-between shrink-0">
+      <header className="hidden md:flex bg-card border-b border-border px-4 py-3 items-center justify-between shrink-0">
         <div className="flex items-center space-x-3">
           <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
             <SheetTrigger asChild>
