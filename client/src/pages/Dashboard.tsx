@@ -217,9 +217,11 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="h-screen flex flex-col bg-background">
+    <div className="h-screen flex flex-col bg-gradient-to-br from-gray-900 via-slate-800 to-black relative">
+      {/* Glossy overlay effect */}
+      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent pointer-events-none"></div>
       {/* Mobile Header */}
-      <header className="md:hidden px-4 py-3 flex items-center justify-between shrink-0 absolute top-0 left-0 right-0 z-10">
+      <header className="md:hidden px-4 py-3 flex items-center justify-between shrink-0 absolute top-0 left-0 right-0 z-20">
         <div className="flex items-center space-x-2">
           <span className="text-sm font-medium">
             {user?.firstName} {user?.lastName}
@@ -238,7 +240,7 @@ export default function Dashboard() {
       </header>
 
       {/* Desktop Header */}
-      <header className="hidden md:flex bg-card border-b border-border px-4 py-3 items-center justify-between shrink-0">
+      <header className="hidden md:flex bg-card/80 backdrop-blur border-b border-border px-4 py-3 items-center justify-between shrink-0 relative z-20">
         <div className="flex items-center space-x-3">
           <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
             <SheetTrigger asChild>
@@ -315,7 +317,7 @@ export default function Dashboard() {
         </div>
       </header>
 
-      <div className="flex-1 flex pt-16 md:pt-0">
+      <div className="flex-1 flex pt-16 md:pt-0 relative z-10">
         {/* Desktop Sidebar */}
         <div className="hidden lg:block">
           <StudioSidebar />

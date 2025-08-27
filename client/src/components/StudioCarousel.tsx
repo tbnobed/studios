@@ -93,9 +93,7 @@ export function StudioCarousel({ studios, onStudioSelect }: StudioCarouselProps)
   }
 
   return (
-    <div className="h-full flex flex-col overflow-hidden bg-gradient-to-br from-gray-900 via-slate-800 to-black relative">
-      {/* Glossy overlay effect */}
-      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent pointer-events-none"></div>
+    <div className="h-full flex flex-col overflow-hidden">
       {/* Large Portrait Studio Card - Top Center */}
       <div className="flex-1 flex items-center justify-center px-2 py-1 relative z-10">
         <GestureHandler
