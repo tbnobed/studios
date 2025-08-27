@@ -225,9 +225,16 @@ export function StudioCarousel({ studios, onStudioSelect }: StudioCarouselProps)
                         className="w-full h-full"
                         controls={false}
                         autoPlay={true}
+                        showOverlay={false}
                         onStatusChange={(status) => handleStreamStatusChange(stream.id, status)}
                       />
                     </div>
+                    
+                    <CardContent className="p-2">
+                      <h4 className="font-medium text-xs truncate" data-testid={`stream-name-${stream.id}`}>
+                        {stream.name}
+                      </h4>
+                    </CardContent>
                   </Card>
                 </div>
               ))}

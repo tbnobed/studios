@@ -6,6 +6,7 @@ interface StreamPlayerProps {
   className?: string;
   controls?: boolean;
   autoPlay?: boolean;
+  showOverlay?: boolean;
   onStatusChange?: (status: 'online' | 'offline' | 'error') => void;
 }
 
@@ -20,6 +21,7 @@ export function StreamPlayer({
   className = "", 
   controls = true, 
   autoPlay = false,
+  showOverlay = true,
   onStatusChange 
 }: StreamPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -124,19 +126,23 @@ export function StreamPlayer({
       />
       
       {/* Stream overlay info */}
-      <div className="absolute top-2 left-2 flex items-center space-x-2">
-        <span className="bg-black/60 text-white px-2 py-1 rounded text-xs font-medium">
-          <span className={`w-2 h-2 rounded-full inline-block mr-1 ${
-            currentStatus === 'online' ? 'bg-green-500 live-indicator' : 
-            currentStatus === 'error' ? 'bg-red-500' : 'bg-yellow-500'
-          }`}></span>
-          {currentStatus === 'online' ? 'LIVE' : currentStatus.toUpperCase()}
-        </span>
-      </div>
-      
-      <div className="absolute bottom-2 left-2 bg-black/60 text-white px-2 py-1 rounded text-xs">
-        {stream.resolution} • {stream.fps}fps
-      </div>
+      {showOverlay && (
+        <>
+          <div className="absolute top-2 left-2 flex items-center space-x-2">
+            <span className="bg-black/60 text-white px-2 py-1 rounded text-xs font-medium">
+              <span className={`w-2 h-2 rounded-full inline-block mr-1 ${
+                currentStatus === 'online' ? 'bg-green-500 live-indicator' : 
+                currentStatus === 'error' ? 'bg-red-500' : 'bg-yellow-500'
+              }`}></span>
+              {currentStatus === 'online' ? 'LIVE' : currentStatus.toUpperCase()}
+            </span>
+          </div>
+          
+          <div className="absolute bottom-2 left-2 bg-black/60 text-white px-2 py-1 rounded text-xs">
+            {stream.resolution} • {stream.fps}fps
+          </div>
+        </>
+      )}
     </div>
   );
 }
