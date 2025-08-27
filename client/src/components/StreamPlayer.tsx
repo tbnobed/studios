@@ -52,15 +52,22 @@ export function StreamPlayer({
           // Start playing the stream
           await sdkRef.current.play(stream.streamUrl);
 
-          // Try to play video again after WebRTC connection
-          if (videoRef.current && autoPlay) {
-            setTimeout(() => {
-              videoRef.current?.play().catch(console.error);
-            }, 500);
-          }
-
-          setCurrentStatus('online');
-          onStatusChange?.('online');
+          // Wait a moment to see if we actually get video data
+          setTimeout(() => {
+            if (videoRef.current && videoRef.current.videoWidth > 0) {
+              setCurrentStatus('online');
+              onStatusChange?.('online');
+              
+              // Try to play video after confirming stream
+              if (autoPlay) {
+                videoRef.current.play().catch(console.error);
+              }
+            } else {
+              console.warn('No video data received for stream:', stream.name);
+              setCurrentStatus('error');
+              onStatusChange?.('error');
+            }
+          }, 3000); // Wait 3 seconds for video data
         } else {
           console.error('SRS SDK not loaded');
           setCurrentStatus('error');
