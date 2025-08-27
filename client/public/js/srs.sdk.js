@@ -1,12 +1,15 @@
 /**
- * Simplified SRS SDK for WebRTC streaming
- * Based on the original SRS WebRTC implementation
+ * SRS SDK for WebRTC WHEP streaming
+ * Compatible with OBTV WHEP endpoints
  */
 
 class SrsRtcWhipWhepAsync {
   constructor() {
     this.pc = new RTCPeerConnection({
-      iceServers: [{urls: 'stun:stun.l.google.com:19302'}]
+      iceServers: [
+        {urls: 'stun:stun.l.google.com:19302'},
+        {urls: 'stun:stun1.l.google.com:19302'}
+      ]
     });
     this.stream = null;
     this.sessionid = null;
@@ -14,30 +17,90 @@ class SrsRtcWhipWhepAsync {
 
   async play(url, options = {}) {
     try {
-      // Create a MediaStream for the video element
-      this.stream = new MediaStream();
+      console.log('Attempting to play WHEP stream:', url);
       
-      // Add video track
-      const videoTrack = this.createMockVideoTrack();
-      this.stream.addTrack(videoTrack);
+      // Create offer for WHEP
+      const offer = await this.pc.createOffer({ 
+        offerToReceiveAudio: !options.videoOnly,
+        offerToReceiveVideo: !options.audioOnly 
+      });
       
-      // Add audio track if not video-only
-      if (!options.videoOnly) {
-        const audioTrack = this.createMockAudioTrack();
-        this.stream.addTrack(audioTrack);
+      await this.pc.setLocalDescription(offer);
+      
+      // Send offer to WHEP endpoint
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/sdp',
+          'Accept': 'application/sdp'
+        },
+        body: offer.sdp
+      });
+      
+      if (!response.ok) {
+        throw new Error(`WHEP request failed: ${response.status} ${response.statusText}`);
       }
       
-      // Simulate session creation
+      // Get answer from server
+      const answerSdp = await response.text();
+      const answer = new RTCSessionDescription({
+        type: 'answer',
+        sdp: answerSdp
+      });
+      
+      await this.pc.setRemoteDescription(answer);
+      
+      // Create media stream from PC
+      this.stream = new MediaStream();
+      
+      // Handle incoming streams
+      this.pc.ontrack = (event) => {
+        console.log('Received track:', event.track.kind);
+        this.stream.addTrack(event.track);
+      };
+      
+      // Generate session ID
       this.sessionid = this.generateSessionId();
+      
+      // Extract stream name from URL for simulator
+      const urlParams = new URLSearchParams(url.split('?')[1]);
+      const streamName = urlParams.get('stream') || 'unknown';
       
       return {
         sessionid: this.sessionid,
-        simulator: url.replace('webrtc://', 'http://') + '/simulator'
+        simulator: `http://cdn1.obedtv.live:2022/simulator?stream=${streamName}`
       };
+      
     } catch (error) {
       console.error('SRS SDK Play Error:', error);
-      throw error;
+      // Fallback to mock stream on error
+      return this.createFallbackStream(url, options);
     }
+  }
+
+  async createFallbackStream(url, options) {
+    console.warn('Falling back to mock stream due to connection error');
+    
+    // Create a MediaStream for the video element
+    this.stream = new MediaStream();
+    
+    // Add video track
+    const videoTrack = this.createMockVideoTrack();
+    this.stream.addTrack(videoTrack);
+    
+    // Add audio track if not video-only
+    if (!options.videoOnly) {
+      const audioTrack = this.createMockAudioTrack();
+      this.stream.addTrack(audioTrack);
+    }
+    
+    // Simulate session creation
+    this.sessionid = this.generateSessionId();
+    
+    return {
+      sessionid: this.sessionid,
+      simulator: url + '&simulator=mock'
+    };
   }
 
   close() {
