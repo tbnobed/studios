@@ -3,7 +3,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { StreamPlayer } from "./StreamPlayer";
 import { GestureHandler } from "./GestureHandler";
-import { ChevronLeft, ChevronRight, Camera } from "lucide-react";
+import { ChevronLeft, ChevronRight, Camera, Play } from "lucide-react";
 import { StudioWithStreams } from "@shared/schema";
 
 interface StudioCarouselProps {
@@ -78,52 +78,53 @@ export function StudioCarousel({ studios, onStudioSelect }: StudioCarouselProps)
   }
 
   return (
-    <div className="h-full flex flex-col justify-center px-4">
-      {/* Studio Name Card - Top Center */}
-      <GestureHandler
-        onSwipeLeft={handleNext}
-        onSwipeRight={handlePrevious}
-        className="flex-shrink-0 mb-8"
-      >
-        <div className="flex items-center justify-center space-x-4">
+    <div className="h-full flex flex-col overflow-hidden">
+      {/* Large Portrait Studio Card - Top Center */}
+      <div className="flex-1 flex items-center justify-center px-4 pt-4">
+        <GestureHandler
+          onSwipeLeft={handleNext}
+          onSwipeRight={handlePrevious}
+          className="flex items-center space-x-4"
+        >
           <Button
             variant="ghost"
             size="sm"
             onClick={handlePrevious}
-            className="touch-area"
+            className="touch-area flex-shrink-0"
             data-testid="button-previous-studio"
           >
             <ChevronLeft size={20} />
           </Button>
 
+          {/* Large Portrait Card (9:16 aspect ratio) */}
           <Card 
-            className="w-72 h-24 overflow-hidden cursor-pointer hover:border-primary/50 border-2"
+            className="w-64 h-96 overflow-hidden cursor-pointer hover:border-primary/50 border-2 flex-shrink-0"
             onClick={() => onStudioSelect(currentStudio)}
             data-testid={`studio-card-${currentStudio.id}`}
           >
-            <div className={`w-full h-full bg-gradient-to-r ${theme.gradient} relative flex items-center justify-center text-white`}>
+            <div className={`w-full h-full bg-gradient-to-br ${theme.gradient} relative flex flex-col items-center justify-center text-white`}>
               {/* Studio Icon and Name */}
-              <div className="flex items-center space-x-3">
-                <div className="text-2xl opacity-90">
+              <div className="flex flex-col items-center space-y-4 z-10">
+                <div className="text-6xl opacity-90">
                   {theme.icon}
                 </div>
                 
                 <div className="text-center">
-                  <h2 className="text-2xl font-bold text-shadow-lg tracking-wide">
+                  <h2 className="text-4xl font-bold text-shadow-lg tracking-wide mb-2">
                     {currentStudio.name}
                   </h2>
-                  <p className="text-xs opacity-90 font-medium">STUDIOS</p>
+                  <p className="text-lg opacity-90 font-medium">STUDIOS</p>
                 </div>
               </div>
               
               {/* Status Badge */}
-              <div className="absolute top-2 right-2 bg-black bg-opacity-50 px-2 py-1 rounded-full">
-                <div className="flex items-center space-x-1">
-                  <div className={`w-1.5 h-1.5 rounded-full ${
+              <div className="absolute top-4 right-4 bg-black bg-opacity-60 px-3 py-2 rounded-full">
+                <div className="flex items-center space-x-2">
+                  <div className={`w-2 h-2 rounded-full ${
                     getStudioStatus(currentStudio) === 'online' ? 'bg-green-400' : 
                     getStudioStatus(currentStudio) === 'loading' ? 'bg-yellow-400' : 'bg-red-400'
                   }`}></div>
-                  <span className="text-xs uppercase font-medium">
+                  <span className="text-sm uppercase font-medium">
                     {getStudioStatus(currentStudio) === 'online' ? 'LIVE' : 
                      getStudioStatus(currentStudio) === 'loading' ? 'LOADING' : 'OFFLINE'}
                   </span>
@@ -131,11 +132,16 @@ export function StudioCarousel({ studios, onStudioSelect }: StudioCarouselProps)
               </div>
 
               {/* Stream Count Badge */}
-              <div className="absolute bottom-2 left-2 bg-black bg-opacity-50 px-2 py-1 rounded-full">
-                <div className="flex items-center space-x-1">
-                  <Camera size={12} />
-                  <span className="text-xs font-medium">{currentStudio.streams.length}</span>
+              <div className="absolute bottom-4 left-4 bg-black bg-opacity-60 px-3 py-2 rounded-full">
+                <div className="flex items-center space-x-2">
+                  <Camera size={16} />
+                  <span className="text-sm font-medium">{currentStudio.streams.length}</span>
                 </div>
+              </div>
+
+              {/* Background Pattern */}
+              <div className="absolute inset-0 opacity-10">
+                <div className="w-full h-full bg-gradient-to-t from-black/50 via-transparent to-black/20"></div>
               </div>
             </div>
           </Card>
@@ -144,16 +150,16 @@ export function StudioCarousel({ studios, onStudioSelect }: StudioCarouselProps)
             variant="ghost"
             size="sm"
             onClick={handleNext}
-            className="touch-area"
+            className="touch-area flex-shrink-0"
             data-testid="button-next-studio"
           >
             <ChevronRight size={20} />
           </Button>
-        </div>
-      </GestureHandler>
+        </GestureHandler>
+      </div>
 
       {/* Studio Indicators */}
-      <div className="flex justify-center space-x-2 mb-8 flex-shrink-0">
+      <div className="flex justify-center space-x-2 py-2 flex-shrink-0">
         {studios.map((_, index) => (
           <button
             key={index}
@@ -166,13 +172,11 @@ export function StudioCarousel({ studios, onStudioSelect }: StudioCarouselProps)
         ))}
       </div>
 
-      {/* Stream Preview Carousel - Bottom Horizontal */}
-      <div className="flex-1 flex flex-col justify-end">
-        <div className="mb-4">
-          <h3 className="text-lg font-bold mb-2 text-center">Live Streams</h3>
-          
+      {/* Small Horizontal Stream Preview Carousel - Bottom */}
+      <div className="flex-shrink-0 pb-4">
+        <div className="px-4">
           <div className="overflow-x-auto scrollbar-hide">
-            <div className="flex space-x-3 px-4" style={{ minWidth: 'max-content' }}>
+            <div className="flex space-x-3" style={{ minWidth: 'max-content' }}>
               {currentStudio.streams.map((stream) => (
                 <div
                   key={stream.id}
@@ -180,7 +184,7 @@ export function StudioCarousel({ studios, onStudioSelect }: StudioCarouselProps)
                   onClick={() => handleStreamClick(stream)}
                   data-testid={`stream-preview-${stream.id}`}
                 >
-                  <Card className="w-32 overflow-hidden border-2 hover:border-primary/50">
+                  <Card className="w-28 overflow-hidden border-2 hover:border-primary/50">
                     <div className="aspect-video relative bg-black">
                       <StreamPlayer
                         stream={stream}
@@ -191,16 +195,23 @@ export function StudioCarousel({ studios, onStudioSelect }: StudioCarouselProps)
                       />
                       
                       {/* Stream Status Overlay */}
-                      <div className="absolute top-1 right-1 bg-black bg-opacity-60 px-1 py-0.5 rounded-full">
+                      <div className="absolute top-1 right-1 bg-black bg-opacity-70 px-1 py-0.5 rounded">
                         <div className="flex items-center space-x-1">
-                          <div className={`w-1.5 h-1.5 rounded-full ${
+                          <div className={`w-1 h-1 rounded-full ${
                             streamStatuses[stream.id] === 'online' ? 'bg-green-500' : 
                             streamStatuses[stream.id] === 'error' ? 'bg-red-500' : 'bg-yellow-500'
                           }`}></div>
                           <span className="text-xs text-white font-medium">
                             {streamStatuses[stream.id] === 'online' ? 'LIVE' : 
-                             streamStatuses[stream.id] === 'error' ? 'ERROR' : 'LOAD'}
+                             streamStatuses[stream.id] === 'error' ? 'ERR' : 'LOAD'}
                           </span>
+                        </div>
+                      </div>
+
+                      {/* Play Button Overlay */}
+                      <div className="absolute inset-0 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity bg-black bg-opacity-30">
+                        <div className="w-8 h-8 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
+                          <Play size={12} className="text-white ml-0.5" />
                         </div>
                       </div>
                     </div>
@@ -219,7 +230,7 @@ export function StudioCarousel({ studios, onStudioSelect }: StudioCarouselProps)
         </div>
 
         {/* Enter Studio Button */}
-        <div className="text-center mb-4 flex-shrink-0">
+        <div className="text-center mt-3">
           <Button
             onClick={() => onStudioSelect(currentStudio)}
             className="touch-area"
