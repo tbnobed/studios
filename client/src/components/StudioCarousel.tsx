@@ -95,11 +95,11 @@ export function StudioCarousel({ studios, onStudioSelect }: StudioCarouselProps)
   return (
     <div className="h-full flex flex-col overflow-hidden">
       {/* Large Portrait Studio Card - Top Center */}
-      <div className="flex-1 flex items-center justify-center px-4 py-2">
+      <div className="flex-1 flex items-center justify-center px-2 py-1">
         <GestureHandler
           onSwipeLeft={handleNext}
           onSwipeRight={handlePrevious}
-          className="flex items-center space-x-4"
+          className="flex items-center space-x-2"
         >
           <Button
             variant="ghost"
@@ -113,7 +113,7 @@ export function StudioCarousel({ studios, onStudioSelect }: StudioCarouselProps)
 
           {/* Large Portrait Card (9:16 aspect ratio) */}
           <Card 
-            className="w-64 h-80 sm:w-72 sm:h-[420px] overflow-hidden cursor-pointer hover:border-primary/50 border-2 flex-shrink-0 max-h-[60vh]"
+            className="w-72 h-[420px] overflow-hidden cursor-pointer hover:border-primary/50 border-2 flex-shrink-0"
             onClick={() => onStudioSelect(currentStudio)}
             data-testid={`studio-card-${currentStudio.id}`}
           >
@@ -188,7 +188,7 @@ export function StudioCarousel({ studios, onStudioSelect }: StudioCarouselProps)
       </div>
 
       {/* Studio Indicators */}
-      <div className="flex justify-center space-x-2 py-2 flex-shrink-0">
+      <div className="flex justify-center space-x-2 py-1 flex-shrink-0">
         {studios.map((_, index) => (
           <button
             key={index}
@@ -202,8 +202,8 @@ export function StudioCarousel({ studios, onStudioSelect }: StudioCarouselProps)
       </div>
 
       {/* Small Horizontal Stream Preview Carousel - Bottom */}
-      <div className="flex-shrink-0 pb-4">
-        <div className="px-4">
+      <div className="flex-shrink-0 pb-2">
+        <div className="px-2">
           <div className="flex items-center space-x-2">
             {/* Previous Button */}
             {previewIndex > 0 && (
@@ -260,7 +260,7 @@ export function StudioCarousel({ studios, onStudioSelect }: StudioCarouselProps)
         </div>
 
         {/* Enter Studio Button */}
-        <div className="text-center mt-3">
+        <div className="text-center mt-2">
           <Button
             onClick={() => onStudioSelect(currentStudio)}
             className="touch-area"
