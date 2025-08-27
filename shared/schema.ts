@@ -135,10 +135,14 @@ export type InsertUserStudioPermission = z.infer<typeof insertUserStudioPermissi
 export type StudioWithStreams = Studio & {
   streams: Stream[];
   userPermissions?: UserStudioPermission[];
+  primaryColor?: string; // Alias for colorCode for backward compatibility
 };
 
 export type UserWithPermissions = User & {
-  studioPermissions: (UserStudioPermission & {
+  permissions?: (UserStudioPermission & {
+    studio: Studio;
+  })[];
+  studioPermissions?: (UserStudioPermission & {
     studio: Studio;
   })[];
 };

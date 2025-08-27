@@ -212,10 +212,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/admin/studios", requireAuth, requireAdmin, async (req, res) => {
     try {
       const studios = await storage.getAllStudios();
-      res.json(studios);
+      const studiosWithPrimaryColor = studios.map(studio => ({
+        ...studio,
+        primaryColor: studio.colorCode || '#4A5568' // Provide primaryColor alias
+      }));
+      res.json(studiosWithPrimaryColor);
     } catch (error) {
       console.error("Error fetching all studios:", error);
       res.status(500).json({ message: "Failed to fetch studios" });
+    }
+  });
+
+  app.get("/api/admin/studios-with-streams", requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const studios = await storage.getAllStudios();
+      const studiosWithStreams = await Promise.all(
+        studios.map(async (studio) => {
+          const streams = await storage.getStreamsByStudio(studio.id);
+          return { 
+            ...studio, 
+            streams, 
+            primaryColor: studio.colorCode || '#4A5568' // Provide primaryColor alias
+          };
+        })
+      );
+      res.json(studiosWithStreams);
+    } catch (error) {
+      console.error("Error fetching studios with streams:", error);
+      res.status(500).json({ message: "Failed to fetch studios with streams" });
     }
   });
 
@@ -238,6 +262,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error creating stream:", error);
       res.status(500).json({ message: "Failed to create stream" });
+    }
+  });
+
+  app.patch("/api/admin/streams/:id", requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const updateData = req.body;
+      const stream = await storage.updateStream(id, updateData);
+      res.json(stream);
+    } catch (error) {
+      console.error("Error updating stream:", error);
+      res.status(500).json({ message: "Failed to update stream" });
+    }
+  });
+
+  app.delete("/api/admin/streams/:id", requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      // Instead of hard delete, deactivate the stream
+      await storage.updateStream(id, { isActive: false });
+      res.json({ message: "Stream deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting stream:", error);
+      res.status(500).json({ message: "Failed to delete stream" });
     }
   });
 
