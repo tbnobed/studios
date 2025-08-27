@@ -52,22 +52,39 @@ export function StreamPlayer({
           // Start playing the stream
           await sdkRef.current.play(stream.streamUrl);
 
-          // Wait a moment to see if we actually get video data
-          setTimeout(() => {
-            if (videoRef.current && videoRef.current.videoWidth > 0) {
-              setCurrentStatus('online');
-              onStatusChange?.('online');
+          // Check for actual video data flowing
+          let videoCheckCount = 0;
+          const maxChecks = 6; // Check for 3 seconds
+          
+          const checkVideoData = () => {
+            videoCheckCount++;
+            
+            if (videoRef.current) {
+              const hasVideo = videoRef.current.videoWidth > 0 && videoRef.current.videoHeight > 0;
+              const isPlaying = !videoRef.current.paused && !videoRef.current.ended && videoRef.current.currentTime > 0;
               
-              // Try to play video after confirming stream
-              if (autoPlay) {
-                videoRef.current.play().catch(console.error);
+              if (hasVideo && (isPlaying || videoRef.current.readyState >= 3)) {
+                setCurrentStatus('online');
+                onStatusChange?.('online');
+                
+                // Try to play video after confirming stream
+                if (autoPlay) {
+                  videoRef.current.play().catch(console.error);
+                }
+                return;
               }
+            }
+            
+            if (videoCheckCount < maxChecks) {
+              setTimeout(checkVideoData, 500);
             } else {
-              console.warn('No video data received for stream:', stream.name);
+              console.warn('No valid video stream detected for:', stream.name);
               setCurrentStatus('error');
               onStatusChange?.('error');
             }
-          }, 3000); // Wait 3 seconds for video data
+          };
+          
+          setTimeout(checkVideoData, 500); // Start checking after 500ms
         } else {
           console.error('SRS SDK not loaded');
           setCurrentStatus('error');
