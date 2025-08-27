@@ -113,7 +113,7 @@ export function StudioCarousel({ studios, onStudioSelect }: StudioCarouselProps)
 
           {/* Large Portrait Card (9:16 aspect ratio) */}
           <Card 
-            className="w-72 h-[420px] overflow-hidden cursor-pointer hover:border-primary/50 border-2 flex-shrink-0"
+            className="overflow-hidden cursor-pointer hover:border-primary/50 border-2 flex-shrink-0" style={{ width: 'clamp(16rem, 20vw, 24rem)', height: 'clamp(22rem, 30vw, 32rem)' }}
             onClick={() => onStudioSelect(currentStudio)}
             data-testid={`studio-card-${currentStudio.id}`}
           >
@@ -139,10 +139,10 @@ export function StudioCarousel({ studios, onStudioSelect }: StudioCarouselProps)
                 )}
                 
                 <div className="text-center">
-                  <h2 className="text-4xl font-bold text-shadow-lg tracking-wide mb-2">
+                  <h2 className="font-bold text-shadow-lg tracking-wide mb-2" style={{ fontSize: 'clamp(1.5rem, 4vw, 3rem)' }}>
                     {currentStudio.name}
                   </h2>
-                  <p className="text-lg opacity-90 font-medium">STUDIOS</p>
+                  <p className="opacity-90 font-medium" style={{ fontSize: 'clamp(0.875rem, 2vw, 1.5rem)' }}>STUDIOS</p>
                 </div>
               </div>
               
@@ -225,7 +225,7 @@ export function StudioCarousel({ studios, onStudioSelect }: StudioCarouselProps)
                 onSwipeRight={handlePreviewPrevious}
                 className="w-full flex justify-center"
               >
-                <div className="grid grid-cols-3 gap-2 w-full max-w-lg mx-auto">
+                <div className="grid grid-cols-3 w-full mx-auto" style={{ gap: 'clamp(0.25rem, 1vw, 1rem)', maxWidth: 'clamp(20rem, 60vw, 40rem)' }}>
                   {currentStudio.streams.slice(previewIndex, previewIndex + 6).map((stream) => (
                     <div
                       key={stream.id}
