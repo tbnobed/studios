@@ -12,7 +12,8 @@ import {
   Maximize, 
   ChevronLeft, 
   ChevronRight,
-  Play
+  Play,
+  Shield
 } from "lucide-react";
 import { StreamPlayer } from "@/components/StreamPlayer";
 import { GestureHandler } from "@/components/GestureHandler";
@@ -195,6 +196,18 @@ export default function Dashboard() {
                     <p className="font-medium text-sm">{user?.username}</p>
                     <p className="text-xs text-muted-foreground">{user?.email}</p>
                   </div>
+                  {user?.role === 'admin' && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="w-full justify-start touch-area"
+                      onClick={() => window.location.href = '/admin'}
+                      data-testid="button-admin"
+                    >
+                      <Shield className="mr-2" size={16} />
+                      Admin Panel
+                    </Button>
+                  )}
                   <Button
                     variant="ghost"
                     size="sm"
