@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { StreamPlayer } from "./StreamPlayer";
@@ -15,6 +15,22 @@ export function StudioCarousel({ studios, onStudioSelect }: StudioCarouselProps)
   const [currentIndex, setCurrentIndex] = useState(0);
   const [previewIndex, setPreviewIndex] = useState(0);
   const [streamStatuses, setStreamStatuses] = useState<Record<string, 'loading' | 'online' | 'offline' | 'error'>>({});
+  const [viewportHeight, setViewportHeight] = useState(window.innerHeight);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setViewportHeight(window.innerHeight);
+    };
+    
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // Calculate actual available heights
+  const headerHeight = 120; // Approximate header height
+  const availableHeight = viewportHeight - headerHeight;
+  const studioCardHeight = Math.floor(availableHeight * 0.75);
+  const previewHeight = Math.floor(availableHeight * 0.25);
 
   const handlePrevious = () => {
     setCurrentIndex((prev) => (prev === 0 ? studios.length - 1 : prev - 1));
@@ -95,7 +111,7 @@ export function StudioCarousel({ studios, onStudioSelect }: StudioCarouselProps)
   return (
     <div className="w-full h-full flex flex-col">
       {/* STUDIO CARD SECTION - 75% of total height */}
-      <div className="flex-none flex items-center justify-center px-2 py-2 relative z-10" style={{ height: 'calc(75vh - 60px)' }}>
+      <div className="flex-none flex items-center justify-center px-2 py-2 relative z-10" style={{ height: `${studioCardHeight}px` }}>
         <GestureHandler
           onSwipeLeft={handleNext}
           onSwipeRight={handlePrevious}
@@ -188,7 +204,7 @@ export function StudioCarousel({ studios, onStudioSelect }: StudioCarouselProps)
       </div>
 
       {/* PREVIEW SECTION - 25% of total height */}
-      <div className="flex-none p-2 relative z-10" style={{ height: 'calc(25vh + 60px)' }}>
+      <div className="flex-none p-2 relative z-10" style={{ height: `${previewHeight}px`, minHeight: '120px' }}>
         {/* Studio Indicators */}
         <div className="flex justify-center space-x-2 mb-2">
           {studios.map((_, index) => (
