@@ -79,7 +79,7 @@ CREATE TABLE IF NOT EXISTS user_studio_permissions (
 
 -- Insert default admin user (password: admin123)
 INSERT INTO users (id, username, email, first_name, last_name, password, role) VALUES 
-    ('admin-user-id-12345', 'admin', 'admin@obtv.live', 'Admin', 'User', '$2b$10$mK8C5/yGdGlgYzJjFjC.MeFw5zKg7i8bPjBHyRJy7rH3.6MQxw4T6', 'admin')
+    ('admin-user-id-12345', 'admin', 'admin@obtv.live', 'Admin', 'User', '$2b$10$2LO.379Pa7N3HcWZ6Xvy6.okmNOASrXIdBWfyCqsslJUJXOWK4v0K', 'admin')
 ON CONFLICT (id) DO NOTHING;
 
 -- Insert default studios
@@ -105,16 +105,16 @@ INSERT INTO streams (studio_id, name, description, stream_url, resolution, fps) 
     ('f2c8a3b1-4d6e-4a2b-8c9d-1e5f7a9b3c2d', 'Plex Camera 4', 'Fourth studio camera feed', 'http://cdn1.obedtv.live:2022/rtc/v1/whep/?app=live&stream=Plex4', '1080p', 30),
     
     -- Irving streams
-    ('a7b2c9d4-3f8e-4b1a-9c6d-2e8f1a4b7c5d', 'Irving Main Camera', 'http://cdn1.obedtv.live:2022/rtc/v1/whep/?app=live&stream=Irving1', '1080p', 30),
-    ('a7b2c9d4-3f8e-4b1a-9c6d-2e8f1a4b7c5d', 'Irving Camera 2', 'http://cdn1.obedtv.live:2022/rtc/v1/whep/?app=live&stream=Irving2', '1080p', 30),
-    ('a7b2c9d4-3f8e-4b1a-9c6d-2e8f1a4b7c5d', 'Irving Camera 3', 'http://cdn1.obedtv.live:2022/rtc/v1/whep/?app=live&stream=Irving3', '1080p', 30),
-    ('a7b2c9d4-3f8e-4b1a-9c6d-2e8f1a4b7c5d', 'Irving Camera 4', 'http://cdn1.obedtv.live:2022/rtc/v1/whep/?app=live&stream=Irving4', '1080p', 30),
+    ('a7b2c9d4-3f8e-4b1a-9c6d-2e8f1a4b7c5d', 'Irving Main Camera', 'Primary studio camera feed', 'http://cdn1.obedtv.live:2022/rtc/v1/whep/?app=live&stream=Irving1', '1080p', 30),
+    ('a7b2c9d4-3f8e-4b1a-9c6d-2e8f1a4b7c5d', 'Irving Camera 2', 'Secondary studio camera feed', 'http://cdn1.obedtv.live:2022/rtc/v1/whep/?app=live&stream=Irving2', '1080p', 30),
+    ('a7b2c9d4-3f8e-4b1a-9c6d-2e8f1a4b7c5d', 'Irving Camera 3', 'Third studio camera feed', 'http://cdn1.obedtv.live:2022/rtc/v1/whep/?app=live&stream=Irving3', '1080p', 30),
+    ('a7b2c9d4-3f8e-4b1a-9c6d-2e8f1a4b7c5d', 'Irving Camera 4', 'Fourth studio camera feed', 'http://cdn1.obedtv.live:2022/rtc/v1/whep/?app=live&stream=Irving4', '1080p', 30),
     
     -- Nashville streams
-    ('c5d8f1a3-2b7e-4c9a-8d5f-3e1f6a2b9c8d', 'Nashville Main Camera', 'http://cdn1.obedtv.live:2022/rtc/v1/whep/?app=live&stream=Nashville1', '1080p', 30),
-    ('c5d8f1a3-2b7e-4c9a-8d5f-3e1f6a2b9c8d', 'Nashville Camera 2', 'http://cdn1.obedtv.live:2022/rtc/v1/whep/?app=live&stream=Nashville2', '1080p', 30),
-    ('c5d8f1a3-2b7e-4c9a-8d5f-3e1f6a2b9c8d', 'Nashville Camera 3', 'http://cdn1.obedtv.live:2022/rtc/v1/whep/?app=live&stream=Nashville3', '1080p', 30),
-    ('c5d8f1a3-2b7e-4c9a-8d5f-3e1f6a2b9c8d', 'Nashville Camera 4', 'http://cdn1.obedtv.live:2022/rtc/v1/whep/?app=live&stream=Nashville4', '1080p', 30)
+    ('c5d8f1a3-2b7e-4c9a-8d5f-3e1f6a2b9c8d', 'Nashville Main Camera', 'Primary studio camera feed', 'http://cdn1.obedtv.live:2022/rtc/v1/whep/?app=live&stream=Nashville1', '1080p', 30),
+    ('c5d8f1a3-2b7e-4c9a-8d5f-3e1f6a2b9c8d', 'Nashville Camera 2', 'Secondary studio camera feed', 'http://cdn1.obedtv.live:2022/rtc/v1/whep/?app=live&stream=Nashville2', '1080p', 30),
+    ('c5d8f1a3-2b7e-4c9a-8d5f-3e1f6a2b9c8d', 'Nashville Camera 3', 'Third studio camera feed', 'http://cdn1.obedtv.live:2022/rtc/v1/whep/?app=live&stream=Nashville3', '1080p', 30),
+    ('c5d8f1a3-2b7e-4c9a-8d5f-3e1f6a2b9c8d', 'Nashville Camera 4', 'Fourth studio camera feed', 'http://cdn1.obedtv.live:2022/rtc/v1/whep/?app=live&stream=Nashville4', '1080p', 30)
 ON CONFLICT DO NOTHING;
 
 -- Grant admin user access to all studios

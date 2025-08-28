@@ -1,0 +1,102 @@
+obtv-admin@studios:~/studios$ docker compose logs -f
+obtv_studio_manager  | 1:01:06 AM [express] serving on port 5000
+obtv_postgres        | The files belonging to this database system will be owned by user "postgres".
+obtv_postgres        | This user must also own the server process.
+obtv_postgres        |
+obtv_postgres        | The database cluster will be initialized with locale "en_US.utf8".
+obtv_postgres        | The default database encoding has accordingly been set to "UTF8".
+obtv_postgres        | The default text search configuration will be set to "english".
+obtv_postgres        |
+obtv_postgres        | Data page checksums are disabled.
+obtv_postgres        |
+obtv_postgres        | fixing permissions on existing directory /var/lib/postgresql/data/pgdata ... ok
+obtv_postgres        | creating subdirectories ... ok
+obtv_postgres        | selecting dynamic shared memory implementation ... posix
+obtv_postgres        | selecting default max_connections ... 100
+obtv_postgres        | selecting default shared_buffers ... 128MB
+obtv_postgres        | selecting default time zone ... UTC
+obtv_postgres        | creating configuration files ... ok
+obtv_postgres        | running bootstrap script ... ok
+obtv_postgres        | sh: locale: not found
+obtv_postgres        | 2025-08-28 01:00:53.889 UTC [36] WARNING:  no usable system locales were found
+obtv_postgres        | performing post-bootstrap initialization ... ok
+obtv_postgres        | syncing data to disk ... ok
+obtv_postgres        |
+obtv_postgres        |
+obtv_postgres        | Success. You can now start the database server using:
+obtv_postgres        |
+obtv_postgres        |     pg_ctl -D /var/lib/postgresql/data/pgdata -l logfile start
+obtv_postgres        |
+obtv_postgres        | initdb: warning: enabling "trust" authentication for local connections
+obtv_postgres        | initdb: hint: You can change this by editing pg_hba.conf or using the option -A, or --auth-local and --auth-host, the next time you run initdb.
+obtv_postgres        | waiting for server to start....2025-08-28 01:00:54.528 UTC [42] LOG:  starting PostgreSQL 15.14 on x86_64-pc-linux-musl, compiled by gcc (Alpine 14.2.0) 14.2.0, 64-bit
+obtv_postgres        | 2025-08-28 01:00:54.530 UTC [42] LOG:  listening on Unix socket "/var/run/postgresql/.s.PGSQL.5432"
+obtv_postgres        | 2025-08-28 01:00:54.537 UTC [45] LOG:  database system was shut down at 2025-08-28 01:00:54 UTC
+obtv_postgres        | 2025-08-28 01:00:54.547 UTC [42] LOG:  database system is ready to accept connections
+obtv_postgres        |  done
+obtv_postgres        | server started
+obtv_postgres        | CREATE DATABASE
+obtv_postgres        |
+obtv_postgres        |
+obtv_postgres        | /usr/local/bin/docker-entrypoint.sh: running /docker-entrypoint-initdb.d/init.sql
+obtv_postgres        | You are now connected to database "obtv_studio" as user "obtv_user".
+obtv_postgres        | CREATE EXTENSION
+obtv_postgres        | CREATE TABLE
+obtv_postgres        | ALTER TABLE
+obtv_postgres        | CREATE INDEX
+obtv_postgres        | CREATE TYPE
+obtv_postgres        | CREATE TABLE
+obtv_postgres        | CREATE TABLE
+obtv_postgres        | CREATE TYPE
+obtv_postgres        | CREATE TABLE
+obtv_postgres        | CREATE TABLE
+obtv_postgres        | INSERT 0 1
+obtv_postgres        | INSERT 0 4
+obtv_postgres        | 2025-08-28 01:00:54.789 UTC [56] ERROR:  VALUES lists must all be the same length at character 1563
+obtv_postgres        | 2025-08-28 01:00:54.789 UTC [56] STATEMENT:  INSERT INTO streams (studio_id, name, description, stream_url, resolution, fps) VALUES
+obtv_postgres        |      -- SoCal streams
+obtv_postgres        |      ('4813376b-ea45-47ca-b7d5-0090b1f2aab7', 'SoCal Main Camera', 'Primary studio camera feed', 'http://cdn1.obedtv.live:2022/rtc/v1/whep/?app=live&stream=Socal1', '1080p', 30),
+obtv_postgres        |      ('4813376b-ea45-47ca-b7d5-0090b1f2aab7', 'SoCal Camera 2', 'Secondary studio camera feed', 'http://cdn1.obedtv.live:2022/rtc/v1/whep/?app=live&stream=Socal2', '1080p', 30),
+obtv_postgres        |      ('4813376b-ea45-47ca-b7d5-0090b1f2aab7', 'SoCal Camera 3', 'Third studio camera feed', 'http://cdn1.obedtv.live:2022/rtc/v1/whep/?app=live&stream=Socal3', '1080p', 30),
+obtv_postgres        |      ('4813376b-ea45-47ca-b7d5-0090b1f2aab7', 'SoCal Camera 4', 'Fourth studio camera feed', 'http://cdn1.obedtv.live:2022/rtc/v1/whep/?app=live&stream=Socal4', '1080p', 30),
+obtv_postgres        |
+obtv_postgres        |      -- Plex streams
+obtv_postgres        |      ('f2c8a3b1-4d6e-4a2b-8c9d-1e5f7a9b3c2d', 'Plex Main Camera', 'Primary studio camera feed', 'http://cdn1.obedtv.live:2022/rtc/v1/whep/?app=live&stream=Plex1', '1080p', 30),
+obtv_postgres        |      ('f2c8a3b1-4d6e-4a2b-8c9d-1e5f7a9b3c2d', 'Plex Camera 2', 'Secondary studio camera feed', 'http://cdn1.obedtv.live:2022/rtc/v1/whep/?app=live&stream=Plex2', '1080p', 30),
+obtv_postgres        |      ('f2c8a3b1-4d6e-4a2b-8c9d-1e5f7a9b3c2d', 'Plex Camera 3', 'Third studio camera feed', 'http://cdn1.obedtv.live:2022/rtc/v1/whep/?app=live&stream=Plex3', '1080p', 30),
+obtv_postgres        |      ('f2c8a3b1-4d6e-4a2b-8c9d-1e5f7a9b3c2d', 'Plex Camera 4', 'Fourth studio camera feed', 'http://cdn1.obedtv.live:2022/rtc/v1/whep/?app=live&stream=Plex4', '1080p', 30),
+obtv_postgres        |
+obtv_postgres        |      -- Irving streams
+obtv_postgres        |      ('a7b2c9d4-3f8e-4b1a-9c6d-2e8f1a4b7c5d', 'Irving Main Camera', 'http://cdn1.obedtv.live:2022/rtc/v1/whep/?app=live&stream=Irving1', '1080p', 30),
+obtv_postgres        |      ('a7b2c9d4-3f8e-4b1a-9c6d-2e8f1a4b7c5d', 'Irving Camera 2', 'http://cdn1.obedtv.live:2022/rtc/v1/whep/?app=live&stream=Irving2', '1080p', 30),
+obtv_postgres        |      ('a7b2c9d4-3f8e-4b1a-9c6d-2e8f1a4b7c5d', 'Irving Camera 3', 'http://cdn1.obedtv.live:2022/rtc/v1/whep/?app=live&stream=Irving3', '1080p', 30),
+obtv_postgres        |      ('a7b2c9d4-3f8e-4b1a-9c6d-2e8f1a4b7c5d', 'Irving Camera 4', 'http://cdn1.obedtv.live:2022/rtc/v1/whep/?app=live&stream=Irving4', '1080p', 30),
+obtv_postgres        |
+obtv_postgres        |      -- Nashville streams
+obtv_postgres        |      ('c5d8f1a3-2b7e-4c9a-8d5f-3e1f6a2b9c8d', 'Nashville Main Camera', 'http://cdn1.obedtv.live:2022/rtc/v1/whep/?app=live&stream=Nashville1', '1080p', 30),
+obtv_postgres        |      ('c5d8f1a3-2b7e-4c9a-8d5f-3e1f6a2b9c8d', 'Nashville Camera 2', 'http://cdn1.obedtv.live:2022/rtc/v1/whep/?app=live&stream=Nashville2', '1080p', 30),
+obtv_postgres        |      ('c5d8f1a3-2b7e-4c9a-8d5f-3e1f6a2b9c8d', 'Nashville Camera 3', 'http://cdn1.obedtv.live:2022/rtc/v1/whep/?app=live&stream=Nashville3', '1080p', 30),
+obtv_postgres        |      ('c5d8f1a3-2b7e-4c9a-8d5f-3e1f6a2b9c8d', 'Nashville Camera 4', 'http://cdn1.obedtv.live:2022/rtc/v1/whep/?app=live&stream=Nashville4', '1080p', 30)
+obtv_postgres        |  ON CONFLICT DO NOTHING;
+obtv_postgres        | psql:/docker-entrypoint-initdb.d/init.sql:118: ERROR:  VALUES lists must all be the same length
+obtv_postgres        | LINE 15:     ('a7b2c9d4-3f8e-4b1a-9c6d-2e8f1a4b7c5d', 'Irving Main Ca...
+obtv_postgres        |               ^
+obtv_postgres        |
+obtv_postgres        | PostgreSQL Database directory appears to contain a database; Skipping initialization
+obtv_postgres        |
+obtv_postgres        | 2025-08-28 01:00:55.494 UTC [1] LOG:  starting PostgreSQL 15.14 on x86_64-pc-linux-musl, compiled by gcc (Alpine 14.2.0) 14.2.0, 64-bit
+obtv_postgres        | 2025-08-28 01:00:55.494 UTC [1] LOG:  listening on IPv4 address "0.0.0.0", port 5432
+obtv_postgres        | 2025-08-28 01:00:55.494 UTC [1] LOG:  listening on IPv6 address "::", port 5432
+obtv_postgres        | 2025-08-28 01:00:55.497 UTC [1] LOG:  listening on Unix socket "/var/run/postgresql/.s.PGSQL.5432"
+obtv_postgres        | 2025-08-28 01:00:55.503 UTC [29] LOG:  database system was interrupted; last known up at 2025-08-28 01:00:54 UTC
+obtv_postgres        | 2025-08-28 01:00:55.583 UTC [29] LOG:  database system was not properly shut down; automatic recovery in progress
+obtv_postgres        | 2025-08-28 01:00:55.585 UTC [29] LOG:  redo starts at 0/1509918
+obtv_postgres        | 2025-08-28 01:00:55.604 UTC [29] LOG:  invalid record length at 0/194FC10: wanted 24, got 0
+obtv_postgres        | 2025-08-28 01:00:55.604 UTC [29] LOG:  redo done at 0/194FBE8 system usage: CPU: user: 0.01 s, system: 0.00 s, elapsed: 0.01 s
+obtv_postgres        | 2025-08-28 01:00:55.609 UTC [27] LOG:  checkpoint starting: end-of-recovery immediate wait
+obtv_postgres        | 2025-08-28 01:00:55.654 UTC [27] LOG:  checkpoint complete: wrote 958 buffers (5.8%); 0 WAL file(s) added, 0 removed, 0 recycled; write=0.025 s, sync=0.017 s, total=0.048 s; sync files=325, longest=0.002 s, average=0.001 s; distance=4376 kB, estimate=4376 kB
+obtv_postgres        | 2025-08-28 01:00:55.664 UTC [1] LOG:  database system is ready to accept connections
+obtv_studio_manager  | 1:01:22 AM [express] GET /api/auth/user 401 in 6ms :: {"message":"Unauthorized"}
+obtv_studio_manager  | 1:01:22 AM [express] GET /api/auth/user 401 in 1ms :: {"message":"Unauthorized"}
+obtv_studio_manager  | 1:01:26 AM [express] POST /api/auth/login 401 in 57ms :: {"message":"Invalid credentials"}
+obtv_studio_manager  | 1:01:34 AM [express] POST /api/auth/login 401 in 6ms :: {"message":"Invalid credentials"}
