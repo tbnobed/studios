@@ -287,11 +287,17 @@ export default function Dashboard() {
             </SheetContent>
           </Sheet>
           
-          <img 
-            src={tbnLogo} 
-            alt="TBN Studios Logo" 
-            className="h-16 w-auto"
-          />
+          <button
+            onClick={() => window.location.href = '/'}
+            className="hover:opacity-80 transition-opacity cursor-pointer"
+            data-testid="link-home"
+          >
+            <img 
+              src={tbnLogo} 
+              alt="TBN Studios Logo" 
+              className="h-16 w-auto opacity-75"
+            />
+          </button>
         </div>
         
         <div className="flex items-center space-x-2">

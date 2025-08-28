@@ -6,6 +6,7 @@ import { User, Shield, Settings, LogOut } from "lucide-react";
 import { removeAuthToken } from "@/lib/authUtils";
 import { useToast } from "@/hooks/use-toast";
 import obedtvLogo from "@/assets/obedtv-logo.png";
+import tbnLogo from "../assets/tbnlogo-white_1756354700943.png";
 
 export default function SharedHeader() {
   const [userMenuOpen, setUserMenuOpen] = useState(false);
@@ -59,16 +60,14 @@ export default function SharedHeader() {
       <header className="hidden md:flex bg-card/80 backdrop-blur border-b border-border px-4 py-3 items-center justify-between shrink-0 relative z-20">
         <button
           onClick={() => window.location.href = '/'}
-          className="flex items-center space-x-3 hover:opacity-80 transition-opacity cursor-pointer"
+          className="hover:opacity-80 transition-opacity cursor-pointer"
           data-testid="link-home"
         >
           <img 
-            src={obedtvLogo} 
-            alt="OBED TV Logo" 
-            className="h-8 w-auto"
+            src={tbnLogo} 
+            alt="TBN Studios Logo" 
+            className="h-16 w-auto opacity-75"
           />
-          
-          <h1 className="font-bold text-[30px]">TBN Studios</h1>
         </button>
         
         <div className="flex items-center space-x-2">
