@@ -324,7 +324,7 @@ export default function Dashboard() {
         </div>
       </header>
 
-      <div className="flex-1 flex pt-16 md:pt-0 relative z-10">
+      <div className="flex-1 flex md:pt-0 relative z-10">
         {/* Desktop Sidebar */}
         <div className="hidden lg:block">
           <StudioSidebar />
@@ -394,7 +394,7 @@ export default function Dashboard() {
           )}
 
           {/* Video Content */}
-          <div className="flex-1 p-2 overflow-y-auto pb-24 md:pb-0">
+          <div className="flex-1 overflow-y-auto pb-24 md:pb-0 md:p-2">
             {!selectedStudio ? (
               <div className="h-full">
                 {/* Mobile Studio Selection with Full Screen Background */}
