@@ -57,7 +57,11 @@ export default function SharedHeader() {
       
       {/* Desktop Header */}
       <header className="hidden md:flex bg-card/80 backdrop-blur border-b border-border px-4 py-3 items-center justify-between shrink-0 relative z-20">
-        <div className="flex items-center space-x-3">
+        <button
+          onClick={() => window.location.href = '/'}
+          className="flex items-center space-x-3 hover:opacity-80 transition-opacity cursor-pointer"
+          data-testid="link-home"
+        >
           <img 
             src={obedtvLogo} 
             alt="OBED TV Logo" 
@@ -65,7 +69,7 @@ export default function SharedHeader() {
           />
           
           <h1 className="font-bold text-[30px]">TBN Studios</h1>
-        </div>
+        </button>
         
         <div className="flex items-center space-x-2">
           <span className="text-sm text-muted-foreground hidden sm:inline">
