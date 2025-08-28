@@ -119,6 +119,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json(req.user);
   });
 
+  // Change password endpoint
+  app.put("/api/auth/change-password", requireAuth, async (req: any, res) => {
+    try {
+      const { currentPassword, newPassword } = req.body;
+      
+      if (!currentPassword || !newPassword) {
+        return res.status(400).json({ message: "Current password and new password are required" });
+      }
+
+      if (newPassword.length < 6) {
+        return res.status(400).json({ message: "New password must be at least 6 characters long" });
+      }
+
+      // Verify current password
+      const user = await storage.verifyUserPassword(req.user.username, currentPassword);
+      if (!user) {
+        return res.status(400).json({ message: "Current password is incorrect" });
+      }
+
+      // Update password
+      await storage.updateUserPassword(req.user.id, newPassword);
+      
+      res.json({ message: "Password updated successfully" });
+    } catch (error) {
+      console.error("Password change error:", error);
+      res.status(500).json({ message: "Failed to update password" });
+    }
+  });
+
   // Static file serving for uploads
   app.use("/uploads", (req, res, next) => {
     res.header('Access-Control-Allow-Origin', '*');

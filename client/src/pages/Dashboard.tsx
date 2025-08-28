@@ -315,10 +315,7 @@ export default function Dashboard() {
                       e.stopPropagation();
                       setUserMenuOpen(false);
                       setTimeout(() => {
-                        toast({
-                          title: "Settings",
-                          description: "Settings panel coming soon!",
-                        });
+                        window.location.href = '/settings';
                       }, 50);
                     }}
                     data-testid="button-settings"
