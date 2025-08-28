@@ -128,7 +128,7 @@ export function StreamPlayer({
       {/* Stream overlay info */}
       {showOverlay && (
         <>
-          <div className="absolute top-2 left-2 flex items-center space-x-2">
+          <div className="absolute bottom-2 right-2 flex items-center space-x-2">
             <span className="bg-black/60 text-white px-2 py-1 rounded text-xs font-medium">
               <span className={`w-2 h-2 rounded-full inline-block mr-1 ${
                 currentStatus === 'online' ? 'bg-green-500 live-indicator' : 
