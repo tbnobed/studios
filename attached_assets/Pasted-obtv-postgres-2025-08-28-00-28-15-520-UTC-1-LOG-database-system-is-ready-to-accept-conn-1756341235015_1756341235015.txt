@@ -1,0 +1,75 @@
+obtv_postgres        | 2025-08-28 00:28:15.520 UTC [1] LOG:  database system is ready to accept connections
+obtv_studio_manager  | node:internal/modules/cjs/loader:1143
+obtv_studio_manager  |   throw err;
+obtv_studio_manager  |   ^
+obtv_studio_manager  |
+obtv_studio_manager  | Error: Cannot find module '/app/dist/server/index.js'
+obtv_studio_manager  |     at Module._resolveFilename (node:internal/modules/cjs/loader:1140:15)
+obtv_studio_manager  |     at Module._load (node:internal/modules/cjs/loader:981:27)
+obtv_studio_manager  |     at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:128:12)
+obtv_studio_manager  |     at node:internal/main/run_main_module:28:49 {
+obtv_studio_manager  |   code: 'MODULE_NOT_FOUND',
+obtv_studio_manager  |   requireStack: []
+obtv_studio_manager  | }
+obtv_studio_manager  |
+obtv_studio_manager  | Node.js v18.20.8
+obtv_studio_manager exited with code 1
+obtv_studio_manager  | node:internal/modules/cjs/loader:1143
+obtv_studio_manager  |   throw err;
+obtv_studio_manager  |   ^
+obtv_studio_manager  |
+obtv_studio_manager  | Error: Cannot find module '/app/dist/server/index.js'
+obtv_studio_manager  |     at Module._resolveFilename (node:internal/modules/cjs/loader:1140:15)
+obtv_studio_manager  |     at Module._load (node:internal/modules/cjs/loader:981:27)
+obtv_studio_manager  |     at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:128:12)
+obtv_studio_manager  |     at node:internal/main/run_main_module:28:49 {
+obtv_studio_manager  |   code: 'MODULE_NOT_FOUND',
+obtv_studio_manager  |   requireStack: []
+obtv_studio_manager  | }
+obtv_studio_manager  |
+obtv_studio_manager  | Node.js v18.20.8
+obtv_studio_manager exited with code 1
+obtv_studio_manager  | node:internal/modules/cjs/loader:1143
+obtv_studio_manager  |   throw err;
+obtv_studio_manager  |   ^
+obtv_studio_manager  |
+obtv_studio_manager  | Error: Cannot find module '/app/dist/server/index.js'
+obtv_studio_manager  |     at Module._resolveFilename (node:internal/modules/cjs/loader:1140:15)
+obtv_studio_manager  |     at Module._load (node:internal/modules/cjs/loader:981:27)
+obtv_studio_manager  |     at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:128:12)
+obtv_studio_manager  |     at node:internal/main/run_main_module:28:49 {
+obtv_studio_manager  |   code: 'MODULE_NOT_FOUND',
+obtv_studio_manager  |   requireStack: []
+obtv_studio_manager  | }
+obtv_studio_manager  |
+obtv_studio_manager  | Node.js v18.20.8
+obtv_studio_manager exited with code 1
+obtv_studio_manager  | node:internal/modules/cjs/loader:1143
+obtv_studio_manager  |   throw err;
+obtv_studio_manager  |   ^
+obtv_studio_manager  |
+obtv_studio_manager  | Error: Cannot find module '/app/dist/server/index.js'
+obtv_studio_manager  |     at Module._resolveFilename (node:internal/modules/cjs/loader:1140:15)
+obtv_studio_manager  |     at Module._load (node:internal/modules/cjs/loader:981:27)
+obtv_studio_manager  |     at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:128:12)
+obtv_studio_manager  |     at node:internal/main/run_main_module:28:49 {
+obtv_studio_manager  |   code: 'MODULE_NOT_FOUND',
+obtv_studio_manager  |   requireStack: []
+obtv_studio_manager  | }
+obtv_studio_manager  |
+obtv_studio_manager  | Node.js v18.20.8
+obtv_studio_manager exited with code 1
+obtv_studio_manager  | node:internal/modules/cjs/loader:1143
+obtv_studio_manager  |   throw err;
+obtv_studio_manager  |   ^
+obtv_studio_manager  |
+obtv_studio_manager  | Error: Cannot find module '/app/dist/server/index.js'
+obtv_studio_manager  |     at Module._resolveFilename (node:internal/modules/cjs/loader:1140:15)
+obtv_studio_manager  |     at Module._load (node:internal/modules/cjs/loader:981:27)
+obtv_studio_manager  |     at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:128:12)
+obtv_studio_manager  |     at node:internal/main/run_main_module:28:49 {
+obtv_studio_manager  |   code: 'MODULE_NOT_FOUND',
+obtv_studio_manager  |   requireStack: []
+obtv_studio_manager  | }
+obtv_studio_manager  |
+obtv_studio_manager  | Node.js v18.20.8
