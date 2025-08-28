@@ -551,6 +551,18 @@ export default function Dashboard() {
         </main>
       </div>
 
+      {/* Mobile Footer */}
+      <footer className="md:hidden bg-card/80 backdrop-blur border-t border-border px-4 py-3 flex flex-col items-center space-y-2 shrink-0">
+        <img 
+          src={obedtvLogo} 
+          alt="OBED TV Logo" 
+          className="h-6 w-auto"
+        />
+        <p className="text-xs text-muted-foreground">
+          © OBEDTV 2025
+        </p>
+      </footer>
+
       {/* Click outside to close user menu */}
       {userMenuOpen && (
         <div 
