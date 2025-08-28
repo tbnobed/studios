@@ -292,50 +292,55 @@ export default function Dashboard() {
                     <p className="text-xs text-muted-foreground">{user?.email}</p>
                   </div>
                   {user?.role === 'admin' && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="w-full justify-start touch-area"
-                      onClick={() => {
+                    <button
+                      className="w-full flex items-center justify-start px-2 py-2 text-sm hover:bg-accent rounded-md transition-colors"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
                         setUserMenuOpen(false);
-                        window.location.href = '/admin';
+                        setTimeout(() => {
+                          window.location.href = '/admin';
+                        }, 50);
                       }}
                       data-testid="button-admin"
                     >
                       <Shield className="mr-2" size={16} />
                       Admin Panel
-                    </Button>
+                    </button>
                   )}
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="w-full justify-start touch-area"
-                    onClick={() => {
+                  <button
+                    className="w-full flex items-center justify-start px-2 py-2 text-sm hover:bg-accent rounded-md transition-colors"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
                       setUserMenuOpen(false);
-                      // Settings functionality can be added here later
-                      toast({
-                        title: "Settings",
-                        description: "Settings panel coming soon!",
-                      });
+                      setTimeout(() => {
+                        toast({
+                          title: "Settings",
+                          description: "Settings panel coming soon!",
+                        });
+                      }, 50);
                     }}
                     data-testid="button-settings"
                   >
                     <Settings className="mr-2" size={16} />
                     Settings
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="w-full justify-start text-destructive hover:text-destructive touch-area"
-                    onClick={() => {
+                  </button>
+                  <button
+                    className="w-full flex items-center justify-start px-2 py-2 text-sm text-destructive hover:bg-accent rounded-md transition-colors"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
                       setUserMenuOpen(false);
-                      handleLogout();
+                      setTimeout(() => {
+                        handleLogout();
+                      }, 50);
                     }}
                     data-testid="button-logout"
                   >
                     <LogOut className="mr-2" size={16} />
                     Sign Out
-                  </Button>
+                  </button>
                 </CardContent>
               </Card>
             )}
@@ -691,13 +696,6 @@ export default function Dashboard() {
           © OBEDTV 2025
         </p>
       </footer>
-      {/* Click outside to close user menu */}
-      {userMenuOpen && (
-        <div 
-          className="fixed inset-0 z-[50]" 
-          onClick={() => setUserMenuOpen(false)}
-        />
-      )}
     </div>
   );
 }
