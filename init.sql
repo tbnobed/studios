@@ -45,7 +45,8 @@ CREATE TABLE IF NOT EXISTS studios (
     color_code VARCHAR(7),
     image_url VARCHAR(500),
     is_active BOOLEAN NOT NULL DEFAULT true,
-    created_at TIMESTAMP DEFAULT NOW()
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
 );
 
 -- Create stream status enum
