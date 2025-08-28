@@ -222,7 +222,7 @@ export default function Dashboard() {
       {/* Glossy overlay effect */}
       <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent pointer-events-none"></div>
       {/* Mobile Header */}
-      <header className="md:hidden px-4 py-3 flex items-center justify-between shrink-0 absolute top-0 left-0 right-0 z-20">
+      <header className="md:hidden px-4 py-3 flex items-center justify-between shrink-0 fixed top-0 left-0 right-0 z-20 bg-card/80 backdrop-blur border-b border-border">
         <div className="flex items-center space-x-2">
           <span className="text-sm font-medium">
             {user?.firstName} {user?.lastName}
