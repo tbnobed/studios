@@ -323,7 +323,7 @@ export default function Dashboard() {
         </div>
       </header>
 
-      <div className="flex-1 flex pt-16 md:pt-0 relative z-10 overflow-hidden">
+      <div className="flex-1 flex pt-16 md:pt-0 relative z-10">
         {/* Desktop Sidebar */}
         <div className="hidden lg:block">
           <StudioSidebar />
