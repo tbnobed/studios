@@ -114,7 +114,7 @@ export function StudioCarousel({ studios, onStudioSelect }: StudioCarouselProps)
           {/* Large Portrait Card (9:16 aspect ratio) - Uses full height of container */}
           <Card 
             className="overflow-hidden cursor-pointer hover:border-primary/50 border-2"
-            style={{ width: '68vw', height: '45vh' }}
+            style={{ width: '60vw', height: '40vh' }}
             onClick={() => onStudioSelect(currentStudio)}
             data-testid={`studio-card-${currentStudio.id}`}
           >
@@ -191,7 +191,7 @@ export function StudioCarousel({ studios, onStudioSelect }: StudioCarouselProps)
       {/* PREVIEW SECTION - 25% of container height */}
       <div className="flex-1 p-2 relative z-10 min-h-0">
         {/* Studio Indicators */}
-        <div className="flex justify-center space-x-2 mt-[12px] mb-[12px]">
+        <div className="flex justify-center space-x-2 mt-[19px] mb-[19px]">
           {studios.map((_, index) => (
             <button
               key={index}
