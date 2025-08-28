@@ -474,7 +474,7 @@ export default function Dashboard() {
                       setCurrentStudioIndex(currentStudioIndex - 1);
                     }
                   }}
-                  className="lg:hidden absolute inset-0 pt-16"
+                  className="lg:hidden absolute inset-0"
                 >
                   {/* Studio Background Cards */}
                   {studios.map((studio, index) => (
@@ -500,8 +500,8 @@ export default function Dashboard() {
                       {/* Overlay for better text readability */}
                       <div className="absolute inset-0 bg-black/30"></div>
                       
-                      {/* TBN Logo positioned at top */}
-                      <div className="absolute top-16 left-1/2 transform -translate-x-1/2 z-10">
+                      {/* TBN Logo positioned at top with safe area support */}
+                      <div className="absolute left-1/2 transform -translate-x-1/2 z-10" style={{ top: 'max(44px, env(safe-area-inset-top))' }}>
                         <img 
                           src={tbnLogo} 
                           alt="TBN Logo" 

@@ -74,6 +74,21 @@
     @apply bg-background text-foreground font-sans antialiased;
     font-family: var(--font-sans);
   }
+
+  /* iOS Safe Area Support */
+  #root {
+    /* Extend to full viewport including status bar area */
+    height: 100vh;
+    height: 100dvh; /* Dynamic viewport height for mobile browsers */
+  }
+
+  /* Support for devices with notches/safe areas */
+  @supports (padding: max(0px)) {
+    #root {
+      padding-left: max(0px, env(safe-area-inset-left));
+      padding-right: max(0px, env(safe-area-inset-right));
+    }
+  }
 }
 
 @layer components {
