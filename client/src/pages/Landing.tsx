@@ -9,6 +9,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { setAuthToken } from "@/lib/authUtils";
 import obedtvLogo from "@/assets/obedtv-logo.png";
+import authBackground from "@assets/generated_images/Dark_modern_auth_background_1e344dc8.png";
 
 export default function Landing() {
   const [username, setUsername] = useState("");
@@ -54,8 +55,18 @@ export default function Landing() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-background">
-      <div className="w-full max-w-md">
+    <div 
+      className="min-h-screen flex items-center justify-center p-4 bg-background relative"
+      style={{
+        backgroundImage: `url(${authBackground})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat'
+      }}
+    >
+      {/* Dark overlay for better readability */}
+      <div className="absolute inset-0 bg-black/40"></div>
+      <div className="w-full max-w-md relative z-10">
         {/* Logo Section */}
         <div className="text-center mb-8">
           <div className="w-40 h-40 mx-auto mb-4 flex items-center justify-center">
