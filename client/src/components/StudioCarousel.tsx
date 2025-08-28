@@ -95,7 +95,7 @@ export function StudioCarousel({ studios, onStudioSelect }: StudioCarouselProps)
   return (
     <div className="w-full h-full flex flex-col">
       {/* STUDIO CARD SECTION - 75% of container height */}
-      <div className="flex-[4] flex items-center justify-center px-2 py-2 relative z-10 min-h-0">
+      <div className="flex-[6] flex items-center justify-center px-2 py-2 relative z-10 min-h-0">
         <GestureHandler
           onSwipeLeft={handleNext}
           onSwipeRight={handlePrevious}
