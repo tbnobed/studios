@@ -195,7 +195,7 @@ export function StudioCarousel({ studios, onStudioSelect }: StudioCarouselProps)
           {studios.map((_, index) => (
             <button
               key={index}
-              className={`w-1 h-1 rounded-full transition-all ${
+              className={`w-1.5 h-1.5 rounded-full transition-all ${
                 index === currentIndex ? 'bg-primary' : 'bg-muted-foreground/30'
               }`}
               onClick={() => setCurrentIndex(index)}
