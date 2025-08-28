@@ -115,7 +115,7 @@ export default function Dashboard() {
   };
 
   const StudioSidebar = () => (
-    <div className={`${sidebarCollapsed ? 'w-16' : 'w-64'} h-full bg-card/50 backdrop-blur border-r border-border/40 transition-all duration-300`}>
+    <div className={`${sidebarCollapsed ? 'w-20' : 'w-64'} h-full bg-card/50 backdrop-blur border-r border-border/40 transition-all duration-300`}>
       <div className="p-6">
         <div className="flex items-center justify-between mb-6">
           {!sidebarCollapsed && (
