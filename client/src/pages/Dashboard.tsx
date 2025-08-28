@@ -436,7 +436,7 @@ export default function Dashboard() {
                     <Button
                       variant="ghost"
                       size="sm"
-                      className={`touch-area ${viewMode === 'single' ? 'bg-primary text-primary-foreground' : ''}`}
+                      className={`hidden md:block touch-area ${viewMode === 'single' ? 'bg-primary text-primary-foreground' : ''}`}
                       onClick={() => setViewMode('single')}
                       data-testid="button-single-view"
                     >
