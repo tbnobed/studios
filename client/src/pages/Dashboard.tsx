@@ -115,97 +115,113 @@ export default function Dashboard() {
   };
 
   const StudioSidebar = () => (
-    <div className={`${sidebarCollapsed ? 'w-16' : 'w-64'} h-full bg-card border-r border-border transition-all duration-300`}>
-      <div className="p-4">
-        <div className="flex items-center justify-between mb-4">
+    <div className={`${sidebarCollapsed ? 'w-16' : 'w-64'} h-full bg-card/50 backdrop-blur border-r border-border/40 transition-all duration-300`}>
+      <div className="p-6">
+        <div className="flex items-center justify-between mb-6">
           {!sidebarCollapsed && (
-            <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
+            <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-[0.1em] opacity-60">
               Studios
             </h2>
           )}
           <Button
             variant="ghost"
             size="sm"
-            className="touch-area"
+            className="touch-area h-6 w-6 p-0 opacity-50 hover:opacity-100 transition-opacity"
             onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
             data-testid="button-toggle-sidebar"
           >
-            {sidebarCollapsed ? <PanelLeftOpen size={16} /> : <PanelLeftClose size={16} />}
+            {sidebarCollapsed ? <PanelLeftOpen size={14} /> : <PanelLeftClose size={14} />}
           </Button>
         </div>
         
-        <div className="space-y-3">
+        <div className="space-y-2">
           {studios.map((studio) => (
-            <Button
+            <button
               key={studio.id}
-              variant="ghost"
-              className={`w-full ${sidebarCollapsed ? 'p-2 h-auto justify-center' : 'p-4 h-auto justify-between'} ${getStudioGradientClass(studio.name)} hover:shadow-lg transition-all touch-area`}
+              className={`w-full ${sidebarCollapsed ? 'p-3 h-12 justify-center' : 'p-4 h-16 justify-between'} 
+                group relative overflow-hidden rounded-xl border border-border/20 hover:border-border/40
+                bg-gradient-to-r from-background/60 to-background/80 backdrop-blur
+                hover:from-background/80 hover:to-background/100 
+                transition-all duration-200 hover:shadow-sm
+                text-left flex items-center touch-area`}
               onClick={() => handleSelectStudio(studio)}
               data-testid={`studio-card-${studio.name.toLowerCase()}`}
               title={sidebarCollapsed ? `${studio.name} - ${studio.streams.length} streams available` : undefined}
             >
               {sidebarCollapsed ? (
                 <div className="flex flex-col items-center space-y-1">
-                  <span className="text-lg font-bold">{studio.name.charAt(0)}</span>
-                  <div className="w-2 h-2 bg-green-500 rounded-full live-indicator"></div>
+                  <span className="text-sm font-medium opacity-80">{studio.name.charAt(0)}</span>
+                  <div className="w-1.5 h-1.5 bg-green-400 rounded-full"></div>
                 </div>
               ) : (
                 <>
-                  <div className="text-left">
-                    <h3 className="text-[19px] bg-[transparent] font-bold">{studio.name}</h3>
-                    <p className="text-sm opacity-75">
-                      {studio.streams.length} streams available
+                  <div className="text-left flex-1 min-w-0">
+                    <h3 className="text-sm font-medium truncate">{studio.name}</h3>
+                    <p className="text-xs text-muted-foreground opacity-70">
+                      {studio.streams.length} streams
                     </p>
                   </div>
-                  <div className="flex items-center space-x-1">
-                    <div className="w-2 h-2 bg-green-500 rounded-full live-indicator"></div>
-                    <span className="text-xs font-medium">LIVE</span>
+                  <div className="flex items-center space-x-2 shrink-0">
+                    <div className="w-1.5 h-1.5 bg-green-400 rounded-full"></div>
+                    <span className="text-[10px] font-medium opacity-60 uppercase tracking-wider">Live</span>
                   </div>
                 </>
               )}
-            </Button>
+            </button>
           ))}
         </div>
         
         {/* Admin Section */}
         {user?.role === 'admin' && (
-          <div className="border-t border-border mt-6 pt-4">
+          <div className="border-t border-border/30 mt-8 pt-6">
             {!sidebarCollapsed && (
-              <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wider mb-3">
+              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-[0.1em] opacity-60 mb-4">
                 Admin
               </h3>
             )}
             <div className="space-y-2">
-              <Button
-                variant="secondary"
-                className={`w-full touch-area ${sidebarCollapsed ? 'p-2 justify-center' : ''}`}
+              <button
+                className={`w-full ${sidebarCollapsed ? 'p-3 h-12 justify-center' : 'p-3 h-12 justify-start'}
+                  group relative overflow-hidden rounded-lg border border-border/20 hover:border-border/40
+                  bg-gradient-to-r from-background/40 to-background/60 backdrop-blur
+                  hover:from-background/60 hover:to-background/80 
+                  transition-all duration-200 hover:shadow-sm
+                  text-left flex items-center touch-area`}
                 onClick={() => window.location.href = '/admin'}
                 data-testid="button-manage-users"
                 title={sidebarCollapsed ? 'Manage Users' : undefined}
               >
-                <Settings className={sidebarCollapsed ? '' : 'mr-2'} size={16} />
-                {!sidebarCollapsed && 'Manage Users'}
-              </Button>
-              <Button
-                variant="secondary"
-                className={`w-full touch-area ${sidebarCollapsed ? 'p-2 justify-center' : ''}`}
+                <Settings className={sidebarCollapsed ? '' : 'mr-3'} size={14} opacity={0.7} />
+                {!sidebarCollapsed && <span className="text-xs font-medium opacity-80">Manage Users</span>}
+              </button>
+              <button
+                className={`w-full ${sidebarCollapsed ? 'p-3 h-12 justify-center' : 'p-3 h-12 justify-start'}
+                  group relative overflow-hidden rounded-lg border border-border/20 hover:border-border/40
+                  bg-gradient-to-r from-background/40 to-background/60 backdrop-blur
+                  hover:from-background/60 hover:to-background/80 
+                  transition-all duration-200 hover:shadow-sm
+                  text-left flex items-center touch-area`}
                 onClick={() => window.location.href = '/admin?tab=studios'}
                 data-testid="button-manage-studios"
                 title={sidebarCollapsed ? 'Manage Studios' : undefined}
               >
-                <Monitor className={sidebarCollapsed ? '' : 'mr-2'} size={16} />
-                {!sidebarCollapsed && 'Manage Studios'}
-              </Button>
-              <Button
-                variant="secondary"
-                className={`w-full touch-area ${sidebarCollapsed ? 'p-2 justify-center' : ''}`}
+                <Monitor className={sidebarCollapsed ? '' : 'mr-3'} size={14} opacity={0.7} />
+                {!sidebarCollapsed && <span className="text-xs font-medium opacity-80">Manage Studios</span>}
+              </button>
+              <button
+                className={`w-full ${sidebarCollapsed ? 'p-3 h-12 justify-center' : 'p-3 h-12 justify-start'}
+                  group relative overflow-hidden rounded-lg border border-border/20 hover:border-border/40
+                  bg-gradient-to-r from-background/40 to-background/60 backdrop-blur
+                  hover:from-background/60 hover:to-background/80 
+                  transition-all duration-200 hover:shadow-sm
+                  text-left flex items-center touch-area`}
                 onClick={() => window.location.href = '/admin?tab=streams'}
                 data-testid="button-manage-streams"
                 title={sidebarCollapsed ? 'Manage Streams' : undefined}
               >
-                <Video className={sidebarCollapsed ? '' : 'mr-2'} size={16} />
-                {!sidebarCollapsed && 'Manage Streams'}
-              </Button>
+                <Video className={sidebarCollapsed ? '' : 'mr-3'} size={14} opacity={0.7} />
+                {!sidebarCollapsed && <span className="text-xs font-medium opacity-80">Manage Streams</span>}
+              </button>
             </div>
           </div>
         )}
