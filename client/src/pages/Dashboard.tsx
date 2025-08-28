@@ -219,7 +219,7 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="h-screen flex flex-col bg-gradient-to-br from-gray-900 via-slate-800 to-black relative overflow-hidden md:overflow-visible">
+    <div className="min-h-screen flex flex-col bg-gradient-to-br from-gray-900 via-slate-800 to-black relative overflow-hidden md:overflow-visible">
       {/* Glossy overlay effect */}
       <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent pointer-events-none"></div>
       {/* Mobile Header */}
@@ -324,7 +324,7 @@ export default function Dashboard() {
         </div>
       </header>
 
-      <div className="flex-1 flex md:pt-0 relative z-10 overflow-hidden md:overflow-visible">
+      <div className="flex-1 flex md:pt-0 relative z-10 overflow-hidden md:overflow-visible md:min-h-0">
         {/* Desktop Sidebar */}
         <div className="hidden lg:block">
           <StudioSidebar />
