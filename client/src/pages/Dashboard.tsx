@@ -436,6 +436,14 @@ export default function Dashboard() {
                       {/* Studio Content */}
                       <div className="relative h-full flex flex-col justify-center items-center px-6 text-center">
                         <div className="mb-8">
+                          {/* TBN Logo above studio name */}
+                          <div className="mb-4">
+                            <img 
+                              src={tbnLogo} 
+                              alt="TBN Logo" 
+                              className="h-12 w-auto mx-auto"
+                            />
+                          </div>
                           <h1 className="text-[48px] font-bold text-white mb-2 drop-shadow-lg">
                             {studio.name}
                           </h1>
@@ -519,14 +527,6 @@ export default function Dashboard() {
                   )}
                   
                   
-                  {/* TBN Logo */}
-                  <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-10">
-                    <img 
-                      src={tbnLogo} 
-                      alt="TBN Logo" 
-                      className="h-8 w-auto"
-                    />
-                  </div>
                 </GestureHandler>
 
                 {/* Desktop Welcome State */}
