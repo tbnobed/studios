@@ -245,7 +245,7 @@ export default function Dashboard() {
           <img 
             src={obLogo} 
             alt="OB Logo" 
-            className={`${sidebarCollapsed ? 'w-8 h-8' : 'w-12 h-12'} opacity-75`}
+            className="w-12 h-12 opacity-75 ml-[84px] mr-[84px]"
           />
           {!sidebarCollapsed && (
             <span className="text-xs text-muted-foreground">™</span>
