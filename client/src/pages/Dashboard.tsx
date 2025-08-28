@@ -588,10 +588,10 @@ export default function Dashboard() {
                         {stream.name}
                       </h4>
                       <div className="flex items-center justify-between mt-2">
-                        <span className="text-xs text-muted-foreground">
+                        <span className="hidden md:block text-xs text-muted-foreground">
                           {stream.resolution}
                         </span>
-                        <div className="flex items-center space-x-1">
+                        <div className="flex items-center space-x-1 md:ml-auto">
                           <div className={`w-1 h-1 rounded-full ${
                             getStreamStatus(stream) === 'online' ? 'bg-green-500' : 
                             getStreamStatus(stream) === 'error' ? 'bg-red-500' : 'bg-yellow-500'
