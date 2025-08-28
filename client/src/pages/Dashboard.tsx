@@ -290,7 +290,7 @@ export default function Dashboard() {
           <img 
             src={tbnLogo} 
             alt="TBN Studios Logo" 
-            className="h-8 w-auto"
+            className="h-16 w-auto"
           />
         </div>
         
