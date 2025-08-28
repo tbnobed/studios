@@ -64,9 +64,6 @@ fi
 # Create logs directory
 mkdir -p logs
 
-# Create SSL directory for nginx (optional)
-mkdir -p ssl
-
 # Pull the latest images
 echo "📥 Pulling Docker images..."
 docker-compose pull
