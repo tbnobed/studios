@@ -150,7 +150,7 @@ export default function Dashboard() {
               ) : (
                 <>
                   <div className="text-left">
-                    <h3 className="font-semibold">{studio.name}</h3>
+                    <h3 className="text-[19px] bg-[transparent] font-bold">{studio.name}</h3>
                     <p className="text-sm opacity-75">
                       {studio.streams.length} streams available
                     </p>
@@ -241,7 +241,6 @@ export default function Dashboard() {
           <LogOut size={16} />
         </Button>
       </header>
-
       {/* Desktop Header */}
       <header className="hidden md:flex bg-card/80 backdrop-blur border-b border-border px-4 py-3 items-center justify-between shrink-0 relative z-20">
         <div className="flex items-center space-x-3">
@@ -324,7 +323,6 @@ export default function Dashboard() {
           </div>
         </div>
       </header>
-
       <div className="flex-1 flex md:pt-0 relative z-10 overflow-hidden md:overflow-visible md:min-h-0">
         {/* Desktop Sidebar */}
         <div className="hidden lg:block">
@@ -538,7 +536,7 @@ export default function Dashboard() {
               </div>
             ) : viewMode === 'grid' ? (
               // Grid View
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 pb-4">
+              (<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 pb-4">
                 {selectedStudio.streams.map((stream) => (
                   <Card key={stream.id} className="overflow-hidden hover:border-accent transition-colors">
                     <div className="video-container relative">
@@ -588,10 +586,10 @@ export default function Dashboard() {
                     </CardContent>
                   </Card>
                 ))}
-              </div>
+              </div>)
             ) : (
               // Single View Mode
-              <GestureHandler
+              (<GestureHandler
                 onSwipeLeft={handleNextStream}
                 onSwipeRight={handlePreviousStream}
                 onPinchZoom={(scale) => {
@@ -658,12 +656,11 @@ export default function Dashboard() {
                     </>
                   )}
                 </div>
-              </GestureHandler>
+              </GestureHandler>)
             )}
           </div>
         </main>
       </div>
-
       {/* Mobile Footer */}
       <footer className="md:hidden fixed bottom-0 left-0 right-0 bg-card/80 backdrop-blur border-t border-border px-4 py-3 flex flex-col items-center space-y-2 z-30">
         <img 
@@ -675,7 +672,6 @@ export default function Dashboard() {
           © OBEDTV 2025
         </p>
       </footer>
-
       {/* Click outside to close user menu */}
       {userMenuOpen && (
         <div 
