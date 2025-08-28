@@ -296,7 +296,10 @@ export default function Dashboard() {
                       variant="ghost"
                       size="sm"
                       className="w-full justify-start touch-area"
-                      onClick={() => window.location.href = '/admin'}
+                      onClick={() => {
+                        setUserMenuOpen(false);
+                        window.location.href = '/admin';
+                      }}
                       data-testid="button-admin"
                     >
                       <Shield className="mr-2" size={16} />
@@ -307,6 +310,14 @@ export default function Dashboard() {
                     variant="ghost"
                     size="sm"
                     className="w-full justify-start touch-area"
+                    onClick={() => {
+                      setUserMenuOpen(false);
+                      // Settings functionality can be added here later
+                      toast({
+                        title: "Settings",
+                        description: "Settings panel coming soon!",
+                      });
+                    }}
                     data-testid="button-settings"
                   >
                     <Settings className="mr-2" size={16} />
@@ -316,7 +327,10 @@ export default function Dashboard() {
                     variant="ghost"
                     size="sm"
                     className="w-full justify-start text-destructive hover:text-destructive touch-area"
-                    onClick={handleLogout}
+                    onClick={() => {
+                      setUserMenuOpen(false);
+                      handleLogout();
+                    }}
                     data-testid="button-logout"
                   >
                     <LogOut className="mr-2" size={16} />
