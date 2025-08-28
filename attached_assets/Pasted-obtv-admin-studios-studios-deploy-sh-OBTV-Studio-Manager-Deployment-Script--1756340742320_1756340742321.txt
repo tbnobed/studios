@@ -1,0 +1,39 @@
+obtv-admin@studios:~/studios$ ./deploy.sh
+?? OBTV Studio Manager Deployment Script
+==========================================
+? Docker is already installed
+? Docker Compose is already installed
+? Environment file already exists
+?? Pulling Docker images...
+[+] Pulling 3/3
+ ? obtv_app Skipped - No image to be pulled                                                                                                                                                                                                                                                                             0.0s
+ ? nginx Pulled                                                                                                                                                                                                                                                                                                         0.4s
+ ? postgres Pulled                                                                                                                                                                                                                                                                                                      0.4s
+?? Building OBTV Studio Manager...
+[+] Building 10.2s (14/18)
+ => [obtv_app internal] load build definition from Dockerfile                                                                                                                                                                                                                                                           0.0s
+ => => transferring dockerfile: 1.24kB                                                                                                                                                                                                                                                                                  0.0s
+ => [obtv_app internal] load metadata for docker.io/library/node:18-alpine                                                                                                                                                                                                                                              0.4s
+ => [obtv_app internal] load .dockerignore                                                                                                                                                                                                                                                                              0.0s
+ => => transferring context: 467B                                                                                                                                                                                                                                                                                       0.0s
+ => CACHED [obtv_app builder 1/6] FROM docker.io/library/node:18-alpine@sha256:8d6421d663b4c28fd3ebc498332f249011d118945588d0a35cb9bc4b8ca09d9e                                                                                                                                                                         0.0s
+ => [obtv_app internal] load build context                                                                                                                                                                                                                                                                              0.0s
+ => => transferring context: 39.71kB                                                                                                                                                                                                                                                                                    0.0s
+ => CACHED [obtv_app builder 2/6] WORKDIR /app                                                                                                                                                                                                                                                                          0.0s
+ => [obtv_app production 2/9] RUN apk add --no-cache dumb-init                                                                                                                                                                                                                                                          1.1s
+ => [obtv_app builder 3/6] COPY package*.json ./                                                                                                                                                                                                                                                                        0.0s
+ => [obtv_app builder 4/6] RUN npm ci --only=production                                                                                                                                                                                                                                                                 9.2s
+ => [obtv_app production 3/9] RUN addgroup -g 1001 -S nodejs                                                                                                                                                                                                                                                            0.3s
+ => [obtv_app production 4/9] RUN adduser -S obtv -u 1001                                                                                                                                                                                                                                                               0.5s
+ => [obtv_app production 5/9] WORKDIR /app                                                                                                                                                                                                                                                                              0.0s
+ => [obtv_app builder 5/6] COPY . .                                                                                                                                                                                                                                                                                     0.1s
+ => ERROR [obtv_app builder 6/6] RUN npm run build                                                                                                                                                                                                                                                                      0.5s
+------
+ > [obtv_app builder 6/6] RUN npm run build:
+0.421
+0.421 > rest-express@1.0.0 build
+0.421 > vite build && esbuild server/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist
+0.421
+0.427 sh: vite: not found
+------
+failed to solve: process "/bin/sh -c npm run build" did not complete successfully: exit code: 127
