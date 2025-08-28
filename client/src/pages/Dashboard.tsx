@@ -745,6 +745,15 @@ export default function Dashboard() {
           </div>
         </main>
       </div>
+      
+      {/* Mobile OB Logo - Static at bottom */}
+      <div className="md:hidden fixed bottom-4 left-1/2 transform -translate-x-1/2 z-40">
+        <img 
+          src={obLogo} 
+          alt="OB Logo" 
+          className="w-12 h-12 opacity-75"
+        />
+      </div>
     </div>
   );
 }
