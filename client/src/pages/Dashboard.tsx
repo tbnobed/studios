@@ -334,7 +334,7 @@ export default function Dashboard() {
         <main className="flex-1 relative">
           {/* Studio Header */}
           {selectedStudio && (
-            <div className="bg-card border-b border-border px-4 lg:px-6 py-4">
+            <div className="bg-card border-b border-border px-4 lg:px-6 py-4 mt-16 md:mt-0">
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-3">
                   {/* Back Button */}
