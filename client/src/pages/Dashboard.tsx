@@ -323,14 +323,14 @@ export default function Dashboard() {
         </div>
       </header>
 
-      <div className="flex-1 flex pt-16 md:pt-0 pb-20 md:pb-0 relative z-10 overflow-hidden">
+      <div className="flex-1 flex pt-16 md:pt-0 relative z-10 overflow-hidden">
         {/* Desktop Sidebar */}
         <div className="hidden lg:block">
           <StudioSidebar />
         </div>
 
         {/* Main Content */}
-        <main className="flex-1 relative overflow-y-auto">
+        <main className="flex-1 relative overflow-y-auto pb-24 md:pb-0">
           {/* Studio Header */}
           {selectedStudio && (
             <div className="bg-card border-b border-border px-4 lg:px-6 py-4">
