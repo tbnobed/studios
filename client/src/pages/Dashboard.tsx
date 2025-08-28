@@ -433,17 +433,18 @@ export default function Dashboard() {
                       {/* Overlay for better text readability */}
                       <div className="absolute inset-0 bg-black/30"></div>
                       
+                      {/* TBN Logo positioned at top */}
+                      <div className="absolute top-16 left-1/2 transform -translate-x-1/2 z-10">
+                        <img 
+                          src={tbnLogo} 
+                          alt="TBN Logo" 
+                          className="h-24 w-auto"
+                        />
+                      </div>
+                      
                       {/* Studio Content */}
                       <div className="relative h-full flex flex-col justify-center items-center px-6 text-center">
                         <div className="mb-8">
-                          {/* TBN Logo above studio name */}
-                          <div className="mb-8">
-                            <img 
-                              src={tbnLogo} 
-                              alt="TBN Logo" 
-                              className="h-24 w-auto mx-auto"
-                            />
-                          </div>
                           <h1 className="text-[48px] font-bold text-white mb-2 drop-shadow-lg">
                             {studio.name}
                           </h1>
