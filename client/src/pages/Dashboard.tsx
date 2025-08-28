@@ -287,7 +287,11 @@ export default function Dashboard() {
             </SheetContent>
           </Sheet>
           
-          <h1 className="font-bold text-[30px]">TBN Studios</h1>
+          <img 
+            src={tbnLogo} 
+            alt="TBN Studios Logo" 
+            className="h-8 w-auto"
+          />
         </div>
         
         <div className="flex items-center space-x-2">
