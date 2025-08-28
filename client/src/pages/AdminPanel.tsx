@@ -38,6 +38,7 @@ export default function AdminPanel() {
   });
 
   const [isCreateUserOpen, setIsCreateUserOpen] = useState(false);
+  const [isEditUserOpen, setIsEditUserOpen] = useState(false);
   const [isCreateStreamOpen, setIsCreateStreamOpen] = useState(false);
   const [isEditStreamOpen, setIsEditStreamOpen] = useState(false);
   const [isEditStudioOpen, setIsEditStudioOpen] = useState(false);
@@ -45,6 +46,7 @@ export default function AdminPanel() {
   const [activeTab, setActiveTab] = useState("users");
   const [editingStream, setEditingStream] = useState<Stream | null>(null);
   const [editingStudio, setEditingStudio] = useState<Studio | null>(null);
+  const [editingUser, setEditingUser] = useState<UserWithPermissions | null>(null);
   const [selectedImageFile, setSelectedImageFile] = useState<File | null>(null);
   const [imageUploadPreview, setImageUploadPreview] = useState<string | null>(null);
 
@@ -125,6 +127,32 @@ export default function AdminPanel() {
     onError: (error: Error) => {
       toast({
         title: "Failed to Delete User",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Update user mutation
+  const updateUserMutation = useMutation({
+    mutationFn: async ({ userId, updateData }: { userId: string; updateData: Partial<UserWithPermissions> }) => {
+      const response = await apiRequest("PATCH", `/api/admin/users/${userId}`, updateData, {
+        headers: getAuthHeaders(),
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+      setIsEditUserOpen(false);
+      setEditingUser(null);
+      toast({
+        title: "User Updated",
+        description: "User has been successfully updated",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Failed to Update User",
         description: error.message,
         variant: "destructive",
       });
@@ -306,6 +334,26 @@ export default function AdminPanel() {
     if (window.confirm("Are you sure you want to delete this user?")) {
       deleteUserMutation.mutate(userId);
     }
+  };
+
+  const handleEditUser = (user: UserWithPermissions) => {
+    setEditingUser(user);
+    setIsEditUserOpen(true);
+  };
+
+  const handleUpdateUser = () => {
+    if (!editingUser) return;
+    
+    updateUserMutation.mutate({
+      userId: editingUser.id,
+      updateData: {
+        firstName: editingUser.firstName,
+        lastName: editingUser.lastName,
+        email: editingUser.email,
+        role: editingUser.role,
+        username: editingUser.username,
+      }
+    });
   };
 
   const handleEditStudio = (studio: Studio) => {
@@ -574,6 +622,100 @@ export default function AdminPanel() {
                   </Dialog>
                 </div>
               </CardHeader>
+
+              {/* Edit User Dialog */}
+              <Dialog open={isEditUserOpen} onOpenChange={setIsEditUserOpen}>
+                <DialogContent className="sm:max-w-md">
+                  <DialogHeader>
+                    <DialogTitle>Edit User</DialogTitle>
+                  </DialogHeader>
+                  
+                  {editingUser && (
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label htmlFor="editFirstName">First Name</Label>
+                          <Input
+                            id="editFirstName"
+                            value={editingUser.firstName || ''}
+                            onChange={(e) => setEditingUser({ ...editingUser, firstName: e.target.value })}
+                            placeholder="John"
+                            data-testid="input-edit-first-name"
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="editLastName">Last Name</Label>
+                          <Input
+                            id="editLastName"
+                            value={editingUser.lastName || ''}
+                            onChange={(e) => setEditingUser({ ...editingUser, lastName: e.target.value })}
+                            placeholder="Doe"
+                            data-testid="input-edit-last-name"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <Label htmlFor="editUsername">Username</Label>
+                        <Input
+                          id="editUsername"
+                          value={editingUser.username}
+                          onChange={(e) => setEditingUser({ ...editingUser, username: e.target.value })}
+                          placeholder="johndoe"
+                          data-testid="input-edit-username"
+                        />
+                      </div>
+
+                      <div>
+                        <Label htmlFor="editEmail">Email</Label>
+                        <Input
+                          id="editEmail"
+                          type="email"
+                          value={editingUser.email || ''}
+                          onChange={(e) => setEditingUser({ ...editingUser, email: e.target.value })}
+                          placeholder="john@example.com"
+                          data-testid="input-edit-email"
+                        />
+                      </div>
+
+                      <div>
+                        <Label htmlFor="editRole">Role</Label>
+                        <Select 
+                          value={editingUser.role} 
+                          onValueChange={(value: "admin" | "operator" | "viewer") => setEditingUser({ ...editingUser, role: value })}
+                        >
+                          <SelectTrigger data-testid="select-edit-role">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="viewer">Viewer</SelectItem>
+                            <SelectItem value="operator">Operator</SelectItem>
+                            <SelectItem value="admin">Admin</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                  )}
+                  
+                  <div className="flex gap-2 mt-6">
+                    <Button 
+                      onClick={handleUpdateUser}
+                      disabled={updateUserMutation.isPending}
+                      className="flex-1"
+                      data-testid="button-update-user"
+                    >
+                      {updateUserMutation.isPending ? "Updating..." : "Update User"}
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      onClick={() => setIsEditUserOpen(false)}
+                      className="flex-1"
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
               
               <CardContent>
                 <div className="space-y-4">
@@ -609,6 +751,7 @@ export default function AdminPanel() {
                           variant="ghost"
                           size="sm"
                           className="touch-area"
+                          onClick={() => handleEditUser(user)}
                           data-testid={`button-edit-${user.username}`}
                         >
                           <Edit size={16} />
