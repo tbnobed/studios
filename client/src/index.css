@@ -89,6 +89,13 @@
       padding-right: max(0px, env(safe-area-inset-right));
     }
   }
+
+  /* Desktop studio header spacing */
+  @media (min-width: 768px) {
+    .studio-header {
+      margin-top: 0 !important;
+    }
+  }
 }
 
 @layer components {
