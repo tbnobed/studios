@@ -19,16 +19,19 @@ CREATE TABLE IF NOT EXISTS sessions (
 ALTER TABLE sessions ADD CONSTRAINT session_pkey PRIMARY KEY (sid) NOT DEFERRABLE INITIALLY IMMEDIATE;
 CREATE INDEX IF NOT EXISTS IDX_session_expire ON sessions(expire);
 
+-- Create user role enum
+CREATE TYPE user_role AS ENUM ('admin', 'operator', 'viewer');
+
 -- Create users table
 CREATE TABLE IF NOT EXISTS users (
     id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
-    email VARCHAR UNIQUE,
-    username VARCHAR UNIQUE,
-    first_name VARCHAR,
-    last_name VARCHAR,
-    profile_image_url VARCHAR,
-    password_hash VARCHAR,
-    role VARCHAR DEFAULT 'viewer' CHECK (role IN ('admin', 'operator', 'viewer')),
+    username VARCHAR(50) NOT NULL UNIQUE,
+    email VARCHAR(100) UNIQUE,
+    password TEXT NOT NULL,
+    first_name VARCHAR(50),
+    last_name VARCHAR(50),
+    role user_role NOT NULL DEFAULT 'viewer',
+    is_active BOOLEAN NOT NULL DEFAULT true,
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW()
 );
@@ -36,22 +39,29 @@ CREATE TABLE IF NOT EXISTS users (
 -- Create studios table
 CREATE TABLE IF NOT EXISTS studios (
     id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
-    name VARCHAR NOT NULL UNIQUE,
+    name VARCHAR(100) NOT NULL,
+    location VARCHAR(100),
     description TEXT,
-    location VARCHAR,
-    created_at TIMESTAMP DEFAULT NOW(),
-    updated_at TIMESTAMP DEFAULT NOW()
+    color_code VARCHAR(7),
+    image_url VARCHAR(500),
+    is_active BOOLEAN NOT NULL DEFAULT true,
+    created_at TIMESTAMP DEFAULT NOW()
 );
+
+-- Create stream status enum
+CREATE TYPE stream_status AS ENUM ('online', 'offline', 'error');
 
 -- Create streams table
 CREATE TABLE IF NOT EXISTS streams (
     id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
     studio_id VARCHAR NOT NULL REFERENCES studios(id) ON DELETE CASCADE,
-    name VARCHAR NOT NULL,
-    stream_url VARCHAR NOT NULL,
-    resolution VARCHAR DEFAULT '1080p',
+    name VARCHAR(100) NOT NULL,
+    description TEXT,
+    stream_url TEXT NOT NULL,
+    resolution VARCHAR(20) DEFAULT '1080p',
     fps INTEGER DEFAULT 30,
-    status VARCHAR DEFAULT 'offline' CHECK (status IN ('online', 'offline', 'error')),
+    status stream_status NOT NULL DEFAULT 'offline',
+    is_active BOOLEAN NOT NULL DEFAULT true,
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW()
 );
@@ -61,13 +71,14 @@ CREATE TABLE IF NOT EXISTS user_studio_permissions (
     id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id VARCHAR NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     studio_id VARCHAR NOT NULL REFERENCES studios(id) ON DELETE CASCADE,
-    permission_level VARCHAR DEFAULT 'viewer' CHECK (permission_level IN ('admin', 'operator', 'viewer')),
+    can_view BOOLEAN NOT NULL DEFAULT true,
+    can_control BOOLEAN NOT NULL DEFAULT false,
     created_at TIMESTAMP DEFAULT NOW(),
     UNIQUE(user_id, studio_id)
 );
 
 -- Insert default admin user (password: admin123)
-INSERT INTO users (id, username, email, first_name, last_name, password_hash, role) VALUES 
+INSERT INTO users (id, username, email, first_name, last_name, password, role) VALUES 
     ('admin-user-id-12345', 'admin', 'admin@obtv.live', 'Admin', 'User', '$2b$10$mK8C5/yGdGlgYzJjFjC.MeFw5zKg7i8bPjBHyRJy7rH3.6MQxw4T6', 'admin')
 ON CONFLICT (id) DO NOTHING;
 
@@ -80,18 +91,18 @@ INSERT INTO studios (id, name, description, location) VALUES
 ON CONFLICT (id) DO NOTHING;
 
 -- Insert default streams for each studio
-INSERT INTO streams (studio_id, name, stream_url, resolution, fps) VALUES 
+INSERT INTO streams (studio_id, name, description, stream_url, resolution, fps) VALUES 
     -- SoCal streams
-    ('4813376b-ea45-47ca-b7d5-0090b1f2aab7', 'SoCal Main Camera', 'http://cdn1.obedtv.live:2022/rtc/v1/whep/?app=live&stream=Socal1', '1080p', 30),
-    ('4813376b-ea45-47ca-b7d5-0090b1f2aab7', 'SoCal Camera 2', 'http://cdn1.obedtv.live:2022/rtc/v1/whep/?app=live&stream=Socal2', '1080p', 30),
-    ('4813376b-ea45-47ca-b7d5-0090b1f2aab7', 'SoCal Camera 3', 'http://cdn1.obedtv.live:2022/rtc/v1/whep/?app=live&stream=Socal3', '1080p', 30),
-    ('4813376b-ea45-47ca-b7d5-0090b1f2aab7', 'SoCal Camera 4', 'http://cdn1.obedtv.live:2022/rtc/v1/whep/?app=live&stream=Socal4', '1080p', 30),
+    ('4813376b-ea45-47ca-b7d5-0090b1f2aab7', 'SoCal Main Camera', 'Primary studio camera feed', 'http://cdn1.obedtv.live:2022/rtc/v1/whep/?app=live&stream=Socal1', '1080p', 30),
+    ('4813376b-ea45-47ca-b7d5-0090b1f2aab7', 'SoCal Camera 2', 'Secondary studio camera feed', 'http://cdn1.obedtv.live:2022/rtc/v1/whep/?app=live&stream=Socal2', '1080p', 30),
+    ('4813376b-ea45-47ca-b7d5-0090b1f2aab7', 'SoCal Camera 3', 'Third studio camera feed', 'http://cdn1.obedtv.live:2022/rtc/v1/whep/?app=live&stream=Socal3', '1080p', 30),
+    ('4813376b-ea45-47ca-b7d5-0090b1f2aab7', 'SoCal Camera 4', 'Fourth studio camera feed', 'http://cdn1.obedtv.live:2022/rtc/v1/whep/?app=live&stream=Socal4', '1080p', 30),
     
     -- Plex streams
-    ('f2c8a3b1-4d6e-4a2b-8c9d-1e5f7a9b3c2d', 'Plex Main Camera', 'http://cdn1.obedtv.live:2022/rtc/v1/whep/?app=live&stream=Plex1', '1080p', 30),
-    ('f2c8a3b1-4d6e-4a2b-8c9d-1e5f7a9b3c2d', 'Plex Camera 2', 'http://cdn1.obedtv.live:2022/rtc/v1/whep/?app=live&stream=Plex2', '1080p', 30),
-    ('f2c8a3b1-4d6e-4a2b-8c9d-1e5f7a9b3c2d', 'Plex Camera 3', 'http://cdn1.obedtv.live:2022/rtc/v1/whep/?app=live&stream=Plex3', '1080p', 30),
-    ('f2c8a3b1-4d6e-4a2b-8c9d-1e5f7a9b3c2d', 'Plex Camera 4', 'http://cdn1.obedtv.live:2022/rtc/v1/whep/?app=live&stream=Plex4', '1080p', 30),
+    ('f2c8a3b1-4d6e-4a2b-8c9d-1e5f7a9b3c2d', 'Plex Main Camera', 'Primary studio camera feed', 'http://cdn1.obedtv.live:2022/rtc/v1/whep/?app=live&stream=Plex1', '1080p', 30),
+    ('f2c8a3b1-4d6e-4a2b-8c9d-1e5f7a9b3c2d', 'Plex Camera 2', 'Secondary studio camera feed', 'http://cdn1.obedtv.live:2022/rtc/v1/whep/?app=live&stream=Plex2', '1080p', 30),
+    ('f2c8a3b1-4d6e-4a2b-8c9d-1e5f7a9b3c2d', 'Plex Camera 3', 'Third studio camera feed', 'http://cdn1.obedtv.live:2022/rtc/v1/whep/?app=live&stream=Plex3', '1080p', 30),
+    ('f2c8a3b1-4d6e-4a2b-8c9d-1e5f7a9b3c2d', 'Plex Camera 4', 'Fourth studio camera feed', 'http://cdn1.obedtv.live:2022/rtc/v1/whep/?app=live&stream=Plex4', '1080p', 30),
     
     -- Irving streams
     ('a7b2c9d4-3f8e-4b1a-9c6d-2e8f1a4b7c5d', 'Irving Main Camera', 'http://cdn1.obedtv.live:2022/rtc/v1/whep/?app=live&stream=Irving1', '1080p', 30),
