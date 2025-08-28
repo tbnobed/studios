@@ -190,7 +190,7 @@ export function StudioCarousel({ studios, onStudioSelect }: StudioCarouselProps)
       {/* PREVIEW SECTION - 25% of container height */}
       <div className="flex-1 p-2 relative z-10 min-h-0">
         {/* Studio Indicators */}
-        <div className="flex justify-center space-x-2 mb-2">
+        <div className="flex justify-center space-x-2 mt-[32px] mb-[32px]">
           {studios.map((_, index) => (
             <button
               key={index}
