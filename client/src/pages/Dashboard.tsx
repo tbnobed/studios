@@ -219,7 +219,7 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="h-screen flex flex-col bg-gradient-to-br from-gray-900 via-slate-800 to-black relative overflow-hidden md:overflow-auto">
+    <div className="h-screen flex flex-col bg-gradient-to-br from-gray-900 via-slate-800 to-black relative overflow-hidden md:overflow-visible">
       {/* Glossy overlay effect */}
       <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent pointer-events-none"></div>
       {/* Mobile Header */}
@@ -394,7 +394,7 @@ export default function Dashboard() {
           )}
 
           {/* Video Content */}
-          <div className="flex-1 pb-24 md:pb-0 md:p-2 overflow-hidden md:overflow-y-auto">
+          <div className="flex-1 pb-24 md:pb-0 md:p-2 overflow-hidden md:overflow-visible md:h-auto">
             {!selectedStudio ? (
               <div className="h-full">
                 {/* Mobile Studio Selection with Full Screen Background */}
