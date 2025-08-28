@@ -15,7 +15,9 @@ import {
   Play,
   Shield,
   PanelLeftClose,
-  PanelLeftOpen
+  PanelLeftOpen,
+  Monitor,
+  Video
 } from "lucide-react";
 import { StreamPlayer } from "@/components/StreamPlayer";
 import { GestureHandler } from "@/components/GestureHandler";
@@ -187,18 +189,21 @@ export default function Dashboard() {
               <Button
                 variant="secondary"
                 className={`w-full touch-area ${sidebarCollapsed ? 'p-2 justify-center' : ''}`}
-                onClick={() => {
-                  window.location.href = '/admin';
-                  // Set the active tab to streams when navigating
-                  setTimeout(() => {
-                    const streamsTab = document.querySelector('[data-testid="tab-streams"]') as HTMLElement;
-                    if (streamsTab) streamsTab.click();
-                  }, 100);
-                }}
+                onClick={() => window.location.href = '/admin?tab=studios'}
+                data-testid="button-manage-studios"
+                title={sidebarCollapsed ? 'Manage Studios' : undefined}
+              >
+                <Monitor className={sidebarCollapsed ? '' : 'mr-2'} size={16} />
+                {!sidebarCollapsed && 'Manage Studios'}
+              </Button>
+              <Button
+                variant="secondary"
+                className={`w-full touch-area ${sidebarCollapsed ? 'p-2 justify-center' : ''}`}
+                onClick={() => window.location.href = '/admin?tab=streams'}
                 data-testid="button-manage-streams"
                 title={sidebarCollapsed ? 'Manage Streams' : undefined}
               >
-                <Shield className={sidebarCollapsed ? '' : 'mr-2'} size={16} />
+                <Video className={sidebarCollapsed ? '' : 'mr-2'} size={16} />
                 {!sidebarCollapsed && 'Manage Streams'}
               </Button>
             </div>

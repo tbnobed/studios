@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -44,6 +44,15 @@ export default function AdminPanel() {
   const [isEditStudioOpen, setIsEditStudioOpen] = useState(false);
   const [selectedStudioForStreams, setSelectedStudioForStreams] = useState<string>("");
   const [activeTab, setActiveTab] = useState("users");
+
+  // Handle URL parameters for tab selection
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const tab = urlParams.get('tab');
+    if (tab && ['users', 'studios', 'streams'].includes(tab)) {
+      setActiveTab(tab);
+    }
+  }, []);
   const [editingStream, setEditingStream] = useState<Stream | null>(null);
   const [editingStudio, setEditingStudio] = useState<Studio | null>(null);
   const [editingUser, setEditingUser] = useState<UserWithPermissions | null>(null);
