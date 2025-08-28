@@ -285,7 +285,7 @@ export default function Dashboard() {
             
             {/* User Menu Dropdown */}
             {userMenuOpen && (
-              <Card className="absolute top-12 right-0 w-48 z-50 shadow-xl">
+              <Card className="absolute top-12 right-0 w-48 z-[60] shadow-xl">
                 <CardContent className="p-2">
                   <div className="px-3 py-2 border-b border-border">
                     <p className="font-medium text-sm">{user?.username}</p>
@@ -694,7 +694,7 @@ export default function Dashboard() {
       {/* Click outside to close user menu */}
       {userMenuOpen && (
         <div 
-          className="fixed inset-0 z-40" 
+          className="fixed inset-0 z-[50]" 
           onClick={() => setUserMenuOpen(false)}
         />
       )}
