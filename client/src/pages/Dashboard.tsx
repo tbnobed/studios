@@ -477,7 +477,7 @@ export default function Dashboard() {
                                 stream={stream}
                                 className="w-full h-full"
                                 controls={false}
-                                autoPlay={false}
+                                autoPlay={true}
                                 onStatusChange={(status) => handleStreamStatusChange(stream.id, status)}
                               />
                               <div className="absolute bottom-1 left-1 right-1 text-xs text-white/90 bg-black/60 px-2 py-1 rounded truncate">
