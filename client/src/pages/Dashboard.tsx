@@ -139,19 +139,24 @@ export default function Dashboard() {
             <button
               key={studio.id}
               className={`w-full ${sidebarCollapsed ? 'p-3 h-12 justify-center' : 'p-4 h-16 justify-between'} 
-                group relative overflow-hidden rounded-xl border border-border/20 hover:border-border/40
-                bg-gradient-to-r from-background/60 to-background/80 backdrop-blur
-                hover:from-background/80 hover:to-background/100 
-                transition-all duration-200 hover:shadow-sm
-                text-left flex items-center touch-area`}
+                group relative overflow-hidden rounded-xl border transition-all duration-200 
+                text-left flex items-center touch-area transform hover:scale-[1.02] ${
+                selectedStudio?.id === studio.id 
+                  ? 'border-primary bg-primary/10 shadow-md ring-1 ring-primary/20' 
+                  : 'border-border/20 hover:border-border/40 bg-gradient-to-r from-background/60 to-background/80 backdrop-blur hover:from-background/80 hover:to-background/100 hover:shadow-sm'
+              }`}
               onClick={() => handleSelectStudio(studio)}
               data-testid={`studio-card-${studio.name.toLowerCase()}`}
               title={sidebarCollapsed ? `${studio.name} - ${studio.streams.length} streams available` : undefined}
             >
               {sidebarCollapsed ? (
                 <div className="flex flex-col items-center space-y-1">
-                  <span className="text-sm font-medium opacity-80">{studio.name.charAt(0)}</span>
-                  <div className="w-1.5 h-1.5 bg-green-400 rounded-full"></div>
+                  <span className={`text-sm font-medium transition-colors duration-200 ${
+                    selectedStudio?.id === studio.id ? 'text-primary' : 'opacity-80'
+                  }`}>{studio.name.charAt(0)}</span>
+                  <div className={`w-1.5 h-1.5 rounded-full transition-colors duration-200 ${
+                    selectedStudio?.id === studio.id ? 'bg-primary' : 'bg-green-400'
+                  }`}></div>
                 </div>
               ) : (
                 <>
@@ -162,8 +167,14 @@ export default function Dashboard() {
                     </p>
                   </div>
                   <div className="flex items-center space-x-2 shrink-0">
-                    <div className="w-1.5 h-1.5 bg-green-400 rounded-full"></div>
-                    <span className="text-[10px] font-medium opacity-60 uppercase tracking-wider">Live</span>
+                    <div className={`w-1.5 h-1.5 rounded-full transition-colors duration-200 ${
+                      selectedStudio?.id === studio.id ? 'bg-primary' : 'bg-green-400'
+                    }`}></div>
+                    <span className={`text-[10px] font-medium uppercase tracking-wider transition-colors duration-200 ${
+                      selectedStudio?.id === studio.id ? 'text-primary opacity-80' : 'opacity-60'
+                    }`}>
+                      {selectedStudio?.id === studio.id ? 'Selected' : 'Live'}
+                    </span>
                   </div>
                 </>
               )}
@@ -451,13 +462,15 @@ export default function Dashboard() {
                   {studios.map((studio, index) => (
                     <div
                       key={studio.id}
-                      className={`absolute inset-0 transition-all duration-500 transform cursor-pointer ${
+                      className={`absolute inset-0 transition-all duration-500 transform cursor-pointer hover:scale-[1.02] ${
                         index === currentStudioIndex 
                           ? 'opacity-100 scale-100' 
                           : index < currentStudioIndex 
                             ? 'opacity-0 scale-95 -translate-x-full' 
                             : 'opacity-0 scale-95 translate-x-full'
-                      } ${getStudioGradientClass(studio.name)}`}
+                      } ${getStudioGradientClass(studio.name)} ${
+                        selectedStudio?.id === studio.id ? 'ring-4 ring-primary/30' : ''
+                      }`}
                       style={{
                         backgroundImage: studio.imageUrl ? `url(${studio.imageUrl})` : undefined,
                         backgroundSize: 'cover',
@@ -481,23 +494,39 @@ export default function Dashboard() {
                       {/* Studio Content */}
                       <div className="relative h-full flex flex-col justify-center items-center px-6 text-center">
                         <div className="mb-8">
-                          <h1 className="text-[48px] font-bold text-white mb-2 drop-shadow-lg">
+                          <h1 className={`text-[48px] font-bold mb-2 drop-shadow-lg transition-colors duration-300 ${
+                            selectedStudio?.id === studio.id ? 'text-primary-foreground' : 'text-white'
+                          }`}>
                             {studio.name}
                           </h1>
-                          <p className="text-lg text-white/90 mb-1 drop-shadow">
+                          <p className={`text-lg mb-1 drop-shadow transition-colors duration-300 ${
+                            selectedStudio?.id === studio.id ? 'text-primary-foreground/90' : 'text-white/90'
+                          }`}>
                             {studio.location}
                           </p>
-                          <p className="text-white/80 drop-shadow">
+                          <p className={`drop-shadow transition-colors duration-300 ${
+                            selectedStudio?.id === studio.id ? 'text-primary-foreground/80' : 'text-white/80'
+                          }`}>
                             {studio.streams.length} streams available
                           </p>
+                          {selectedStudio?.id === studio.id && (
+                            <div className="mt-4 inline-flex items-center space-x-2 bg-primary/20 text-primary-foreground px-3 py-1 rounded-full text-sm font-medium backdrop-blur">
+                              <div className="w-2 h-2 bg-primary-foreground rounded-full animate-pulse"></div>
+                              <span>SELECTED</span>
+                            </div>
+                          )}
                         </div>
                         
                         
                         
                         {/* Live indicator */}
                         <div className="flex items-center space-x-2 mt-6">
-                          <div className="w-3 h-3 bg-green-500 rounded-full live-indicator"></div>
-                          <span className="text-white font-medium drop-shadow">LIVE</span>
+                          <div className={`w-3 h-3 rounded-full live-indicator transition-colors duration-300 ${
+                            selectedStudio?.id === studio.id ? 'bg-primary-foreground' : 'bg-green-500'
+                          }`}></div>
+                          <span className={`font-medium drop-shadow transition-colors duration-300 ${
+                            selectedStudio?.id === studio.id ? 'text-primary-foreground' : 'text-white'
+                          }`}>LIVE</span>
                         </div>
                       </div>
                       

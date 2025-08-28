@@ -9,9 +9,10 @@ import { StudioWithStreams } from "@shared/schema";
 interface StudioCarouselProps {
   studios: StudioWithStreams[];
   onStudioSelect: (studio: StudioWithStreams) => void;
+  selectedStudio?: StudioWithStreams | null;
 }
 
-export function StudioCarousel({ studios, onStudioSelect }: StudioCarouselProps) {
+export function StudioCarousel({ studios, onStudioSelect, selectedStudio }: StudioCarouselProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [previewIndex, setPreviewIndex] = useState(0);
   const [streamStatuses, setStreamStatuses] = useState<Record<string, 'loading' | 'online' | 'offline' | 'error'>>({});
@@ -125,7 +126,11 @@ export function StudioCarousel({ studios, onStudioSelect }: StudioCarouselProps)
 
           {/* Large Portrait Card (9:16 aspect ratio) - Uses full height of container */}
           <Card 
-            className="overflow-hidden cursor-pointer hover:border-primary/50 border-2"
+            className={`overflow-hidden cursor-pointer border-2 transition-all duration-300 transform hover:scale-[1.02] hover:shadow-xl ${
+              selectedStudio?.id === currentStudio.id 
+                ? 'border-primary ring-2 ring-primary/20 shadow-lg' 
+                : 'border-border hover:border-primary/50'
+            }`}
             style={{ width: '60vw', height: '40vh' }}
             onClick={() => onStudioSelect(currentStudio)}
             data-testid={`studio-card-${currentStudio.id}`}
@@ -160,14 +165,19 @@ export function StudioCarousel({ studios, onStudioSelect }: StudioCarouselProps)
               </div>
               
               {/* Status Badge */}
-              <div className="absolute top-4 right-4 bg-black bg-opacity-60 px-3 py-2 rounded-full">
+              <div className={`absolute top-4 right-4 px-3 py-2 rounded-full transition-all duration-300 ${
+                selectedStudio?.id === currentStudio.id 
+                  ? 'bg-primary/90 text-primary-foreground' 
+                  : 'bg-black bg-opacity-60'
+              }`}>
                 <div className="flex items-center space-x-2">
                   <div className={`w-2 h-2 rounded-full ${
                     getStudioStatus(currentStudio) === 'online' ? 'bg-green-400' : 
                     getStudioStatus(currentStudio) === 'loading' ? 'bg-yellow-400' : 'bg-red-400'
                   }`}></div>
                   <span className="text-sm uppercase font-medium">
-                    {getStudioStatus(currentStudio) === 'online' ? 'LIVE' : 
+                    {selectedStudio?.id === currentStudio.id ? 'SELECTED' : 
+                     getStudioStatus(currentStudio) === 'online' ? 'LIVE' : 
                      getStudioStatus(currentStudio) === 'loading' ? 'LOADING' : 'OFFLINE'}
                   </span>
                 </div>
@@ -246,7 +256,7 @@ export function StudioCarousel({ studios, onStudioSelect }: StudioCarouselProps)
                     onClick={() => handleStreamClick(stream)}
                     data-testid={`stream-preview-${stream.id}`}
                   >
-                    <Card className="w-full overflow-hidden border-2 hover:border-primary/50">
+                    <Card className="w-full overflow-hidden border-2 hover:border-primary/50 transition-all duration-200 hover:shadow-md">
                       <div className="aspect-video relative bg-black">
                         <StreamPlayer
                           stream={stream}
