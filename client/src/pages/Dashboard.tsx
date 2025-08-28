@@ -437,11 +437,11 @@ export default function Dashboard() {
                       <div className="relative h-full flex flex-col justify-center items-center px-6 text-center">
                         <div className="mb-8">
                           {/* TBN Logo above studio name */}
-                          <div className="mb-4">
+                          <div className="mb-8">
                             <img 
                               src={tbnLogo} 
                               alt="TBN Logo" 
-                              className="h-12 w-auto mx-auto"
+                              className="h-24 w-auto mx-auto"
                             />
                           </div>
                           <h1 className="text-[48px] font-bold text-white mb-2 drop-shadow-lg">
