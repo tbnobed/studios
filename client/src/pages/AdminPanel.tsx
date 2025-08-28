@@ -341,19 +341,64 @@ export default function AdminPanel() {
     setIsEditUserOpen(true);
   };
 
-  const handleUpdateUser = () => {
+  const handleUpdateUser = async () => {
     if (!editingUser) return;
     
-    updateUserMutation.mutate({
-      userId: editingUser.id,
-      updateData: {
-        firstName: editingUser.firstName,
-        lastName: editingUser.lastName,
-        email: editingUser.email,
-        role: editingUser.role,
-        username: editingUser.username,
+    try {
+      // First update the basic user info
+      await updateUserMutation.mutateAsync({
+        userId: editingUser.id,
+        updateData: {
+          firstName: editingUser.firstName,
+          lastName: editingUser.lastName,
+          email: editingUser.email,
+          role: editingUser.role,
+          username: editingUser.username,
+        }
+      });
+
+      // Then handle studio permissions
+      const originalUser = users.find(u => u.id === editingUser.id);
+      const originalPermissions = originalUser?.studioPermissions || [];
+      const newPermissions = editingUser.studioPermissions || [];
+
+      // Find permissions to remove
+      const permissionsToRemove = originalPermissions.filter(
+        orig => !newPermissions.some(newPerm => newPerm.studioId === orig.studioId)
+      );
+
+      // Find permissions to add
+      const permissionsToAdd = newPermissions.filter(
+        newPerm => !originalPermissions.some(orig => orig.studioId === newPerm.studioId)
+      );
+
+      // Remove old permissions
+      for (const permission of permissionsToRemove) {
+        await apiRequest("DELETE", `/api/admin/permissions/${editingUser.id}/${permission.studioId}`, undefined, {
+          headers: getAuthHeaders(),
+        });
       }
-    });
+
+      // Add new permissions
+      for (const permission of permissionsToAdd) {
+        await apiRequest("POST", "/api/admin/permissions", {
+          userId: editingUser.id,
+          studioId: permission.studioId,
+          canView: true,
+          canControl: editingUser.role !== 'viewer',
+        }, {
+          headers: getAuthHeaders(),
+        });
+      }
+
+    } catch (error) {
+      console.error("Error updating user:", error);
+      toast({
+        title: "Failed to Update User",
+        description: "There was an error updating the user and permissions",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleEditStudio = (studio: Studio) => {
@@ -693,6 +738,57 @@ export default function AdminPanel() {
                             <SelectItem value="admin">Admin</SelectItem>
                           </SelectContent>
                         </Select>
+                      </div>
+
+                      {/* Studio Permissions */}
+                      <div>
+                        <Label>Studio Permissions</Label>
+                        <div className="space-y-2 mt-2">
+                          {studios.map((studio) => {
+                            const hasPermission = editingUser.studioPermissions?.some(p => p.studioId === studio.id) || false;
+                            return (
+                              <div key={studio.id} className="flex items-center space-x-2">
+                                <input
+                                  type="checkbox"
+                                  id={`studio-${studio.id}`}
+                                  checked={hasPermission}
+                                  onChange={(e) => {
+                                    const currentPermissions = editingUser.studioPermissions || [];
+                                    if (e.target.checked) {
+                                      // Add permission
+                                      setEditingUser({
+                                        ...editingUser,
+                                        studioPermissions: [
+                                          ...currentPermissions,
+                                          {
+                                            id: '',
+                                            userId: editingUser.id,
+                                            studioId: studio.id,
+                                            canView: true,
+                                            canControl: editingUser.role !== 'viewer',
+                                            createdAt: new Date(),
+                                            studio: studio
+                                          }
+                                        ]
+                                      });
+                                    } else {
+                                      // Remove permission
+                                      setEditingUser({
+                                        ...editingUser,
+                                        studioPermissions: currentPermissions.filter(p => p.studioId !== studio.id)
+                                      });
+                                    }
+                                  }}
+                                  className="rounded"
+                                  data-testid={`checkbox-studio-${studio.name.toLowerCase().replace(/\s+/g, '-')}`}
+                                />
+                                <Label htmlFor={`studio-${studio.id}`} className="text-sm font-normal">
+                                  {studio.name}
+                                </Label>
+                              </div>
+                            );
+                          })}
+                        </div>
                       </div>
                     </div>
                   )}
