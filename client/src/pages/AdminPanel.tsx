@@ -55,7 +55,7 @@ export default function AdminPanel() {
   }, []);
   const [editingStream, setEditingStream] = useState<Stream | null>(null);
   const [editingStudio, setEditingStudio] = useState<Studio | null>(null);
-  const [editingUser, setEditingUser] = useState<UserWithPermissions | null>(null);
+  const [editingUser, setEditingUser] = useState<(UserWithPermissions & { newPassword?: string }) | null>(null);
   const [selectedImageFile, setSelectedImageFile] = useState<File | null>(null);
   const [imageUploadPreview, setImageUploadPreview] = useState<string | null>(null);
 
@@ -153,10 +153,16 @@ export default function AdminPanel() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
       setIsEditUserOpen(false);
+      
+      // Check if password was updated
+      const passwordWasUpdated = editingUser?.newPassword && editingUser.newPassword.trim();
+      
       setEditingUser(null);
       toast({
         title: "User Updated",
-        description: "User has been successfully updated",
+        description: passwordWasUpdated 
+          ? "User information and password have been successfully updated" 
+          : "User information has been successfully updated",
       });
     },
     onError: (error: Error) => {
@@ -346,7 +352,7 @@ export default function AdminPanel() {
   };
 
   const handleEditUser = (user: UserWithPermissions) => {
-    setEditingUser(user);
+    setEditingUser({ ...user, newPassword: '' });
     setIsEditUserOpen(true);
   };
 
@@ -354,16 +360,31 @@ export default function AdminPanel() {
     if (!editingUser) return;
     
     try {
-      // First update the basic user info
+      // First update the basic user info (including password if provided)
+      const updateData: any = {
+        firstName: editingUser.firstName,
+        lastName: editingUser.lastName,
+        email: editingUser.email,
+        role: editingUser.role,
+        username: editingUser.username,
+      };
+      
+      // Include password if provided
+      if (editingUser.newPassword && editingUser.newPassword.trim()) {
+        if (editingUser.newPassword.length < 6) {
+          toast({
+            title: "Invalid Password",
+            description: "Password must be at least 6 characters long",
+            variant: "destructive",
+          });
+          return;
+        }
+        updateData.newPassword = editingUser.newPassword;
+      }
+      
       await updateUserMutation.mutateAsync({
         userId: editingUser.id,
-        updateData: {
-          firstName: editingUser.firstName,
-          lastName: editingUser.lastName,
-          email: editingUser.email,
-          role: editingUser.role,
-          username: editingUser.username,
-        }
+        updateData
       });
 
       // Then handle studio permissions
@@ -726,6 +747,21 @@ export default function AdminPanel() {
                           placeholder="john@example.com"
                           data-testid="input-edit-email"
                         />
+                      </div>
+
+                      <div>
+                        <Label htmlFor="editPassword">Reset Password (optional)</Label>
+                        <Input
+                          id="editPassword"
+                          type="password"
+                          value={editingUser.newPassword || ''}
+                          onChange={(e) => setEditingUser({ ...editingUser, newPassword: e.target.value })}
+                          placeholder="Leave blank to keep current password"
+                          data-testid="input-edit-password"
+                        />
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Minimum 6 characters. Leave blank to keep current password.
+                        </p>
                       </div>
 
                       <div>

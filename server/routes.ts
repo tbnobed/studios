@@ -299,6 +299,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { id } = req.params;
       const updateData = req.body;
       
+      // Handle password separately if provided
+      if (updateData.newPassword) {
+        if (updateData.newPassword.length < 6) {
+          return res.status(400).json({ message: "Password must be at least 6 characters long" });
+        }
+        await storage.updateUserPassword(id, updateData.newPassword);
+        delete updateData.newPassword; // Remove from regular update data
+      }
+      
       const user = await storage.updateUser(id, updateData);
       const { password, ...userResponse } = user;
       res.json(userResponse);
