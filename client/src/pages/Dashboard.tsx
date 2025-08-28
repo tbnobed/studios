@@ -517,21 +517,6 @@ export default function Dashboard() {
                     </>
                   )}
                   
-                  {/* Navigation Dots */}
-                  {studios.length > 1 && (
-                    <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 flex space-x-2 z-10">
-                      {studios.map((_, index) => (
-                        <button
-                          key={index}
-                          className={`w-3 h-3 rounded-full transition-all touch-area ${
-                            index === currentStudioIndex ? 'bg-white scale-125' : 'bg-white/50'
-                          }`}
-                          onClick={() => setCurrentStudioIndex(index)}
-                          data-testid={`studio-dot-${index}`}
-                        />
-                      ))}
-                    </div>
-                  )}
                   
                   {/* Swipe Indicator */}
                   <div className="absolute top-4 left-1/2 transform -translate-x-1/2 bg-black/60 text-white px-3 py-2 rounded-lg text-xs z-10">
