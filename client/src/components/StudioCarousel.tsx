@@ -113,7 +113,8 @@ export function StudioCarousel({ studios, onStudioSelect }: StudioCarouselProps)
 
           {/* Large Portrait Card (9:16 aspect ratio) - Uses full height of container */}
           <Card 
-            className="overflow-hidden cursor-pointer hover:border-primary/50 border-2 h-full aspect-[9/16]"
+            className="overflow-hidden cursor-pointer hover:border-primary/50 border-2"
+            style={{ width: 'min(300px, 90vw)', height: 'min(80vh, 90vw * 16/9)' }}
             onClick={() => onStudioSelect(currentStudio)}
             data-testid={`studio-card-${currentStudio.id}`}
           >
