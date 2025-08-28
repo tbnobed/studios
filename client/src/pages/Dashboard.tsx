@@ -409,7 +409,7 @@ export default function Dashboard() {
                       setCurrentStudioIndex(currentStudioIndex - 1);
                     }
                   }}
-                  className="lg:hidden h-full relative"
+                  className="lg:hidden h-full relative pt-16"
                 >
                   {/* Studio Background Cards */}
                   {studios.map((studio, index) => (
