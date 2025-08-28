@@ -78,7 +78,11 @@ export function StudioCarousel({ studios, onStudioSelect }: StudioCarouselProps)
   };
 
   const currentStudio = studios[currentIndex];
-  const theme = studioThemes[currentStudio.name as keyof typeof studioThemes] || { 
+  const theme = currentStudio ? studioThemes[currentStudio.name as keyof typeof studioThemes] || { 
+    gradient: 'from-gray-400 to-gray-600', 
+    icon: '📺', 
+    color: 'text-gray-600'
+  } : { 
     gradient: 'from-gray-400 to-gray-600', 
     icon: '📺', 
     color: 'text-gray-600'
@@ -88,6 +92,14 @@ export function StudioCarousel({ studios, onStudioSelect }: StudioCarouselProps)
     return (
       <div className="h-48 flex items-center justify-center">
         <p className="text-muted-foreground">No studios available</p>
+      </div>
+    );
+  }
+
+  if (!currentStudio) {
+    return (
+      <div className="h-48 flex items-center justify-center">
+        <p className="text-muted-foreground">Loading studio...</p>
       </div>
     );
   }
