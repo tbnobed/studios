@@ -1,0 +1,28 @@
+obtv_postgres        | 2025-08-28 01:33:26.157 UTC [1] LOG:  database system is ready to accept connections
+obtv_studio_manager  |     at async file:///app/node_modules/drizzle-orm/node-postgres/session.js:83:22
+obtv_studio_manager  |     at async DatabaseStorage.updateStudio (file:///app/dist/production.js:245:22)
+obtv_studio_manager  |     at async file:///app/dist/production.js:421:22 {
+obtv_studio_manager  |   length: 229,
+obtv_studio_manager  |   severity: 'ERROR',
+obtv_studio_manager  |   code: '42703',
+obtv_studio_manager  |   detail: undefined,
+obtv_studio_manager  |   hint: undefined,
+obtv_studio_manager  |   position: undefined,
+obtv_studio_manager  |   internalPosition: undefined,
+obtv_studio_manager  |   internalQuery: undefined,
+obtv_studio_manager  |   where: 'PL/pgSQL assignment "NEW.updated_at = NOW()"\n' +
+obtv_studio_manager  |     'PL/pgSQL function update_updated_at_column() line 3 at assignment',
+obtv_postgres        | 2025-08-28 01:33:57.756 UTC [60] ERROR:  record "new" has no field "updated_at"
+obtv_postgres        | 2025-08-28 01:33:57.756 UTC [60] CONTEXT:  PL/pgSQL assignment "NEW.updated_at = NOW()"
+obtv_postgres        |  PL/pgSQL function update_updated_at_column() line 3 at assignment
+obtv_postgres        | 2025-08-28 01:33:57.756 UTC [60] STATEMENT:  update "studios" set "name" = $1, "location" = $2, "description" = $3, "color_code" = $4, "image_url" = $5 where "studios"."id" = $6 returning "id", "name", "location", "description", "color_code", "image_url", "is_active", "created_at"
+obtv_studio_manager  |   schema: undefined,
+obtv_studio_manager  |   table: undefined,
+obtv_studio_manager  |   column: undefined,
+obtv_studio_manager  |   dataType: undefined,
+obtv_studio_manager  |   constraint: undefined,
+obtv_studio_manager  |   file: 'pl_exec.c',
+obtv_studio_manager  |   line: '5601',
+obtv_studio_manager  |   routine: 'plpgsql_exec_get_datum_type_info'
+obtv_studio_manager  | }
+obtv_studio_manager  | 1:33:57 AM [express] PATCH /api/admin/studios/a7b2c9d4-3f8e-4b1a-9c6d-2e8f1a4b7c5d 500 in 20ms :: {"…

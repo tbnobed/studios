@@ -41,6 +41,7 @@ export const studios = pgTable("studios", {
   imageUrl: varchar("image_url", { length: 500 }), // studio image path/url
   isActive: boolean("is_active").notNull().default(true),
   createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 // Streams table
@@ -106,6 +107,7 @@ export const insertUserSchema = createInsertSchema(users).omit({
 export const insertStudioSchema = createInsertSchema(studios).omit({
   id: true,
   createdAt: true,
+  updatedAt: true,
 });
 
 export const insertStreamSchema = createInsertSchema(streams).omit({
