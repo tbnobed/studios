@@ -24,6 +24,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { StudioWithStreams, Stream } from "@shared/schema";
 import { removeAuthToken, getAuthHeaders, isUnauthorizedError } from "@/lib/authUtils";
+import obedtvLogo from "@/assets/obedtv-logo.png";
 
 type ViewMode = 'grid' | 'single';
 
@@ -256,7 +257,12 @@ export default function Dashboard() {
           <h1 className="font-bold text-[30px]">TBN Studios</h1>
         </div>
         
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center space-x-4">
+          <img 
+            src={obedtvLogo} 
+            alt="OBED TV Logo" 
+            className="h-8 w-auto"
+          />
           <span className="text-sm text-muted-foreground hidden sm:inline">
             {user?.firstName} {user?.lastName}
           </span>
