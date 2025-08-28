@@ -25,6 +25,7 @@ import { useToast } from "@/hooks/use-toast";
 import { StudioWithStreams, Stream } from "@shared/schema";
 import { removeAuthToken, getAuthHeaders, isUnauthorizedError } from "@/lib/authUtils";
 import obedtvLogo from "@/assets/obedtv-logo.png";
+import tbnLogo from "../assets/tbnlogo-white_1756354700943.png";
 
 type ViewMode = 'grid' | 'single';
 
@@ -521,7 +522,7 @@ export default function Dashboard() {
                   {/* TBN Logo */}
                   <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-10">
                     <img 
-                      src="@assets/tbnlogo-white_1756354700943.png" 
+                      src={tbnLogo} 
                       alt="TBN Logo" 
                       className="h-8 w-auto"
                     />
