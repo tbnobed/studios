@@ -394,7 +394,7 @@ export default function Dashboard() {
           )}
 
           {/* Video Content */}
-          <div className="flex-1 pb-24 md:pb-0 md:p-2 md:overflow-y-auto">
+          <div className="flex-1 pb-24 md:pb-0 md:p-2 md:overflow-y-auto overflow-hidden">
             {!selectedStudio ? (
               <div className="h-full">
                 {/* Mobile Studio Selection with Full Screen Background */}
