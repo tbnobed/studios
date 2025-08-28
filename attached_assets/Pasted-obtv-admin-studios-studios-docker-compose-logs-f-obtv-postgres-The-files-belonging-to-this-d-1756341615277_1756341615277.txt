@@ -1,0 +1,167 @@
+obtv-admin@studios:~/studios$ docker compose logs -f
+obtv_postgres  | The files belonging to this database system will be owned by user "postgres".
+obtv_studio_manager  | node:internal/errors:496
+obtv_studio_manager  |     ErrorCaptureStackTrace(err);
+obtv_postgres        | This user must also own the server process.
+obtv_postgres        |
+obtv_studio_manager  |     ^
+obtv_studio_manager  |
+obtv_postgres        | The database cluster will be initialized with locale "en_US.utf8".
+obtv_postgres        | The default database encoding has accordingly been set to "UTF8".
+obtv_postgres        | The default text search configuration will be set to "english".
+obtv_studio_manager  | TypeError [ERR_INVALID_ARG_TYPE]: The "paths[0]" argument must be of type string. Received undefined
+obtv_studio_manager  |     at new NodeError (node:internal/errors:405:5)
+obtv_studio_manager  |     at validateString (node:internal/validators:162:11)
+obtv_postgres        |
+obtv_postgres        | Data page checksums are disabled.
+obtv_postgres        |
+obtv_postgres        | fixing permissions on existing directory /var/lib/postgresql/data/pgdata ... ok
+obtv_postgres        | creating subdirectories ... ok
+obtv_studio_manager  |     at Object.resolve (node:path:1115:7)
+obtv_studio_manager  |     at file:///app/dist/index.js:661:18
+obtv_studio_manager  |     at ModuleJob.run (node:internal/modules/esm/module_job:195:25)
+obtv_studio_manager  |     at async ModuleLoader.import (node:internal/modules/esm/loader:337:24)
+obtv_postgres        | selecting dynamic shared memory implementation ... posix
+obtv_postgres        | selecting default max_connections ... 100
+obtv_postgres        | selecting default shared_buffers ... 128MB
+obtv_studio_manager  |     at async loadESM (node:internal/process/esm_loader:34:7)
+obtv_studio_manager  |     at async handleMainPromise (node:internal/modules/run_main:106:12) {
+obtv_studio_manager  |   code: 'ERR_INVALID_ARG_TYPE'
+obtv_studio_manager  | }
+obtv_studio_manager  |
+obtv_postgres        | selecting default time zone ... UTC
+obtv_postgres        | creating configuration files ... ok
+obtv_postgres        | running bootstrap script ... ok
+obtv_postgres        | sh: locale: not found
+obtv_postgres        | 2025-08-28 00:39:46.996 UTC [36] WARNING:  no usable system locales were found
+obtv_postgres        | performing post-bootstrap initialization ... ok
+obtv_postgres        | syncing data to disk ... ok
+obtv_postgres        |
+obtv_postgres        |
+obtv_studio_manager  | Node.js v18.20.8
+obtv_studio_manager  | node:internal/errors:496
+obtv_studio_manager  |     ErrorCaptureStackTrace(err);
+obtv_studio_manager  |     ^
+obtv_studio_manager  |
+obtv_studio_manager  | TypeError [ERR_INVALID_ARG_TYPE]: The "paths[0]" argument must be of type string. Received undefined
+obtv_studio_manager  |     at new NodeError (node:internal/errors:405:5)
+obtv_studio_manager  |     at validateString (node:internal/validators:162:11)
+obtv_studio_manager  |     at Object.resolve (node:path:1115:7)
+obtv_studio_manager  |     at file:///app/dist/index.js:661:18
+obtv_studio_manager  |     at ModuleJob.run (node:internal/modules/esm/module_job:195:25)
+obtv_studio_manager  |     at async ModuleLoader.import (node:internal/modules/esm/loader:337:24)
+obtv_studio_manager  |     at async loadESM (node:internal/process/esm_loader:34:7)
+obtv_studio_manager  |     at async handleMainPromise (node:internal/modules/run_main:106:12) {
+obtv_postgres        | initdb: warning: enabling "trust" authentication for local connections
+obtv_postgres        | initdb: hint: You can change this by editing pg_hba.conf or using the option -A, or --auth-local and --auth-host, the next time you run initdb.
+obtv_postgres        | Success. You can now start the database server using:
+obtv_postgres        |
+obtv_studio_manager  |   code: 'ERR_INVALID_ARG_TYPE'
+obtv_studio_manager  | }
+obtv_studio_manager  |
+obtv_studio_manager  | Node.js v18.20.8
+obtv_studio_manager  | node:internal/errors:496
+obtv_studio_manager  |     ErrorCaptureStackTrace(err);
+obtv_studio_manager  |     ^
+obtv_studio_manager  |
+obtv_studio_manager  | TypeError [ERR_INVALID_ARG_TYPE]: The "paths[0]" argument must be of type string. Received undefined
+obtv_studio_manager  |     at new NodeError (node:internal/errors:405:5)
+obtv_postgres        |     pg_ctl -D /var/lib/postgresql/data/pgdata -l logfile start
+obtv_postgres        |
+obtv_postgres        | waiting for server to start....2025-08-28 00:39:47.610 UTC [42] LOG:  starting PostgreSQL 15.14 on x86_64-pc-linux-musl, compiled by gcc (Alpine 14.2.0) 14.2.0, 64-bit
+obtv_postgres        | 2025-08-28 00:39:47.612 UTC [42] LOG:  listening on Unix socket "/var/run/postgresql/.s.PGSQL.5432"
+obtv_postgres        | 2025-08-28 00:39:47.618 UTC [45] LOG:  database system was shut down at 2025-08-28 00:39:47 UTC
+obtv_postgres        | 2025-08-28 00:39:47.629 UTC [42] LOG:  database system is ready to accept connections
+obtv_postgres        |  done
+obtv_postgres        | server started
+obtv_postgres        | CREATE DATABASE
+obtv_postgres        |
+obtv_postgres        |
+obtv_postgres        | /usr/local/bin/docker-entrypoint.sh: running /docker-entrypoint-initdb.d/init.sql
+obtv_postgres        | You are now connected to database "obtv_studio" as user "obtv_user".
+obtv_postgres        | CREATE EXTENSION
+obtv_postgres        | CREATE TABLE
+obtv_postgres        | ALTER TABLE
+obtv_postgres        | CREATE INDEX
+obtv_postgres        | CREATE TABLE
+obtv_postgres        | CREATE TABLE
+obtv_postgres        | CREATE TABLE
+obtv_postgres        | CREATE TABLE
+obtv_postgres        | INSERT 0 4
+obtv_studio_manager  |     at validateString (node:internal/validators:162:11)
+obtv_studio_manager  |     at Object.resolve (node:path:1115:7)
+obtv_studio_manager  |     at file:///app/dist/index.js:661:18
+obtv_studio_manager  |     at ModuleJob.run (node:internal/modules/esm/module_job:195:25)
+obtv_studio_manager  |     at async ModuleLoader.import (node:internal/modules/esm/loader:337:24)
+obtv_studio_manager  |     at async loadESM (node:internal/process/esm_loader:34:7)
+obtv_studio_manager  |     at async handleMainPromise (node:internal/modules/run_main:106:12) {
+obtv_postgres        | INSERT 0 16
+obtv_postgres        | CREATE INDEX
+obtv_studio_manager  |   code: 'ERR_INVALID_ARG_TYPE'
+obtv_postgres        | CREATE INDEX
+obtv_studio_manager  | }
+obtv_studio_manager  |
+obtv_studio_manager  | Node.js v18.20.8
+obtv_postgres        | CREATE INDEX
+obtv_postgres        | CREATE INDEX
+obtv_postgres        | CREATE INDEX
+obtv_postgres        | CREATE FUNCTION
+obtv_postgres        | CREATE TRIGGER
+obtv_postgres        | CREATE TRIGGER
+obtv_postgres        | CREATE TRIGGER
+obtv_postgres        |
+obtv_postgres        |
+obtv_postgres        | waiting for server to shut down....2025-08-28 00:39:47.901 UTC [42] LOG:  received fast shutdown request
+obtv_postgres        | 2025-08-28 00:39:47.902 UTC [42] LOG:  aborting any active transactions
+obtv_postgres        | 2025-08-28 00:39:47.908 UTC [42] LOG:  background worker "logical replication launcher" (PID 48) exited with exit code 1
+obtv_postgres        | 2025-08-28 00:39:47.911 UTC [43] LOG:  shutting down
+obtv_postgres        | 2025-08-28 00:39:47.912 UTC [43] LOG:  checkpoint starting: shutdown immediate
+obtv_postgres        | 2025-08-28 00:39:47.961 UTC [43] LOG:  checkpoint complete: wrote 944 buffers (5.8%); 0 WAL file(s) added, 0 removed, 0 recycled; write=0.026 s, sync=0.020 s, total=0.051 s; sync files=331, longest=0.002 s, average=0.001 s; distance=4396 kB, estimate=4396 kB
+obtv_postgres        | 2025-08-28 00:39:47.971 UTC [42] LOG:  database system is shut down
+obtv_postgres        |  done
+obtv_postgres        | server stopped
+obtv_postgres        |
+obtv_postgres        | PostgreSQL init process complete; ready for start up.
+obtv_postgres        |
+obtv_postgres        | 2025-08-28 00:39:48.039 UTC [1] LOG:  starting PostgreSQL 15.14 on x86_64-pc-linux-musl, compiled by gcc (Alpine 14.2.0) 14.2.0, 64-bit
+obtv_postgres        | 2025-08-28 00:39:48.040 UTC [1] LOG:  listening on IPv4 address "0.0.0.0", port 5432
+obtv_postgres        | 2025-08-28 00:39:48.040 UTC [1] LOG:  listening on IPv6 address "::", port 5432
+obtv_postgres        | 2025-08-28 00:39:48.042 UTC [1] LOG:  listening on Unix socket "/var/run/postgresql/.s.PGSQL.5432"
+obtv_postgres        | 2025-08-28 00:39:48.048 UTC [61] LOG:  database system was shut down at 2025-08-28 00:39:47 UTC
+obtv_postgres        | 2025-08-28 00:39:48.058 UTC [1] LOG:  database system is ready to accept connections
+obtv_studio_manager  | node:internal/errors:496
+obtv_studio_manager  |     ErrorCaptureStackTrace(err);
+obtv_studio_manager  |     ^
+obtv_studio_manager  |
+obtv_studio_manager  | TypeError [ERR_INVALID_ARG_TYPE]: The "paths[0]" argument must be of type string. Received undefined
+obtv_studio_manager  |     at new NodeError (node:internal/errors:405:5)
+obtv_studio_manager  |     at validateString (node:internal/validators:162:11)
+obtv_studio_manager  |     at Object.resolve (node:path:1115:7)
+obtv_studio_manager  |     at file:///app/dist/index.js:661:18
+obtv_studio_manager  |     at ModuleJob.run (node:internal/modules/esm/module_job:195:25)
+obtv_studio_manager  |     at async ModuleLoader.import (node:internal/modules/esm/loader:337:24)
+obtv_studio_manager  |     at async loadESM (node:internal/process/esm_loader:34:7)
+obtv_studio_manager  |     at async handleMainPromise (node:internal/modules/run_main:106:12) {
+obtv_studio_manager  |   code: 'ERR_INVALID_ARG_TYPE'
+obtv_studio_manager  | }
+obtv_studio_manager  |
+obtv_studio_manager  | Node.js v18.20.8
+obtv_studio_manager exited with code 1
+obtv_studio_manager  | node:internal/errors:496
+obtv_studio_manager  |     ErrorCaptureStackTrace(err);
+obtv_studio_manager  |     ^
+obtv_studio_manager  |
+obtv_studio_manager  | TypeError [ERR_INVALID_ARG_TYPE]: The "paths[0]" argument must be of type string. Received undefined
+obtv_studio_manager  |     at new NodeError (node:internal/errors:405:5)
+obtv_studio_manager  |     at validateString (node:internal/validators:162:11)
+obtv_studio_manager  |     at Object.resolve (node:path:1115:7)
+obtv_studio_manager  |     at file:///app/dist/index.js:661:18
+obtv_studio_manager  |     at ModuleJob.run (node:internal/modules/esm/module_job:195:25)
+obtv_studio_manager  |     at async ModuleLoader.import (node:internal/modules/esm/loader:337:24)
+obtv_studio_manager  |     at async loadESM (node:internal/process/esm_loader:34:7)
+obtv_studio_manager  |     at async handleMainPromise (node:internal/modules/run_main:106:12) {
+obtv_studio_manager  |   code: 'ERR_INVALID_ARG_TYPE'
+obtv_studio_manager  | }
+obtv_studio_manager  |
+obtv_studio_manager  | Node.js v18.20.8
+obtv_studio_manager exited with code 1

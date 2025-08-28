@@ -16,6 +16,9 @@ COPY . .
 # Build the application
 RUN npm run build
 
+# Build production server separately to avoid import.meta.dirname issues
+RUN npx esbuild server/production.ts --platform=node --packages=external --bundle --format=esm --outfile=dist/production.js
+
 # Production stage
 FROM node:18-alpine AS production
 
@@ -48,4 +51,4 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
 
 # Start the application
 ENTRYPOINT ["dumb-init", "--"]
-CMD ["node", "dist/index.js"]
+CMD ["node", "dist/production.js"]
