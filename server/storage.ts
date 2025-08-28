@@ -15,7 +15,7 @@ import {
   type UserWithPermissions
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and } from "drizzle-orm";
+import { eq, and, asc } from "drizzle-orm";
 import bcrypt from "bcrypt";
 
 export interface IStorage {
@@ -128,7 +128,7 @@ export class DatabaseStorage implements IStorage {
 
   // Studio operations
   async getAllStudios(): Promise<Studio[]> {
-    return db.select().from(studios).where(eq(studios.isActive, true));
+    return db.select().from(studios).where(eq(studios.isActive, true)).orderBy(asc(studios.name));
   }
 
   async getStudioWithStreams(id: string): Promise<StudioWithStreams | undefined> {
@@ -137,6 +137,7 @@ export class DatabaseStorage implements IStorage {
       with: {
         streams: {
           where: eq(streams.isActive, true),
+          orderBy: (streams, { asc }) => [asc(streams.name)],
         },
       },
     });
@@ -151,13 +152,16 @@ export class DatabaseStorage implements IStorage {
           with: {
             streams: {
               where: eq(streams.isActive, true),
+              orderBy: (streams, { asc }) => [asc(streams.name)],
             },
           },
         },
       },
     });
 
-    return userPermissions.map(p => p.studio as StudioWithStreams);
+    // Sort studios by name and return
+    const studiosWithStreams = userPermissions.map(p => p.studio as StudioWithStreams);
+    return studiosWithStreams.sort((a, b) => a.name.localeCompare(b.name));
   }
 
   async createStudio(studioData: InsertStudio): Promise<Studio> {
@@ -178,7 +182,7 @@ export class DatabaseStorage implements IStorage {
   async getStreamsByStudio(studioId: string): Promise<Stream[]> {
     return db.select().from(streams).where(
       and(eq(streams.studioId, studioId), eq(streams.isActive, true))
-    );
+    ).orderBy(asc(streams.name));
   }
 
   async getStream(id: string): Promise<Stream | undefined> {
