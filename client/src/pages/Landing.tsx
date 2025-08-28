@@ -65,9 +65,7 @@ export default function Landing() {
               className="w-full h-full object-contain"
             />
           </div>
-          <h1 className="text-2xl font-bold text-foreground mb-2">
-            OBTV Studio Manager
-          </h1>
+          <h1 className="text-2xl font-bold text-foreground mb-2">TBN Studios</h1>
           <p className="text-muted-foreground">Access your studio streams</p>
         </div>
         
