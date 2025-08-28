@@ -446,7 +446,7 @@ export default function Dashboard() {
           )}
 
           {/* Video Content */}
-          <div className="flex-1 pb-24 md:pb-0 md:p-2 overflow-hidden md:overflow-visible md:h-auto">
+          <div className="flex-1 md:p-2 overflow-hidden md:overflow-visible md:h-auto">
             {!selectedStudio ? (
               <div className="h-full">
                 {/* Mobile Studio Selection with Full Screen Background */}
@@ -732,20 +732,6 @@ export default function Dashboard() {
           </div>
         </main>
       </div>
-      {/* Footer */}
-      <footer className="fixed bottom-0 left-0 right-0 bg-card/80 backdrop-blur border-t border-border px-4 py-3 flex flex-col items-center space-y-2 z-30">
-        <div className="flex items-center space-x-2">
-          <img 
-            src={obedtvLogo} 
-            alt="OBED TV Logo" 
-            className="h-6 w-auto"
-          />
-          <span className="text-xs text-muted-foreground">™</span>
-        </div>
-        <p className="text-xs text-muted-foreground">
-          © OBEDTV 2025
-        </p>
-      </footer>
     </div>
   );
 }
