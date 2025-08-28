@@ -83,16 +83,16 @@ export default function Settings() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <SharedHeader 
-        title="TBN Studios"
-        subtitle="Settings - Manage your account settings"
-      />
+    <div className="min-h-screen flex flex-col bg-gradient-to-br from-gray-900 via-slate-800 to-black relative overflow-hidden md:overflow-visible">
+      {/* Glossy overlay effect */}
+      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent pointer-events-none"></div>
+      
+      <SharedHeader />
 
-      <div className="container mx-auto px-4 py-8">
-        <div className="max-w-4xl mx-auto">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+      <div className="flex-1 pt-16 md:pt-0 relative z-10">
+        <div className="container mx-auto px-4 py-8">
+          <div className="max-w-4xl mx-auto">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
             {/* Sidebar Navigation */}
             <div className="md:col-span-1">
               <Card>
@@ -283,6 +283,7 @@ export default function Settings() {
                   </CardContent>
                 </Card>
               )}
+            </div>
             </div>
           </div>
         </div>

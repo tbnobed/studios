@@ -539,13 +539,14 @@ export default function AdminPanel() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <SharedHeader 
-        title="TBN Studios"
-        subtitle="Admin Panel - Manage users, studios, and streaming configuration"
-      />
+    <div className="min-h-screen flex flex-col bg-gradient-to-br from-gray-900 via-slate-800 to-black relative overflow-hidden md:overflow-visible">
+      {/* Glossy overlay effect */}
+      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent pointer-events-none"></div>
       
-      <div className="max-w-7xl mx-auto p-4 mt-6">
+      <SharedHeader />
+      
+      <div className="flex-1 pt-16 md:pt-0 relative z-10">
+        <div className="max-w-7xl mx-auto p-4 mt-6">
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <TabsList className="grid w-full grid-cols-3">
@@ -1431,6 +1432,7 @@ export default function AdminPanel() {
 
           {/* Settings Tab */}
         </Tabs>
+        </div>
       </div>
     </div>
   );
