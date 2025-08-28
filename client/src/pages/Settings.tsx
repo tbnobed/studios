@@ -9,8 +9,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, User, Lock, Save } from "lucide-react";
+import { User, Lock, Save } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import SharedHeader from "@/components/SharedHeader";
 
 const passwordSchema = z.object({
   currentPassword: z.string().min(1, "Current password is required"),
@@ -84,26 +85,10 @@ export default function Settings() {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="border-b border-border bg-card/50 backdrop-blur-sm">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center gap-4">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => window.location.href = '/'}
-              className="text-muted-foreground hover:text-foreground"
-              data-testid="button-back"
-            >
-              <ArrowLeft size={16} className="mr-2" />
-              Back to Dashboard
-            </Button>
-            <div>
-              <h1 className="text-2xl font-bold text-foreground">Settings</h1>
-              <p className="text-sm text-muted-foreground">Manage your account settings</p>
-            </div>
-          </div>
-        </div>
-      </header>
+      <SharedHeader 
+        title="TBN Studios"
+        subtitle="Settings - Manage your account settings"
+      />
 
       <div className="container mx-auto px-4 py-8">
         <div className="max-w-4xl mx-auto">
