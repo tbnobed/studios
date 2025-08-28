@@ -330,7 +330,7 @@ export default function Dashboard() {
         </div>
 
         {/* Main Content */}
-        <main className="flex-1 relative overflow-y-auto pb-24 md:pb-0">
+        <main className="flex-1 relative overflow-hidden">
           {/* Studio Header */}
           {selectedStudio && (
             <div className="bg-card border-b border-border px-4 lg:px-6 py-4">
@@ -393,7 +393,7 @@ export default function Dashboard() {
           )}
 
           {/* Video Content */}
-          <div className="flex-1 p-2 overflow-hidden" style={{ maxHeight: 'calc(100vh - 140px)' }}>
+          <div className="flex-1 p-2 overflow-y-auto pb-24 md:pb-0">
             {!selectedStudio ? (
               <div className="h-full">
                 {/* Mobile Studio Carousel */}
