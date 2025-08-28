@@ -416,7 +416,7 @@ export default function Dashboard() {
                   {studios.map((studio, index) => (
                     <div
                       key={studio.id}
-                      className={`absolute inset-0 transition-all duration-500 transform ${
+                      className={`absolute inset-0 transition-all duration-500 transform cursor-pointer ${
                         index === currentStudioIndex 
                           ? 'opacity-100 scale-100' 
                           : index < currentStudioIndex 
@@ -429,6 +429,7 @@ export default function Dashboard() {
                         backgroundPosition: 'center',
                         backgroundBlendMode: studio.imageUrl ? 'overlay' : 'normal'
                       }}
+                      onClick={() => handleSelectStudio(studio)}
                     >
                       {/* Overlay for better text readability */}
                       <div className="absolute inset-0 bg-black/30"></div>
