@@ -66,6 +66,11 @@ CREATE TABLE IF NOT EXISTS user_studio_permissions (
     UNIQUE(user_id, studio_id)
 );
 
+-- Insert default admin user (password: admin123)
+INSERT INTO users (id, username, email, first_name, last_name, password_hash, role) VALUES 
+    ('admin-user-id-12345', 'admin', 'admin@obtv.live', 'Admin', 'User', '$2b$10$mK8C5/yGdGlgYzJjFjC.MeFw5zKg7i8bPjBHyRJy7rH3.6MQxw4T6', 'admin')
+ON CONFLICT (id) DO NOTHING;
+
 -- Insert default studios
 INSERT INTO studios (id, name, description, location) VALUES 
     ('4813376b-ea45-47ca-b7d5-0090b1f2aab7', 'SoCal', 'Southern California Studio', 'Los Angeles, CA'),
@@ -100,6 +105,14 @@ INSERT INTO streams (studio_id, name, stream_url, resolution, fps) VALUES
     ('c5d8f1a3-2b7e-4c9a-8d5f-3e1f6a2b9c8d', 'Nashville Camera 3', 'http://cdn1.obedtv.live:2022/rtc/v1/whep/?app=live&stream=Nashville3', '1080p', 30),
     ('c5d8f1a3-2b7e-4c9a-8d5f-3e1f6a2b9c8d', 'Nashville Camera 4', 'http://cdn1.obedtv.live:2022/rtc/v1/whep/?app=live&stream=Nashville4', '1080p', 30)
 ON CONFLICT DO NOTHING;
+
+-- Grant admin user access to all studios
+INSERT INTO user_studio_permissions (user_id, studio_id, can_view, can_control) VALUES 
+    ('admin-user-id-12345', '4813376b-ea45-47ca-b7d5-0090b1f2aab7', true, true),  -- SoCal
+    ('admin-user-id-12345', 'f2c8a3b1-4d6e-4a2b-8c9d-1e5f7a9b3c2d', true, true),  -- Plex  
+    ('admin-user-id-12345', 'a7b2c9d4-3f8e-4b1a-9c6d-2e8f1a4b7c5d', true, true),  -- Irving
+    ('admin-user-id-12345', 'c5d8f1a3-2b7e-4c9a-8d5f-3e1f6a2b9c8d', true, true)   -- Nashville
+ON CONFLICT (user_id, studio_id) DO NOTHING;
 
 -- Create indexes for performance
 CREATE INDEX IF NOT EXISTS idx_streams_studio_id ON streams(studio_id);
