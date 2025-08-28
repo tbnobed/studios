@@ -528,7 +528,7 @@ export default function AdminPanel() {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="users" className="flex items-center gap-2" data-testid="tab-users">
               <UserPlus size={16} />
               Users
@@ -540,10 +540,6 @@ export default function AdminPanel() {
             <TabsTrigger value="streams" className="flex items-center gap-2" data-testid="tab-streams">
               <Video size={16} />
               Streams
-            </TabsTrigger>
-            <TabsTrigger value="settings" className="flex items-center gap-2" data-testid="tab-settings">
-              <Settings2 size={16} />
-              Settings
             </TabsTrigger>
           </TabsList>
 
@@ -1399,39 +1395,6 @@ export default function AdminPanel() {
           </TabsContent>
 
           {/* Settings Tab */}
-          <TabsContent value="settings" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Studio Settings</CardTitle>
-                <CardDescription>Configure studio properties and streaming defaults</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-6">
-                  <div className="grid gap-4">
-                    {studios.map((studio) => (
-                      <Card key={studio.id} className="p-4">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <div 
-                              className="w-4 h-4 rounded-full" 
-                              style={{ backgroundColor: studio.colorCode || '#4A5568' }}
-                            />
-                            <div>
-                              <h3 className="font-semibold">{studio.name}</h3>
-                              <p className="text-sm text-muted-foreground">{studio.location}</p>
-                            </div>
-                          </div>
-                          <Button variant="outline" size="sm">
-                            Configure
-                          </Button>
-                        </div>
-                      </Card>
-                    ))}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
         </Tabs>
       </div>
     </div>
