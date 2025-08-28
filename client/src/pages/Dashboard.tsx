@@ -552,7 +552,7 @@ export default function Dashboard() {
       </div>
 
       {/* Mobile Footer */}
-      <footer className="md:hidden bg-card/80 backdrop-blur border-t border-border px-4 py-3 flex flex-col items-center space-y-2 shrink-0">
+      <footer className="md:hidden fixed bottom-0 left-0 right-0 bg-card/80 backdrop-blur border-t border-border px-4 py-3 flex flex-col items-center space-y-2 z-30">
         <img 
           src={obedtvLogo} 
           alt="OBED TV Logo" 
