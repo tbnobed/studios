@@ -337,16 +337,15 @@ export default function Dashboard() {
             <div className="bg-card border-b border-border px-4 lg:px-6 py-4 mt-16 md:mt-0">
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-3">
-                  {/* Back Button */}
+                  {/* Mobile Back Button */}
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="touch-area"
+                    className="lg:hidden touch-area"
                     onClick={() => setSelectedStudio(null)}
                     data-testid="button-back-to-studios"
                   >
                     <ChevronLeft size={20} />
-                    <span className="hidden sm:inline ml-1">Back to Studios</span>
                   </Button>
                   <div>
                     <h2 className="text-xl font-bold" data-testid="current-studio-name">
