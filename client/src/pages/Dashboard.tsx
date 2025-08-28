@@ -38,6 +38,7 @@ export default function Dashboard() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [streamStatuses, setStreamStatuses] = useState<Record<string, 'online' | 'offline' | 'error'>>({});
+  const [currentStudioIndex, setCurrentStudioIndex] = useState(0);
 
   // Fetch user's accessible studios
   const { data: studios = [], isLoading: studiosLoading, error: studiosError } = useQuery<StudioWithStreams[]>({
@@ -396,19 +397,124 @@ export default function Dashboard() {
           <div className="flex-1 p-2 overflow-y-auto pb-24 md:pb-0">
             {!selectedStudio ? (
               <div className="h-full">
-                {/* Mobile Studio Carousel */}
-                <div className="lg:hidden h-full flex flex-col">
-                  <div className="text-center mb-2">
-                    <h2 className="mt-[17px] mb-[17px] text-[30px] font-extrabold ml-[0px] mr-[0px] pl-[6px] pr-[6px]">TBN Studios</h2>
-                    <p className="text-sm text-muted-foreground">Select a studio to view live streams</p>
+                {/* Mobile Studio Selection with Full Screen Background */}
+                <GestureHandler
+                  onSwipeLeft={() => {
+                    if (currentStudioIndex < studios.length - 1) {
+                      setCurrentStudioIndex(currentStudioIndex + 1);
+                    }
+                  }}
+                  onSwipeRight={() => {
+                    if (currentStudioIndex > 0) {
+                      setCurrentStudioIndex(currentStudioIndex - 1);
+                    }
+                  }}
+                  className="lg:hidden h-full relative"
+                >
+                  {/* Studio Background Cards */}
+                  {studios.map((studio, index) => (
+                    <div
+                      key={studio.id}
+                      className={`absolute inset-0 transition-all duration-500 transform ${
+                        index === currentStudioIndex 
+                          ? 'opacity-100 scale-100' 
+                          : index < currentStudioIndex 
+                            ? 'opacity-0 scale-95 -translate-x-full' 
+                            : 'opacity-0 scale-95 translate-x-full'
+                      } ${getStudioGradientClass(studio.name)}`}
+                      style={{
+                        backgroundImage: studio.imageUrl ? `url(${studio.imageUrl})` : undefined,
+                        backgroundSize: 'cover',
+                        backgroundPosition: 'center',
+                        backgroundBlendMode: studio.imageUrl ? 'overlay' : 'normal'
+                      }}
+                    >
+                      {/* Overlay for better text readability */}
+                      <div className="absolute inset-0 bg-black/30"></div>
+                      
+                      {/* Studio Content */}
+                      <div className="relative h-full flex flex-col justify-center items-center px-6 text-center">
+                        <div className="mb-8">
+                          <h1 className="text-[48px] font-bold text-white mb-2 drop-shadow-lg">
+                            {studio.name}
+                          </h1>
+                          <p className="text-lg text-white/90 mb-1 drop-shadow">
+                            {studio.location}
+                          </p>
+                          <p className="text-white/80 drop-shadow">
+                            {studio.streams.length} streams available
+                          </p>
+                        </div>
+                        
+                        <Button
+                          size="lg"
+                          className="bg-[#e69e10] hover:bg-[#d4920e] text-black font-semibold px-8 py-4 text-lg touch-area shadow-xl"
+                          onClick={() => handleSelectStudio(studio)}
+                          data-testid={`studio-select-${studio.name.toLowerCase()}`}
+                        >
+                          <Play className="mr-2" size={20} />
+                          Enter Studio
+                        </Button>
+                        
+                        {/* Live indicator */}
+                        <div className="flex items-center space-x-2 mt-6">
+                          <div className="w-3 h-3 bg-green-500 rounded-full live-indicator"></div>
+                          <span className="text-white font-medium drop-shadow">LIVE</span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  
+                  {/* Navigation Arrows */}
+                  {studios.length > 1 && (
+                    <>
+                      {currentStudioIndex > 0 && (
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-black/60 hover:bg-black/80 text-white touch-area z-20"
+                          onClick={() => setCurrentStudioIndex(currentStudioIndex - 1)}
+                          data-testid="button-previous-studio"
+                        >
+                          <ChevronLeft size={20} />
+                        </Button>
+                      )}
+                      
+                      {currentStudioIndex < studios.length - 1 && (
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-black/60 hover:bg-black/80 text-white touch-area z-20"
+                          onClick={() => setCurrentStudioIndex(currentStudioIndex + 1)}
+                          data-testid="button-next-studio"
+                        >
+                          <ChevronRight size={20} />
+                        </Button>
+                      )}
+                    </>
+                  )}
+                  
+                  {/* Navigation Dots */}
+                  {studios.length > 1 && (
+                    <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 flex space-x-2 z-10">
+                      {studios.map((_, index) => (
+                        <button
+                          key={index}
+                          className={`w-3 h-3 rounded-full transition-all touch-area ${
+                            index === currentStudioIndex ? 'bg-white scale-125' : 'bg-white/50'
+                          }`}
+                          onClick={() => setCurrentStudioIndex(index)}
+                          data-testid={`studio-dot-${index}`}
+                        />
+                      ))}
+                    </div>
+                  )}
+                  
+                  {/* Swipe Indicator */}
+                  <div className="absolute top-4 left-1/2 transform -translate-x-1/2 bg-black/60 text-white px-3 py-2 rounded-lg text-xs z-10">
+                    Swipe to explore studios • {currentStudioIndex + 1} of {studios.length}
                   </div>
-                  <div className="flex-1 min-h-0">
-                    <StudioCarousel
-                      studios={studios}
-                      onStudioSelect={handleSelectStudio}
-                    />
-                  </div>
-                </div>
+                </GestureHandler>
 
                 {/* Desktop Welcome State */}
                 <div className="hidden lg:flex h-full items-center justify-center">
