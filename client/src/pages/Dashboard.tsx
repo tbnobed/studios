@@ -393,7 +393,7 @@ export default function Dashboard() {
                 {/* Mobile Studio Carousel */}
                 <div className="lg:hidden h-full flex flex-col">
                   <div className="text-center mb-2">
-                    <h2 className="text-xl font-bold mb-1">OBTV Studios</h2>
+                    <h2 className="mt-[17px] mb-[17px] text-[30px] font-extrabold ml-[0px] mr-[0px] pl-[6px] pr-[6px]">TBN Studios</h2>
                     <p className="text-sm text-muted-foreground">Select a studio to view live streams</p>
                   </div>
                   <div className="flex-1 min-h-0">
