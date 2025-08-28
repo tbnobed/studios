@@ -253,7 +253,7 @@ export default function Dashboard() {
             </SheetContent>
           </Sheet>
           
-          <h1 className="text-[29px] font-bold">OBTV Studios</h1>
+          <h1 className="font-bold text-[30px]">TBN Studios</h1>
         </div>
         
         <div className="flex items-center space-x-2">
