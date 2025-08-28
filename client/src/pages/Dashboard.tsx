@@ -518,9 +518,13 @@ export default function Dashboard() {
                   )}
                   
                   
-                  {/* Swipe Indicator */}
-                  <div className="absolute top-4 left-1/2 transform -translate-x-1/2 bg-black/60 text-white px-3 py-2 rounded-lg text-xs z-10">
-                    Swipe to explore studios • {currentStudioIndex + 1} of {studios.length}
+                  {/* TBN Logo */}
+                  <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-10">
+                    <img 
+                      src="@assets/tbnlogo-white_1756354700943.png" 
+                      alt="TBN Logo" 
+                      className="h-8 w-auto"
+                    />
                   </div>
                 </GestureHandler>
 
