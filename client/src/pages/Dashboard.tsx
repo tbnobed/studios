@@ -455,15 +455,7 @@ export default function Dashboard() {
                           </p>
                         </div>
                         
-                        <Button
-                          size="lg"
-                          className="bg-[#e69e10] hover:bg-[#d4920e] text-black font-semibold px-8 py-4 text-lg touch-area shadow-xl"
-                          onClick={() => handleSelectStudio(studio)}
-                          data-testid={`studio-select-${studio.name.toLowerCase()}`}
-                        >
-                          <Play className="mr-2" size={20} />
-                          Enter Studio
-                        </Button>
+                        
                         
                         {/* Live indicator */}
                         <div className="flex items-center space-x-2 mt-6">
