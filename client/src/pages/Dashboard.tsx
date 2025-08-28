@@ -142,8 +142,8 @@ export default function Dashboard() {
                 group relative overflow-hidden rounded-xl border transition-all duration-200 
                 text-left flex items-center touch-area transform hover:scale-[1.02] ${
                 selectedStudio?.id === studio.id 
-                  ? 'border-primary bg-primary/10 shadow-md ring-1 ring-primary/20' 
-                  : 'border-border/20 hover:border-border/40 bg-gradient-to-r from-background/60 to-background/80 backdrop-blur hover:from-background/80 hover:to-background/100 hover:shadow-sm'
+                  ? 'border-primary bg-gradient-to-r from-primary/15 to-primary/5 shadow-md ring-1 ring-primary/20' 
+                  : 'border-border/20 hover:border-border/40 bg-gradient-to-r from-muted/40 to-muted/20 backdrop-blur hover:from-muted/60 hover:to-muted/40 hover:shadow-sm'
               }`}
               onClick={() => handleSelectStudio(studio)}
               data-testid={`studio-card-${studio.name.toLowerCase()}`}
@@ -194,8 +194,8 @@ export default function Dashboard() {
               <button
                 className={`w-full ${sidebarCollapsed ? 'p-3 h-12 justify-center' : 'p-3 h-12 justify-start'}
                   group relative overflow-hidden rounded-lg border border-border/20 hover:border-border/40
-                  bg-gradient-to-r from-background/40 to-background/60 backdrop-blur
-                  hover:from-background/60 hover:to-background/80 
+                  bg-gradient-to-r from-accent/20 to-accent/10 backdrop-blur
+                  hover:from-accent/30 hover:to-accent/15 
                   transition-all duration-200 hover:shadow-sm
                   text-left flex items-center touch-area`}
                 onClick={() => window.location.href = '/admin'}
@@ -208,8 +208,8 @@ export default function Dashboard() {
               <button
                 className={`w-full ${sidebarCollapsed ? 'p-3 h-12 justify-center' : 'p-3 h-12 justify-start'}
                   group relative overflow-hidden rounded-lg border border-border/20 hover:border-border/40
-                  bg-gradient-to-r from-background/40 to-background/60 backdrop-blur
-                  hover:from-background/60 hover:to-background/80 
+                  bg-gradient-to-r from-blue-500/15 to-blue-400/10 backdrop-blur
+                  hover:from-blue-500/25 hover:to-blue-400/15 
                   transition-all duration-200 hover:shadow-sm
                   text-left flex items-center touch-area`}
                 onClick={() => window.location.href = '/admin?tab=studios'}
@@ -222,8 +222,8 @@ export default function Dashboard() {
               <button
                 className={`w-full ${sidebarCollapsed ? 'p-3 h-12 justify-center' : 'p-3 h-12 justify-start'}
                   group relative overflow-hidden rounded-lg border border-border/20 hover:border-border/40
-                  bg-gradient-to-r from-background/40 to-background/60 backdrop-blur
-                  hover:from-background/60 hover:to-background/80 
+                  bg-gradient-to-r from-purple-500/15 to-purple-400/10 backdrop-blur
+                  hover:from-purple-500/25 hover:to-purple-400/15 
                   transition-all duration-200 hover:shadow-sm
                   text-left flex items-center touch-area`}
                 onClick={() => window.location.href = '/admin?tab=streams'}
