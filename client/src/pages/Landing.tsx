@@ -8,6 +8,7 @@ import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { setAuthToken } from "@/lib/authUtils";
+import obedtvLogo from "@/assets/obedtv-logo.png";
 
 export default function Landing() {
   const [username, setUsername] = useState("");
@@ -57,8 +58,12 @@ export default function Landing() {
       <div className="w-full max-w-md">
         {/* Logo Section */}
         <div className="text-center mb-8">
-          <div className="w-20 h-20 mx-auto mb-4 bg-primary rounded-2xl flex items-center justify-center">
-            <Video className="text-3xl text-primary-foreground" size={32} />
+          <div className="w-20 h-20 mx-auto mb-4 flex items-center justify-center">
+            <img 
+              src={obedtvLogo} 
+              alt="OBTV Logo" 
+              className="w-full h-full object-contain"
+            />
           </div>
           <h1 className="text-2xl font-bold text-foreground mb-2">
             OBTV Studio Manager
