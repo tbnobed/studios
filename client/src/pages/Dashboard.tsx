@@ -276,11 +276,6 @@ export default function Dashboard() {
       {/* Desktop Header */}
       <header className="hidden md:flex bg-card/80 backdrop-blur border-b border-border px-4 py-3 items-center justify-between shrink-0 relative z-20">
         <div className="flex items-center space-x-3">
-          <img 
-            src={obedtvLogo} 
-            alt="OBED TV Logo" 
-            className="h-8 w-auto"
-          />
           <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
             <SheetTrigger asChild>
               <Button variant="ghost" size="sm" className="lg:hidden touch-area" data-testid="button-menu">
@@ -727,13 +722,16 @@ export default function Dashboard() {
           </div>
         </main>
       </div>
-      {/* Mobile Footer */}
-      <footer className="md:hidden fixed bottom-0 left-0 right-0 bg-card/80 backdrop-blur border-t border-border px-4 py-3 flex flex-col items-center space-y-2 z-30">
-        <img 
-          src={obedtvLogo} 
-          alt="OBED TV Logo" 
-          className="h-6 w-auto"
-        />
+      {/* Footer */}
+      <footer className="fixed bottom-0 left-0 right-0 bg-card/80 backdrop-blur border-t border-border px-4 py-3 flex flex-col items-center space-y-2 z-30">
+        <div className="flex items-center space-x-2">
+          <img 
+            src={obedtvLogo} 
+            alt="OBED TV Logo" 
+            className="h-6 w-auto"
+          />
+          <span className="text-xs text-muted-foreground">™</span>
+        </div>
         <p className="text-xs text-muted-foreground">
           © OBEDTV 2025
         </p>
