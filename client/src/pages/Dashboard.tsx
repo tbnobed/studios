@@ -247,9 +247,7 @@ export default function Dashboard() {
             alt="OB Logo" 
             className="w-12 h-12 opacity-75 ml-[84px] mr-[84px]"
           />
-          {!sidebarCollapsed && (
-            <span className="text-xs text-muted-foreground mt-[0px] mb-[0px] pt-[0px] pb-[0px] pl-[0px] pr-[0px] ml-[-89px] mr-[-89px]">™</span>
-          )}
+          
         </div>
       </div>
     </div>
