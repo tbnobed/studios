@@ -28,6 +28,7 @@ import { StudioWithStreams, Stream } from "@shared/schema";
 import { removeAuthToken, getAuthHeaders, isUnauthorizedError } from "@/lib/authUtils";
 import obedtvLogo from "@/assets/obedtv-logo.png";
 import tbnLogo from "../assets/tbnlogo-white_1756354700943.png";
+import obLogo from "@assets/image_1756407804157.png";
 
 type ViewMode = 'grid' | 'single';
 
@@ -115,8 +116,8 @@ export default function Dashboard() {
   };
 
   const StudioSidebar = () => (
-    <div className={`${sidebarCollapsed ? 'w-20' : 'w-64'} h-full bg-card/50 backdrop-blur border-r border-border/40 transition-all duration-300`}>
-      <div className="p-6">
+    <div className={`${sidebarCollapsed ? 'w-20' : 'w-64'} h-full bg-card/50 backdrop-blur border-r border-border/40 transition-all duration-300 flex flex-col`}>
+      <div className="p-6 flex-1">
         <div className="flex items-center justify-between mb-6">
           {!sidebarCollapsed && (
             <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-[0.1em] opacity-60">
@@ -236,6 +237,20 @@ export default function Dashboard() {
             </div>
           </div>
         )}
+      </div>
+      
+      {/* OB Logo Footer */}
+      <div className="p-4 border-t border-border/30">
+        <div className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'justify-start space-x-2'}`}>
+          <img 
+            src={obLogo} 
+            alt="OB Logo" 
+            className={`${sidebarCollapsed ? 'w-8 h-8' : 'w-12 h-12'} opacity-75`}
+          />
+          {!sidebarCollapsed && (
+            <span className="text-xs text-muted-foreground">™</span>
+          )}
+        </div>
       </div>
     </div>
   );
