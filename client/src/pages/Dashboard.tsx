@@ -170,8 +170,8 @@ export default function Dashboard() {
                     <div className={`w-1.5 h-1.5 rounded-full transition-colors duration-200 ${
                       selectedStudio?.id === studio.id ? 'bg-primary' : 'bg-green-400'
                     }`}></div>
-                    <span className={`text-[10px] font-medium uppercase tracking-wider transition-colors duration-200 ${
-                      selectedStudio?.id === studio.id ? 'text-primary opacity-80' : 'opacity-60'
+                    <span className={`text-[10px] font-bold uppercase tracking-wider transition-colors duration-200 ${
+                      selectedStudio?.id === studio.id ? 'text-orange-300' : 'opacity-60'
                     }`}>
                       {selectedStudio?.id === studio.id ? 'Selected' : 'Live'}
                     </span>
