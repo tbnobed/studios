@@ -394,7 +394,7 @@ export default function Dashboard() {
           )}
 
           {/* Video Content */}
-          <div className="flex-1 overflow-y-auto pb-24 md:pb-0 md:p-2">
+          <div className="flex-1 pb-24 md:pb-0 md:p-2 md:overflow-y-auto">
             {!selectedStudio ? (
               <div className="h-full">
                 {/* Mobile Studio Selection with Full Screen Background */}
@@ -460,6 +460,29 @@ export default function Dashboard() {
                         <div className="flex items-center space-x-2 mt-6">
                           <div className="w-3 h-3 bg-green-500 rounded-full live-indicator"></div>
                           <span className="text-white font-medium drop-shadow">LIVE</span>
+                        </div>
+                      </div>
+                      
+                      {/* Stream Previews Overlay - positioned at bottom */}
+                      <div className="absolute bottom-24 left-4 right-4">
+                        <div className="grid grid-cols-2 gap-2">
+                          {studio.streams.slice(0, 4).map((stream) => (
+                            <div
+                              key={stream.id}
+                              className="aspect-video bg-black/60 backdrop-blur rounded-lg overflow-hidden border border-white/20"
+                            >
+                              <StreamPlayer
+                                stream={stream}
+                                className="w-full h-full"
+                                controls={false}
+                                autoPlay={false}
+                                onStatusChange={(status) => handleStreamStatusChange(stream.id, status)}
+                              />
+                              <div className="absolute bottom-1 left-1 right-1 text-xs text-white/90 bg-black/60 px-2 py-1 rounded truncate">
+                                {stream.name}
+                              </div>
+                            </div>
+                          ))}
                         </div>
                       </div>
                     </div>
