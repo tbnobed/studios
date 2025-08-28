@@ -16,8 +16,8 @@ COPY . .
 # Build the application
 RUN npm run build
 
-# Build production server separately to avoid import.meta.dirname issues
-RUN npx esbuild server/production.ts --platform=node --packages=external --bundle --format=esm --outfile=dist/production.js
+# Build production server with __dirname polyfill for import.meta.dirname
+RUN npx esbuild server/production.ts --platform=node --packages=external --bundle --format=esm --outfile=dist/production.js --define:import.meta.dirname='"."'
 
 # Production stage
 FROM node:18-alpine AS production
