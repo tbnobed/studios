@@ -2,6 +2,8 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import fs from "fs";
 import path from "path";
+import { db } from "./db";
+import { sql } from "drizzle-orm";
 
 // Simple log function for production (avoiding vite.ts import)
 function log(message: string, source = "express") {
@@ -13,6 +15,40 @@ function log(message: string, source = "express") {
   });
 
   console.log(`${formattedTime} [${source}] ${message}`);
+}
+
+// Function to ensure database schema compatibility
+async function ensureSchemaCompatibility() {
+  try {
+    log("Checking database schema compatibility...");
+    
+    // Check if studios table has updated_at column
+    const result = await db.execute(sql`
+      SELECT column_name 
+      FROM information_schema.columns 
+      WHERE table_name = 'studios' 
+      AND column_name = 'updated_at'
+    `);
+    
+    if (result.rows.length === 0) {
+      log("Adding missing updated_at column to studios table...");
+      await db.execute(sql`
+        ALTER TABLE studios ADD COLUMN updated_at TIMESTAMP DEFAULT NOW()
+      `);
+      
+      // Update existing rows
+      await db.execute(sql`
+        UPDATE studios SET updated_at = created_at WHERE updated_at IS NULL
+      `);
+      
+      log("Database schema updated successfully");
+    } else {
+      log("Database schema is compatible");
+    }
+  } catch (error) {
+    log(`Database schema check failed: ${error}`);
+    // Continue anyway - the app might still work
+  }
 }
 
 const app = express();
@@ -50,6 +86,9 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  // Ensure database schema compatibility before starting server
+  await ensureSchemaCompatibility();
+  
   const server = await registerRoutes(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
