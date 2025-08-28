@@ -269,7 +269,7 @@ export default function Dashboard() {
       {/* Glossy overlay effect */}
       <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent pointer-events-none"></div>
       {/* Mobile Header */}
-      <header className="md:hidden px-4 py-3 flex items-center justify-between shrink-0 fixed top-0 left-0 right-0 z-30 bg-card/80 backdrop-blur border-b border-border">
+      <header className="md:hidden px-4 py-3 flex items-center justify-between shrink-0 fixed left-0 right-0 z-30 bg-card/80 backdrop-blur border-b border-border" style={{ top: 'max(0px, env(safe-area-inset-top))' }}>
         <div className="flex items-center space-x-2">
           <span className="text-sm font-medium">
             {user?.firstName} {user?.lastName}
@@ -487,7 +487,7 @@ export default function Dashboard() {
                             ? 'opacity-0 scale-95 -translate-x-full' 
                             : 'opacity-0 scale-95 translate-x-full'
                       } ${getStudioGradientClass(studio.name)} ${
-                        selectedStudio?.id === studio.id ? 'ring-4 ring-primary/30' : ''
+                        selectedStudio && selectedStudio.id === studio.id ? 'ring-4 ring-primary/30' : ''
                       }`}
                       style={{
                         backgroundImage: studio.imageUrl ? `url(${studio.imageUrl})` : undefined,
@@ -513,21 +513,21 @@ export default function Dashboard() {
                       <div className="relative h-full flex flex-col justify-center items-center px-6 text-center">
                         <div className="mb-8">
                           <h1 className={`text-[48px] font-bold mb-2 drop-shadow-lg transition-colors duration-300 ${
-                            selectedStudio?.id === studio.id ? 'text-primary-foreground' : 'text-white'
+                            selectedStudio && selectedStudio.id === studio.id ? 'text-primary-foreground' : 'text-white'
                           }`}>
                             {studio.name}
                           </h1>
                           <p className={`text-lg mb-1 drop-shadow transition-colors duration-300 ${
-                            selectedStudio?.id === studio.id ? 'text-primary-foreground/90' : 'text-white/90'
+                            selectedStudio && selectedStudio.id === studio.id ? 'text-primary-foreground/90' : 'text-white/90'
                           }`}>
                             {studio.location}
                           </p>
                           <p className={`drop-shadow transition-colors duration-300 ${
-                            selectedStudio?.id === studio.id ? 'text-primary-foreground/80' : 'text-white/80'
+                            selectedStudio && selectedStudio.id === studio.id ? 'text-primary-foreground/80' : 'text-white/80'
                           }`}>
                             {studio.streams.length} streams available
                           </p>
-                          {selectedStudio?.id === studio.id && (
+                          {selectedStudio && selectedStudio.id === studio.id && (
                             <div className="mt-4 inline-flex items-center space-x-2 bg-primary/20 text-primary-foreground px-3 py-1 rounded-full text-sm font-medium backdrop-blur">
                               <div className="w-2 h-2 bg-primary-foreground rounded-full animate-pulse"></div>
                               <span>SELECTED</span>
@@ -540,10 +540,10 @@ export default function Dashboard() {
                         {/* Live indicator */}
                         <div className="flex items-center space-x-2 mt-6">
                           <div className={`w-3 h-3 rounded-full live-indicator transition-colors duration-300 ${
-                            selectedStudio?.id === studio.id ? 'bg-primary-foreground' : 'bg-green-500'
+                            selectedStudio && selectedStudio.id === studio.id ? 'bg-primary-foreground' : 'bg-green-500'
                           }`}></div>
                           <span className={`font-medium drop-shadow transition-colors duration-300 ${
-                            selectedStudio?.id === studio.id ? 'text-primary-foreground' : 'text-white'
+                            selectedStudio && selectedStudio.id === studio.id ? 'text-primary-foreground' : 'text-white'
                           }`}>LIVE</span>
                         </div>
                       </div>
