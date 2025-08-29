@@ -25,7 +25,7 @@ export default function Landing() {
       setAuthToken(data.token);
       toast({
         title: "Welcome!",
-        description: "Successfully signed in to OB Studio Manager",
+        description: "Successfully signed in to OBTV Studio Manager",
       });
       // Reload to trigger auth state update
       window.location.reload();
@@ -76,7 +76,7 @@ export default function Landing() {
               className="w-full h-full object-contain opacity-90"
             />
           </div>
-          <h1 className="text-2xl font-bold text-foreground mb-2">OB Studio Manager</h1>
+          <h1 className="text-2xl font-bold text-foreground mb-2">OBTV Studio Manager</h1>
         </div>
         
         {/* Login Form */}
