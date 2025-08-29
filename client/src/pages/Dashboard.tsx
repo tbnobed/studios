@@ -306,9 +306,9 @@ export default function Dashboard() {
             data-testid="link-home"
           >
             <img 
-              src={obLogo} 
-              alt="OB Studios Logo" 
-              className="h-24 w-auto opacity-90"
+              src={tbnLogo} 
+              alt="TBN Studios Logo" 
+              className="h-16 w-auto opacity-75"
             />
           </button>
         </div>
