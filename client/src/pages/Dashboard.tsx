@@ -503,9 +503,9 @@ export default function Dashboard() {
                       {/* TBN Logo positioned at top with safe area support */}
                       <div className="absolute left-1/2 transform -translate-x-1/2 z-10" style={{ top: 'max(44px, env(safe-area-inset-top))' }}>
                         <img 
-                          src={obLogo} 
-                          alt="OB Logo" 
-                          className="w-64 h-auto max-w-none mt-[121px] mb-[121px] opacity-90"
+                          src={tbnLogo} 
+                          alt="TBN Logo" 
+                          className="w-80 h-auto max-w-none mt-[121px] mb-[121px]"
                         />
                       </div>
                       
