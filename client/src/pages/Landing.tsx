@@ -76,7 +76,7 @@ export default function Landing() {
               className="w-full h-full object-contain opacity-90"
             />
           </div>
-          <h1 className="mb-2 text-[60px] font-extrabold text-[#dbe6f0fa]">TBN Studios</h1>
+          <h1 className="text-[60px] font-extrabold text-[#dbe6f0fa] mt-[-52px] mb-[-52px]">TBN Studios</h1>
         </div>
         
         {/* Login Form */}
