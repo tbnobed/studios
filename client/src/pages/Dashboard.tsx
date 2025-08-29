@@ -245,7 +245,7 @@ export default function Dashboard() {
           <img 
             src={obLogo} 
             alt="OB Logo" 
-            className="w-12 h-12 opacity-75 ml-[84px] mr-[84px]"
+            className="w-24 h-24 opacity-75 ml-[84px] mr-[84px]"
           />
           
         </div>
@@ -308,7 +308,7 @@ export default function Dashboard() {
             <img 
               src={obLogo} 
               alt="OB Studios Logo" 
-              className="h-12 w-auto opacity-90"
+              className="h-24 w-auto opacity-90"
             />
           </button>
         </div>
@@ -505,7 +505,7 @@ export default function Dashboard() {
                         <img 
                           src={obLogo} 
                           alt="OB Logo" 
-                          className="w-32 h-auto max-w-none mt-[121px] mb-[121px] opacity-90"
+                          className="w-64 h-auto max-w-none mt-[121px] mb-[121px] opacity-90"
                         />
                       </div>
                       
@@ -751,7 +751,7 @@ export default function Dashboard() {
         <img 
           src={obLogo} 
           alt="OB Logo" 
-          className="w-12 h-12 opacity-75"
+          className="w-24 h-24 opacity-75"
         />
       </div>
     </div>
