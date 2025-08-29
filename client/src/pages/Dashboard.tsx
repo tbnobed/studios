@@ -751,7 +751,7 @@ export default function Dashboard() {
         <img 
           src={obLogo} 
           alt="OB Logo" 
-          className="w-24 h-24 opacity-75"
+          className="w-12 h-12 opacity-75"
         />
       </div>
     </div>
