@@ -99,7 +99,6 @@ export default function Landing() {
                 />
               </div>
               <div>
-                <Label htmlFor="password">Password</Label>
                 <Input
                   id="password"
                   type="password"
