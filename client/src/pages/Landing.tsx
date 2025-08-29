@@ -84,7 +84,7 @@ export default function Landing() {
           <CardHeader className="pb-4">
             <CardTitle className="text-center text-lg">Sign In</CardTitle>
           </CardHeader>
-          <CardContent className="pt-0">
+          <CardContent className="pt-0 pl-[50px] pr-[50px]">
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <Input
