@@ -26,7 +26,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { StudioWithStreams, Stream } from "@shared/schema";
 import { removeAuthToken, getAuthHeaders, isUnauthorizedError } from "@/lib/authUtils";
-import obedtvLogo from "@/assets/obedtv-logo.png";
+import obedtvLogo from "@assets/image_1756407804157.png";
 import tbnLogo from "../assets/tbnlogo-white_1756354700943.png";
 import obLogo from "@assets/image_1756407804157.png";
 
@@ -306,9 +306,9 @@ export default function Dashboard() {
             data-testid="link-home"
           >
             <img 
-              src={tbnLogo} 
-              alt="TBN Studios Logo" 
-              className="h-16 w-auto opacity-75"
+              src={obLogo} 
+              alt="OB Studios Logo" 
+              className="h-12 w-auto opacity-90"
             />
           </button>
         </div>
@@ -503,9 +503,9 @@ export default function Dashboard() {
                       {/* TBN Logo positioned at top with safe area support */}
                       <div className="absolute left-1/2 transform -translate-x-1/2 z-10" style={{ top: 'max(44px, env(safe-area-inset-top))' }}>
                         <img 
-                          src={tbnLogo} 
-                          alt="TBN Logo" 
-                          className="w-80 h-auto max-w-none mt-[121px] mb-[121px]"
+                          src={obLogo} 
+                          alt="OB Logo" 
+                          className="w-32 h-auto max-w-none mt-[121px] mb-[121px] opacity-90"
                         />
                       </div>
                       

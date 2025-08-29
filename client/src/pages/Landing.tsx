@@ -8,7 +8,7 @@ import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { setAuthToken } from "@/lib/authUtils";
-import obedtvLogo from "@/assets/obedtv-logo.png";
+import obLogo from "@assets/image_1756407804157.png";
 import authBackground from "@assets/generated_images/Dark_modern_auth_background_1e344dc8.png";
 
 export default function Landing() {
@@ -25,7 +25,7 @@ export default function Landing() {
       setAuthToken(data.token);
       toast({
         title: "Welcome!",
-        description: "Successfully signed in to OBTV Studio Manager",
+        description: "Successfully signed in to OB Studio Manager",
       });
       // Reload to trigger auth state update
       window.location.reload();
@@ -69,22 +69,22 @@ export default function Landing() {
       <div className="w-full max-w-md relative z-10">
         {/* Logo Section */}
         <div className="text-center mb-8">
-          <div className="w-40 h-40 mx-auto mb-4 flex items-center justify-center">
+          <div className="w-24 h-24 mx-auto mb-6 flex items-center justify-center">
             <img 
-              src={obedtvLogo} 
-              alt="OBTV Logo" 
-              className="w-full h-full object-contain"
+              src={obLogo} 
+              alt="OB Logo" 
+              className="w-full h-full object-contain opacity-90"
             />
           </div>
-          <h1 className="text-2xl font-bold text-foreground mb-2">TBN Studios</h1>
+          <h1 className="text-2xl font-bold text-foreground mb-2">OB Studio Manager</h1>
         </div>
         
         {/* Login Form */}
-        <Card className="shadow-2xl">
-          <CardHeader>
-            <CardTitle>Sign In</CardTitle>
+        <Card className="shadow-2xl border-0 bg-card/95 backdrop-blur">
+          <CardHeader className="pb-4">
+            <CardTitle className="text-center text-lg">Sign In</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="pt-0">
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <Label htmlFor="username">Username</Label>
@@ -122,8 +122,8 @@ export default function Landing() {
               </Button>
             </form>
             
-            <div className="mt-6 pt-6 border-t border-border">
-              <p className="text-center text-sm text-muted-foreground">
+            <div className="mt-6 pt-4 border-t border-border/50">
+              <p className="text-center text-xs text-muted-foreground">
                 Need access? Contact your administrator
               </p>
             </div>
@@ -131,9 +131,9 @@ export default function Landing() {
         </Card>
         
         {/* Info Notice */}
-        <div className="mt-6 p-4 bg-accent/10 border border-accent/20 rounded-lg">
-          <p className="text-sm text-accent text-center flex items-center justify-center gap-2">
-            <AlertCircle size={16} />
+        <div className="mt-6 p-3 bg-accent/5 border border-accent/10 rounded-lg backdrop-blur">
+          <p className="text-xs text-accent/80 text-center flex items-center justify-center gap-2">
+            <AlertCircle size={14} />
             Secure access to professional studio streams
           </p>
         </div>
