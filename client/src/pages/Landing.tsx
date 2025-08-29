@@ -69,7 +69,7 @@ export default function Landing() {
       <div className="w-full max-w-md relative z-10">
         {/* Logo Section */}
         <div className="text-center mb-8">
-          <div className="w-48 h-48 mx-auto mb-6 flex items-center justify-center">
+          <div className="w-96 h-96 mx-auto mb-6 flex items-center justify-center">
             <img 
               src={obLogo} 
               alt="OB Logo" 
