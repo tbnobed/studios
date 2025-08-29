@@ -76,7 +76,7 @@ export default function Landing() {
               className="w-full h-full object-contain opacity-90"
             />
           </div>
-          <h1 className="text-2xl font-bold text-foreground mb-2">OBTV Studio Manager</h1>
+          <h1 className="text-2xl font-bold text-foreground mb-2">TBN Studios</h1>
         </div>
         
         {/* Login Form */}
