@@ -128,13 +128,7 @@ export default function Landing() {
           </CardContent>
         </Card>
         
-        {/* Info Notice */}
-        <div className="mt-6 p-3 bg-accent/5 border border-accent/10 rounded-lg backdrop-blur">
-          <p className="text-xs text-accent/80 text-center flex items-center justify-center gap-2">
-            <AlertCircle size={14} />
-            Secure access to professional studio streams
-          </p>
-        </div>
+        
       </div>
     </div>
   );
