@@ -87,7 +87,6 @@ export default function Landing() {
           <CardContent className="pt-0">
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <Label htmlFor="username">Username</Label>
                 <Input
                   id="username"
                   type="text"
