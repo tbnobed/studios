@@ -1,0 +1,74 @@
+
+https://sso.obtv.io/application/o/obtv-streams/authorize/?client_id=U6DyBUU5unZk2FEflMi6ldyOEi1ilN4NSCIOjwcZ&redirect_uri=https%3A%2F%2Fstudios.obtv.io%2Fapi%2Fauth%2Fsso%2Fcallback&response_type=code&scope=openid+email+profile&state=w4ws8lbpr3
+Request Method
+GET
+Status Code
+404 Not Found
+Remote Address
+98.191.147.191:443
+Referrer Policy
+strict-origin-when-cross-origin
+connection
+keep-alive
+content-encoding
+gzip
+content-language
+en
+content-type
+text/html; charset=utf-8
+date
+Mon, 01 Jun 2026 04:52:20 GMT
+referrer-policy
+same-origin
+server
+openresty
+transfer-encoding
+chunked
+vary
+Accept-Encoding
+vary
+Accept-Language, Cookie
+x-authentik-id
+e0cf0f5fdf9242b3a7c54e968b83b57f
+x-content-type-options
+nosniff
+x-frame-options
+DENY
+x-powered-by
+authentik
+accept
+text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7
+accept-encoding
+gzip, deflate, br, zstd
+accept-language
+en-US,en;q=0.9
+cache-control
+max-age=0
+connection
+keep-alive
+cookie
+rl_anonymous_id=RudderEncrypt%3AU2FsdGVkX1%2Bv0cnOw1nynLByWYWFZ5SlPxN4%2FqT3lfLSziQqPCEZTRu46eBHQgW0xjDbjpmxsw3q%2FyOlEMXp1w%3D%3D; rl_page_init_referrer=RudderEncrypt%3AU2FsdGVkX1%2FJvZdZlYZywlZf2M5gTElaJpIobupwmNkwj%2Fsz1LBYZGwlwC%2BoWWyO; rl_page_init_referring_domain=RudderEncrypt%3AU2FsdGVkX187G0lOzDfyg%2Bb4JXnDSi4ksGFB4LP11LqLj%2FqxC3WiOTviSgUxbAxn; rl_session=RudderEncrypt%3AU2FsdGVkX188sa520QCQqp0ymroX1Ejt0Dx3f%2FwC9mbw%2FJmrkvxKGQiBLqHjbipievIlPdH3ztQIKmWFgXR0pgFfYoYIUC8eYSiqvSXpYcWbYwV4Gm3KYze4zP62r1Y3ZSFP%2F0OCXGPusV8AChwXFQ%3D%3D; authentik_device=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIyMWI5MDgwNjVjNWMxMDMyZTA5Nzk0MGEyYjNjNjViMzI1YjUwMTRhMTk4ZTE1NWU1NDRiZTEyZmM0Njg3Y2UxIiwiZXhwIjoxNzgyODQ4MTA0LjEzMzI5NH0.ZVf1g53iGEMn0PyWcmf4UdW4ghqHyCeje1jhqkP5dqs; authentik_csrf=2qXwhigvY0mm4VY5EPdR7VaPRfnGIo8j; authentik_session=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzaWQiOiI0cTI3dWd5djgwZjlhOHhxbHQwaWR2Ym5oZ3l6aWlicCIsImlzcyI6ImF1dGhlbnRpayIsInN1YiI6IjIxYjkwODA2NWM1YzEwMzJlMDk3OTQwYTJiM2M2NWIzMjViNTAxNGExOThlMTU1ZTU0NGJlMTJmYzQ2ODdjZTEiLCJhdXRoZW50aWNhdGVkIjp0cnVlLCJhY3IiOiJnb2F1dGhlbnRpay5pby9jb3JlL2RlZmF1bHQifQ.AojJs2ONIRm_LwEdnVnVV8KFi6dwh9TRcuP3ejD78Ro
+dnt
+1
+host
+sso.obtv.io
+referer
+http://studios.obtv.io/
+sec-ch-ua
+"Chromium";v="148", "Google Chrome";v="148", "Not/A)Brand";v="99"
+sec-ch-ua-mobile
+?0
+sec-ch-ua-platform
+"Windows"
+sec-fetch-dest
+document
+sec-fetch-mode
+navigate
+sec-fetch-site
+cross-site
+sec-fetch-user
+?1
+upgrade-insecure-requests
+1
+user-agent
+Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36

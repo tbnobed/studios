@@ -10,6 +10,48 @@ import express from "express";
 
 const JWT_SECRET = process.env.JWT_SECRET || "obtv-studio-secret-key";
 
+// OIDC discovery: Authentik's authorize/token/userinfo endpoints do NOT include
+// the application slug, so we must read them from the well-known configuration
+// instead of concatenating paths onto the issuer URL.
+type OidcConfig = {
+  authorization_endpoint: string;
+  token_endpoint: string;
+  userinfo_endpoint: string;
+};
+
+let cachedOidcConfig: { issuer: string; config: OidcConfig } | null = null;
+
+async function getOidcConfig(issuerUrl: string): Promise<OidcConfig> {
+  const issuer = issuerUrl.replace(/\/+$/, "");
+  if (cachedOidcConfig && cachedOidcConfig.issuer === issuer) {
+    return cachedOidcConfig.config;
+  }
+
+  const wellKnownUrl = `${issuer}/.well-known/openid-configuration`;
+  const response = await fetch(wellKnownUrl);
+  if (!response.ok) {
+    throw new Error(`OIDC discovery failed (${response.status}) at ${wellKnownUrl}`);
+  }
+
+  const config = (await response.json()) as OidcConfig;
+  if (!config.authorization_endpoint || !config.token_endpoint || !config.userinfo_endpoint) {
+    throw new Error("OIDC discovery document is missing required endpoints");
+  }
+
+  cachedOidcConfig = { issuer, config };
+  return config;
+}
+
+// Build the SSO callback URL from the actual incoming request so the scheme
+// (http vs https) matches reality. Honors X-Forwarded-Proto when behind a
+// reverse proxy (e.g. openresty); falls back to the connection protocol.
+function getSsoRedirectUri(req: { headers: Record<string, any>; protocol: string }): string {
+  const host = req.headers.host || process.env.REPLIT_DEV_DOMAIN || "localhost:5000";
+  const forwardedProto = req.headers["x-forwarded-proto"] as string | undefined;
+  const protocol = forwardedProto ? forwardedProto.split(",")[0].trim() : req.protocol;
+  return `${protocol}://${host}/api/auth/sso/callback`;
+}
+
 // Configure multer for file uploads
 const storage_multer = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -149,7 +191,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Authentik SSO routes
-  app.get("/api/auth/sso", (req, res) => {
+  app.get("/api/auth/sso", async (req, res) => {
     const clientId = process.env.AUTHENTIK_CLIENT_ID;
     const issuerUrl = process.env.AUTHENTIK_ISSUER_URL;
 
@@ -157,20 +199,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(503).json({ message: "SSO is not configured. Please set AUTHENTIK_CLIENT_ID, AUTHENTIK_CLIENT_SECRET, and AUTHENTIK_ISSUER_URL." });
     }
 
-    const host = req.headers.host || process.env.REPLIT_DEV_DOMAIN || "localhost:5000";
-    const protocol = host.includes("localhost") ? "http" : "https";
-    const redirectUri = `${protocol}://${host}/api/auth/sso/callback`;
+    try {
+      const { authorization_endpoint } = await getOidcConfig(issuerUrl);
 
-    const state = Math.random().toString(36).substring(2);
-    const params = new URLSearchParams({
-      client_id: clientId,
-      redirect_uri: redirectUri,
-      response_type: "code",
-      scope: "openid email profile",
-      state,
-    });
+      const redirectUri = getSsoRedirectUri(req);
 
-    res.redirect(`${issuerUrl}/authorize/?${params.toString()}`);
+      const state = Math.random().toString(36).substring(2);
+      const params = new URLSearchParams({
+        client_id: clientId,
+        redirect_uri: redirectUri,
+        response_type: "code",
+        scope: "openid email profile",
+        state,
+      });
+
+      res.redirect(`${authorization_endpoint}?${params.toString()}`);
+    } catch (error) {
+      console.error("SSO authorize error:", error);
+      res.redirect("/?sso_error=discovery_failed");
+    }
   });
 
   app.get("/api/auth/sso/callback", async (req, res) => {
@@ -184,12 +231,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
 
     try {
-      const host = req.headers.host || process.env.REPLIT_DEV_DOMAIN || "localhost:5000";
-      const protocol = host.includes("localhost") ? "http" : "https";
-      const redirectUri = `${protocol}://${host}/api/auth/sso/callback`;
+      const { token_endpoint, userinfo_endpoint } = await getOidcConfig(issuerUrl);
+
+      const redirectUri = getSsoRedirectUri(req);
 
       // Exchange code for tokens
-      const tokenResponse = await fetch(`${issuerUrl}/token/`, {
+      const tokenResponse = await fetch(token_endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
         body: new URLSearchParams({
@@ -209,7 +256,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const tokens = await tokenResponse.json() as { access_token: string };
 
       // Get user info from Authentik
-      const userInfoResponse = await fetch(`${issuerUrl}/userinfo/`, {
+      const userInfoResponse = await fetch(userinfo_endpoint, {
         headers: { Authorization: `Bearer ${tokens.access_token}` },
       });
 
