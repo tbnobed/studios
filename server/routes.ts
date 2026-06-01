@@ -148,6 +148,117 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Authentik SSO routes
+  app.get("/api/auth/sso", (req, res) => {
+    const clientId = process.env.AUTHENTIK_CLIENT_ID;
+    const issuerUrl = process.env.AUTHENTIK_ISSUER_URL;
+
+    if (!clientId || !issuerUrl) {
+      return res.status(503).json({ message: "SSO is not configured. Please set AUTHENTIK_CLIENT_ID, AUTHENTIK_CLIENT_SECRET, and AUTHENTIK_ISSUER_URL." });
+    }
+
+    const host = req.headers.host || process.env.REPLIT_DEV_DOMAIN || "localhost:5000";
+    const protocol = host.includes("localhost") ? "http" : "https";
+    const redirectUri = `${protocol}://${host}/api/auth/sso/callback`;
+
+    const state = Math.random().toString(36).substring(2);
+    const params = new URLSearchParams({
+      client_id: clientId,
+      redirect_uri: redirectUri,
+      response_type: "code",
+      scope: "openid email profile",
+      state,
+    });
+
+    res.redirect(`${issuerUrl}/authorize/?${params.toString()}`);
+  });
+
+  app.get("/api/auth/sso/callback", async (req, res) => {
+    const { code } = req.query;
+    const clientId = process.env.AUTHENTIK_CLIENT_ID;
+    const clientSecret = process.env.AUTHENTIK_CLIENT_SECRET;
+    const issuerUrl = process.env.AUTHENTIK_ISSUER_URL;
+
+    if (!code || !clientId || !clientSecret || !issuerUrl) {
+      return res.redirect("/?sso_error=missing_config");
+    }
+
+    try {
+      const host = req.headers.host || process.env.REPLIT_DEV_DOMAIN || "localhost:5000";
+      const protocol = host.includes("localhost") ? "http" : "https";
+      const redirectUri = `${protocol}://${host}/api/auth/sso/callback`;
+
+      // Exchange code for tokens
+      const tokenResponse = await fetch(`${issuerUrl}/token/`, {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+          grant_type: "authorization_code",
+          client_id: clientId,
+          client_secret: clientSecret,
+          redirect_uri: redirectUri,
+          code: code as string,
+        }),
+      });
+
+      if (!tokenResponse.ok) {
+        console.error("SSO token exchange failed:", await tokenResponse.text());
+        return res.redirect("/?sso_error=token_exchange_failed");
+      }
+
+      const tokens = await tokenResponse.json() as { access_token: string };
+
+      // Get user info from Authentik
+      const userInfoResponse = await fetch(`${issuerUrl}/userinfo/`, {
+        headers: { Authorization: `Bearer ${tokens.access_token}` },
+      });
+
+      if (!userInfoResponse.ok) {
+        console.error("SSO userinfo failed:", await userInfoResponse.text());
+        return res.redirect("/?sso_error=userinfo_failed");
+      }
+
+      const userInfo = await userInfoResponse.json() as {
+        email: string;
+        preferred_username?: string;
+        given_name?: string;
+        family_name?: string;
+        name?: string;
+      };
+
+      if (!userInfo.email) {
+        return res.redirect("/?sso_error=no_email");
+      }
+
+      // Find or create the user
+      let user = await storage.getUserByEmail(userInfo.email);
+
+      if (!user) {
+        const baseUsername = (userInfo.preferred_username || userInfo.email.split("@")[0]).replace(/[^a-zA-Z0-9_]/g, "_");
+        const nameParts = (userInfo.name || "").split(" ");
+        user = await storage.createUser({
+          username: baseUsername,
+          email: userInfo.email,
+          password: Math.random().toString(36) + Math.random().toString(36),
+          firstName: userInfo.given_name || nameParts[0] || "",
+          lastName: userInfo.family_name || nameParts.slice(1).join(" ") || "",
+          role: "viewer",
+          isActive: true,
+        });
+      }
+
+      if (!user.isActive) {
+        return res.redirect("/?sso_error=account_disabled");
+      }
+
+      const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: "24h" });
+      res.redirect(`/?sso_token=${token}`);
+    } catch (error) {
+      console.error("SSO callback error:", error);
+      res.redirect("/?sso_error=server_error");
+    }
+  });
+
   // Static file serving for uploads
   app.use("/uploads", (req, res, next) => {
     res.header('Access-Control-Allow-Origin', '*');

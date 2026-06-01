@@ -16,6 +16,17 @@ export default function Landing() {
   const [password, setPassword] = useState("");
   const { toast } = useToast();
 
+  // Handle SSO token returned in URL after Authentik callback
+  useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    const ssoToken = params.get("sso_token");
+    if (ssoToken) {
+      setAuthToken(ssoToken);
+      window.history.replaceState({}, "", "/");
+      window.location.reload();
+    }
+  });
+
   const loginMutation = useMutation({
     mutationFn: async (credentials: { username: string; password: string }) => {
       const response = await apiRequest("POST", "/api/auth/login", credentials);
@@ -120,7 +131,15 @@ export default function Landing() {
               </Button>
             </form>
             
-            <div className="mt-6 pt-4 border-t border-border/50">
+            <div className="mt-6 pt-4 border-t border-border/50 space-y-3">
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full touch-area"
+                onClick={() => { window.location.href = "/api/auth/sso"; }}
+              >
+                Login with SSO
+              </Button>
               <p className="text-center text-xs text-muted-foreground">
                 Need access? Contact your administrator
               </p>
