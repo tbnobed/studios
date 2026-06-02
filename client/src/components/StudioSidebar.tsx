@@ -311,7 +311,7 @@ export default function StudioSidebar({
           <img
             src={obLogo}
             alt="OB Logo"
-            className={`${sidebarCollapsed ? "w-12 h-12" : "w-24 h-24"} opacity-75 border border-border rounded-lg p-2`}
+            className={`${sidebarCollapsed ? "w-12 h-12" : "w-24 h-24"} opacity-75`}
           />
         </div>
       </div>
