@@ -543,16 +543,6 @@ export default function Dashboard() {
                       <Maximize size={16} />
                     </Button>
                   </div>
-                  
-                  {/* Gesture Hints */}
-                  <div className="hidden md:flex items-center space-x-4 text-xs text-muted-foreground">
-                    <div className="flex items-center space-x-1 gesture-hint">
-                      <span>Tap to select</span>
-                    </div>
-                    <div className="flex items-center space-x-1 gesture-hint">
-                      <span>Pinch to zoom</span>
-                    </div>
-                  </div>
                 </div>
               </div>
             </div>
