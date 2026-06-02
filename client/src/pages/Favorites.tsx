@@ -36,7 +36,7 @@ import {
 import SharedHeader from "@/components/SharedHeader";
 import StudioSidebar from "@/components/StudioSidebar";
 import { StreamPlayer } from "@/components/StreamPlayer";
-import { GestureHandler } from "@/components/GestureHandler";
+import { StreamSingleView } from "@/components/StreamSingleView";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { getAuthHeaders } from "@/lib/authUtils";
@@ -116,7 +116,7 @@ export default function Favorites() {
   const [currentPage, setCurrentPage] = useState(0);
   const [order, setOrder] = useState<FavoriteWithStream[]>([]);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [fullscreenIdx, setFullscreenIdx] = useState<number | null>(null);
+  const [singleViewIndex, setSingleViewIndex] = useState<number | null>(null);
   const [streamStatuses, setStreamStatuses] = useState<
     Record<string, "online" | "offline" | "error">
   >({});
@@ -216,6 +216,10 @@ export default function Favorites() {
     const start = currentPage * FAVORITES_PER_PAGE;
     return favorites.slice(start, start + FAVORITES_PER_PAGE);
   }, [favorites, currentPage]);
+  const favoriteStreams = useMemo(
+    () => favorites.map((f) => f.stream),
+    [favorites]
+  );
 
   useEffect(() => {
     if (currentPage > totalPages - 1) {
@@ -224,10 +228,10 @@ export default function Favorites() {
   }, [totalPages, currentPage]);
 
   useEffect(() => {
-    if (fullscreenIdx !== null && !favorites[fullscreenIdx]) {
-      setFullscreenIdx(null);
+    if (singleViewIndex !== null && !favorites[singleViewIndex]) {
+      setSingleViewIndex(null);
     }
-  }, [favorites, fullscreenIdx]);
+  }, [favorites, singleViewIndex]);
 
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-gray-900 via-slate-800 to-black">
@@ -339,6 +343,28 @@ export default function Favorites() {
                 </SortableContext>
               </DndContext>
             </div>
+          ) : singleViewIndex !== null && favorites[singleViewIndex] ? (
+            // Single View Mode (in-panel, identical to studio tabs)
+            <div className="h-[calc(100vh-7rem)]">
+              <StreamSingleView
+                streams={favoriteStreams}
+                currentIndex={singleViewIndex}
+                onNext={() =>
+                  setSingleViewIndex((idx) =>
+                    idx === null ? idx : (idx + 1) % favorites.length
+                  )
+                }
+                onPrevious={() =>
+                  setSingleViewIndex((idx) =>
+                    idx === null
+                      ? idx
+                      : (idx - 1 + favorites.length) % favorites.length
+                  )
+                }
+                onExit={() => setSingleViewIndex(null)}
+                onStatusChange={handleStreamStatusChange}
+              />
+            </div>
           ) : (
             // View mode (paged live players)
             <div>
@@ -376,7 +402,7 @@ export default function Favorites() {
                           variant="secondary"
                           size="sm"
                           className="bg-black/60 hover:bg-black/80 text-white touch-area"
-                          onClick={() => setFullscreenIdx(globalIdx)}
+                          onClick={() => setSingleViewIndex(globalIdx)}
                           data-testid={`button-fullscreen-${stream.id}`}
                           aria-label="View fullscreen"
                         >
@@ -441,92 +467,6 @@ export default function Favorites() {
             </div>
           )}
         </div>
-
-        {/* Fullscreen single-view overlay */}
-        {fullscreenIdx !== null && favorites[fullscreenIdx] && (
-          <div className="fixed inset-0 z-50 bg-black flex items-center justify-center">
-            <GestureHandler
-              onSwipeLeft={() =>
-                setFullscreenIdx((idx) =>
-                  idx === null ? idx : (idx + 1) % favorites.length
-                )
-              }
-              onSwipeRight={() =>
-                setFullscreenIdx((idx) =>
-                  idx === null ? idx : (idx - 1 + favorites.length) % favorites.length
-                )
-              }
-              onPinchZoom={(scale) => {
-                const video = document.querySelector(
-                  "#favorites-fullscreen-video video"
-                ) as HTMLElement | null;
-                if (video) {
-                  video.style.transform = `scale(${Math.min(Math.max(scale, 1), 3)})`;
-                }
-              }}
-              className="w-full h-full"
-            >
-              <div
-                id="favorites-fullscreen-video"
-                className="w-full h-full flex items-center justify-center"
-              >
-                <StreamPlayer
-                  stream={favorites[fullscreenIdx].stream}
-                  className="w-full h-full"
-                  controls={true}
-                  autoPlay={true}
-                />
-              </div>
-            </GestureHandler>
-
-            {/* Close button */}
-            <Button
-              variant="secondary"
-              size="sm"
-              className="absolute top-4 right-4 bg-black/60 hover:bg-black/80 text-white touch-area z-10"
-              onClick={() => setFullscreenIdx(null)}
-              data-testid="button-exit-fullscreen"
-              aria-label="Exit fullscreen"
-            >
-              <X size={18} />
-            </Button>
-
-            {/* Navigation controls */}
-            {favorites.length > 1 && (
-              <div className="absolute bottom-4 left-4 right-4 flex items-center justify-center gap-3 z-10">
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  className="bg-black/60 hover:bg-black/80 text-white touch-area"
-                  onClick={() =>
-                    setFullscreenIdx((idx) =>
-                      idx === null ? idx : (idx - 1 + favorites.length) % favorites.length
-                    )
-                  }
-                  data-testid="button-fs-previous"
-                >
-                  <ChevronLeft size={16} />
-                </Button>
-                <div className="bg-black/60 text-white px-3 py-2 rounded text-sm font-medium max-w-[60vw] truncate">
-                  {favorites[fullscreenIdx].stream.name}
-                </div>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  className="bg-black/60 hover:bg-black/80 text-white touch-area"
-                  onClick={() =>
-                    setFullscreenIdx((idx) =>
-                      idx === null ? idx : (idx + 1) % favorites.length
-                    )
-                  }
-                  data-testid="button-fs-next"
-                >
-                  <ChevronRight size={16} />
-                </Button>
-              </div>
-            )}
-          </div>
-        )}
         </main>
       </div>
     </div>

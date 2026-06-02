@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { StreamPlayer } from "@/components/StreamPlayer";
 import { GestureHandler } from "@/components/GestureHandler";
+import { StreamSingleView } from "@/components/StreamSingleView";
 import { StudioCarousel } from "@/components/StudioCarousel";
 import StudioSidebar from "@/components/StudioSidebar";
 import { useAuth } from "@/hooks/useAuth";
@@ -635,74 +636,14 @@ export default function Dashboard() {
               </div>)
             ) : (
               // Single View Mode
-              (<GestureHandler
-                onSwipeLeft={handleNextStream}
-                onSwipeRight={handlePreviousStream}
-                onPinchZoom={(scale) => {
-                  // Handle pinch-to-zoom for video element
-                  const video = document.querySelector('#main-video') as HTMLElement;
-                  if (video) {
-                    video.style.transform = `scale(${Math.min(Math.max(scale, 1), 3)})`;
-                  }
-                }}
-                className="h-full"
-              >
-                <div className="h-full bg-black rounded-lg overflow-hidden relative">
-                  {selectedStudio.streams[currentStreamIndex] && (
-                    <>
-                      <StreamPlayer
-                        stream={selectedStudio.streams[currentStreamIndex]}
-                        className="w-full h-full"
-                        controls={true}
-                        autoPlay={true}
-                        onStatusChange={(status) => handleStreamStatusChange(selectedStudio.streams[currentStreamIndex].id, status)}
-                      />
-                      
-                      {/* Video Controls Overlay */}
-                      <div className="absolute bottom-4 left-4 right-4 flex items-center justify-between">
-                        <div className="flex items-center space-x-3">
-                          <Button
-                            variant="secondary"
-                            size="sm"
-                            className="bg-black/60 hover:bg-black/80 text-white touch-area"
-                            onClick={handlePreviousStream}
-                            data-testid="button-previous-stream"
-                          >
-                            <ChevronLeft size={16} />
-                          </Button>
-                          <div className="bg-black/60 text-white px-3 py-2 rounded text-sm font-medium">
-                            Stream {currentStreamIndex + 1} of {selectedStudio.streams.length}
-                          </div>
-                          <Button
-                            variant="secondary"
-                            size="sm"
-                            className="bg-black/60 hover:bg-black/80 text-white touch-area"
-                            onClick={handleNextStream}
-                            data-testid="button-next-stream"
-                          >
-                            <ChevronRight size={16} />
-                          </Button>
-                        </div>
-                        
-                        <Button
-                          variant="secondary"
-                          size="sm"
-                          className="bg-black/60 hover:bg-black/80 text-white touch-area"
-                          onClick={() => setViewMode('grid')}
-                          data-testid="button-exit-fullscreen"
-                        >
-                          <Grid3X3 size={16} />
-                        </Button>
-                      </div>
-                      
-                      {/* Touch Gesture Indicators */}
-                      <div className="absolute top-4 right-4 bg-black/60 text-white px-3 py-2 rounded-lg text-xs gesture-hint">
-                        Pinch to zoom • Swipe to navigate
-                      </div>
-                    </>
-                  )}
-                </div>
-              </GestureHandler>)
+              (<StreamSingleView
+                streams={selectedStudio.streams}
+                currentIndex={currentStreamIndex}
+                onNext={handleNextStream}
+                onPrevious={handlePreviousStream}
+                onExit={() => setViewMode('grid')}
+                onStatusChange={handleStreamStatusChange}
+              />)
             )}
           </div>
         </main>
