@@ -306,7 +306,7 @@ export default function StudioSidebar({
       </div>
 
       {/* OB Logo Footer */}
-      <div className="p-4 border-t border-border/30">
+      <div className="p-4">
         <div className="flex items-center justify-center">
           <img
             src={obLogo}
@@ -317,7 +317,7 @@ export default function StudioSidebar({
       </div>
 
       {/* User Menu */}
-      <div className="p-3 border-t border-border/30 shrink-0 relative">
+      <div className="p-3 shrink-0 relative">
         {userMenuOpen && (
           <Card className="absolute bottom-full left-3 w-56 mb-2 z-[60] shadow-xl">
             <CardContent className="p-2">
