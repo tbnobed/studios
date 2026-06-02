@@ -10,7 +10,10 @@
 BEGIN;
 
 -- 1. Reassign any existing operator users to viewer.
-UPDATE users SET role = 'viewer' WHERE role = 'operator';
+-- Compare as text: once the enum has been rebuilt without 'operator', the
+-- literal 'operator' can no longer be cast to user_role, so `role = 'operator'`
+-- would error on re-run. `role::text` keeps this statement safe to re-run.
+UPDATE users SET role = 'viewer' WHERE role::text = 'operator';
 
 -- 2. Drop the now-unused can_control column.
 ALTER TABLE user_studio_permissions DROP COLUMN IF EXISTS can_control;
