@@ -215,11 +215,11 @@ export default function Favorites() {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => setLocation("/")}
+                onClick={() => setLocation("/dashboard")}
                 data-testid="button-back-dashboard"
               >
                 <ArrowLeft size={16} className="mr-1" />
-                Back
+                Studios
               </Button>
               <h1 className="text-xl font-semibold flex items-center gap-2">
                 <Heart className="text-red-500 fill-red-500" size={20} />
@@ -266,7 +266,7 @@ export default function Favorites() {
               <p className="text-muted-foreground mb-6">
                 Tap the heart on any stream to add it here.
               </p>
-              <Button onClick={() => setLocation("/")} data-testid="button-browse-streams">
+              <Button onClick={() => setLocation("/dashboard")} data-testid="button-browse-streams">
                 Browse streams
               </Button>
             </div>

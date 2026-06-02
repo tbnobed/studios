@@ -31,8 +31,9 @@ function Router() {
         <Route path="/" component={Landing} />
       ) : (
         <>
-          <Route path="/" component={Dashboard} />
+          <Route path="/" component={Favorites} />
           <Route path="/favorites" component={Favorites} />
+          <Route path="/dashboard" component={Dashboard} />
           <Route path="/settings" component={Settings} />
           {user?.role === 'admin' && (
             <Route path="/admin" component={AdminPanel} />
