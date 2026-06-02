@@ -31,14 +31,16 @@ import {
   LayoutGrid,
   Move,
   Menu,
+  Maximize,
 } from "lucide-react";
 import SharedHeader from "@/components/SharedHeader";
 import StudioSidebar from "@/components/StudioSidebar";
 import { StreamPlayer } from "@/components/StreamPlayer";
+import { GestureHandler } from "@/components/GestureHandler";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { getAuthHeaders } from "@/lib/authUtils";
-import type { FavoriteWithStream } from "@shared/schema";
+import type { FavoriteWithStream, Stream } from "@shared/schema";
 
 const FAVORITES_PER_PAGE = 8;
 const FAVORITES_MAX_PAGES = 5;
@@ -114,6 +116,21 @@ export default function Favorites() {
   const [currentPage, setCurrentPage] = useState(0);
   const [order, setOrder] = useState<FavoriteWithStream[]>([]);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [fullscreenIdx, setFullscreenIdx] = useState<number | null>(null);
+  const [streamStatuses, setStreamStatuses] = useState<
+    Record<string, "online" | "offline" | "error">
+  >({});
+
+  const getStreamStatus = (stream: Stream) => {
+    return streamStatuses[stream.id] || stream.status;
+  };
+
+  const handleStreamStatusChange = (
+    streamId: string,
+    status: "online" | "offline" | "error"
+  ) => {
+    setStreamStatuses((prev) => ({ ...prev, [streamId]: status }));
+  };
 
   const { data: favorites = [], isLoading } = useQuery<FavoriteWithStream[]>({
     queryKey: ["/api/favorites"],
@@ -205,6 +222,12 @@ export default function Favorites() {
       setCurrentPage(Math.max(0, totalPages - 1));
     }
   }, [totalPages, currentPage]);
+
+  useEffect(() => {
+    if (fullscreenIdx !== null && !favorites[fullscreenIdx]) {
+      setFullscreenIdx(null);
+    }
+  }, [favorites, fullscreenIdx]);
 
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-gray-900 via-slate-800 to-black">
@@ -319,8 +342,11 @@ export default function Favorites() {
           ) : (
             // View mode (paged live players)
             <div>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                {pageStreams.map((favorite) => (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 pb-4">
+                {pageStreams.map((favorite, i) => {
+                  const globalIdx = currentPage * FAVORITES_PER_PAGE + i;
+                  const stream = favorite.stream;
+                  return (
                   <Card
                     key={favorite.streamId}
                     className="overflow-hidden hover:border-accent transition-colors"
@@ -328,22 +354,61 @@ export default function Favorites() {
                   >
                     <div className="video-container relative">
                       <StreamPlayer
-                        stream={favorite.stream}
+                        stream={stream}
                         className="w-full h-full"
                         controls={true}
                         autoPlay={true}
+                        onStatusChange={(status) => handleStreamStatusChange(stream.id, status)}
                       />
+                      <div className="absolute top-2 right-2 flex items-center space-x-2">
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          className="bg-black/60 hover:bg-black/80 text-white touch-area"
+                          onClick={() => removeMutation.mutate(stream.id)}
+                          disabled={removeMutation.isPending}
+                          data-testid={`button-favorite-${stream.id}`}
+                          aria-label="Remove from favorites"
+                        >
+                          <Heart size={12} className="fill-red-500 text-red-500" />
+                        </Button>
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          className="bg-black/60 hover:bg-black/80 text-white touch-area"
+                          onClick={() => setFullscreenIdx(globalIdx)}
+                          data-testid={`button-fullscreen-${stream.id}`}
+                          aria-label="View fullscreen"
+                        >
+                          <Maximize size={12} />
+                        </Button>
+                      </div>
                     </div>
                     <CardContent className="p-3">
-                      <h4 className="font-medium text-sm truncate" title={favorite.stream.name}>
-                        {favorite.stream.name}
+                      <h4 className="font-medium text-sm" data-testid={`stream-name-${stream.id}`}>
+                        {stream.name}
                       </h4>
-                      <p className="text-xs text-muted-foreground">
-                        {favorite.stream.studio?.name}
-                      </p>
+                      <div className="flex items-center justify-between mt-2">
+                        <span className="hidden md:block text-xs text-muted-foreground">
+                          {stream.resolution}
+                        </span>
+                        <div className="flex items-center space-x-1 md:ml-auto">
+                          <div className={`w-1 h-1 rounded-full ${
+                            getStreamStatus(stream) === 'online' ? 'bg-green-500' :
+                            getStreamStatus(stream) === 'error' ? 'bg-red-500' : 'bg-yellow-500'
+                          }`}></div>
+                          <span className={`text-xs font-medium capitalize ${
+                            getStreamStatus(stream) === 'online' ? 'text-green-500' :
+                            getStreamStatus(stream) === 'error' ? 'text-red-500' : 'text-yellow-500'
+                          }`}>
+                            {getStreamStatus(stream)}
+                          </span>
+                        </div>
+                      </div>
                     </CardContent>
                   </Card>
-                ))}
+                  );
+                })}
               </div>
 
               {totalPages > 1 && (
@@ -376,6 +441,92 @@ export default function Favorites() {
             </div>
           )}
         </div>
+
+        {/* Fullscreen single-view overlay */}
+        {fullscreenIdx !== null && favorites[fullscreenIdx] && (
+          <div className="fixed inset-0 z-50 bg-black flex items-center justify-center">
+            <GestureHandler
+              onSwipeLeft={() =>
+                setFullscreenIdx((idx) =>
+                  idx === null ? idx : (idx + 1) % favorites.length
+                )
+              }
+              onSwipeRight={() =>
+                setFullscreenIdx((idx) =>
+                  idx === null ? idx : (idx - 1 + favorites.length) % favorites.length
+                )
+              }
+              onPinchZoom={(scale) => {
+                const video = document.querySelector(
+                  "#favorites-fullscreen-video video"
+                ) as HTMLElement | null;
+                if (video) {
+                  video.style.transform = `scale(${Math.min(Math.max(scale, 1), 3)})`;
+                }
+              }}
+              className="w-full h-full"
+            >
+              <div
+                id="favorites-fullscreen-video"
+                className="w-full h-full flex items-center justify-center"
+              >
+                <StreamPlayer
+                  stream={favorites[fullscreenIdx].stream}
+                  className="w-full h-full"
+                  controls={true}
+                  autoPlay={true}
+                />
+              </div>
+            </GestureHandler>
+
+            {/* Close button */}
+            <Button
+              variant="secondary"
+              size="sm"
+              className="absolute top-4 right-4 bg-black/60 hover:bg-black/80 text-white touch-area z-10"
+              onClick={() => setFullscreenIdx(null)}
+              data-testid="button-exit-fullscreen"
+              aria-label="Exit fullscreen"
+            >
+              <X size={18} />
+            </Button>
+
+            {/* Navigation controls */}
+            {favorites.length > 1 && (
+              <div className="absolute bottom-4 left-4 right-4 flex items-center justify-center gap-3 z-10">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="bg-black/60 hover:bg-black/80 text-white touch-area"
+                  onClick={() =>
+                    setFullscreenIdx((idx) =>
+                      idx === null ? idx : (idx - 1 + favorites.length) % favorites.length
+                    )
+                  }
+                  data-testid="button-fs-previous"
+                >
+                  <ChevronLeft size={16} />
+                </Button>
+                <div className="bg-black/60 text-white px-3 py-2 rounded text-sm font-medium max-w-[60vw] truncate">
+                  {favorites[fullscreenIdx].stream.name}
+                </div>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="bg-black/60 hover:bg-black/80 text-white touch-area"
+                  onClick={() =>
+                    setFullscreenIdx((idx) =>
+                      idx === null ? idx : (idx + 1) % favorites.length
+                    )
+                  }
+                  data-testid="button-fs-next"
+                >
+                  <ChevronRight size={16} />
+                </Button>
+              </div>
+            )}
+          </div>
+        )}
         </main>
       </div>
     </div>
