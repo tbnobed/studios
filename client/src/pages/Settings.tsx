@@ -9,9 +9,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
-import { User, Lock, Save } from "lucide-react";
+import { User, Lock, Save, Menu } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import SharedHeader from "@/components/SharedHeader";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import StudioSidebar from "@/components/StudioSidebar";
 
 const passwordSchema = z.object({
   currentPassword: z.string().min(1, "Current password is required"),
@@ -27,6 +28,7 @@ type PasswordFormData = z.infer<typeof passwordSchema>;
 export default function Settings() {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState<'profile' | 'password'>('profile');
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // Get current user data
   const { data: user, isLoading } = useQuery({
@@ -87,10 +89,27 @@ export default function Settings() {
       {/* Glossy overlay effect */}
       <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent pointer-events-none"></div>
       
-      <SharedHeader />
+      <div className="flex-1 flex relative z-10 overflow-hidden md:overflow-visible md:min-h-0">
+        {/* Desktop Sidebar */}
+        <div className="hidden lg:block">
+          <StudioSidebar />
+        </div>
 
-      <div className="flex-1 pt-16 md:pt-0 relative z-10">
-        <div className="container mx-auto px-4 py-8">
+        <main className="flex-1 overflow-y-auto">
+          {/* Mobile Menu */}
+          <div className="lg:hidden px-4 pt-4" style={{ marginTop: 'env(safe-area-inset-top)' }}>
+            <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
+              <SheetTrigger asChild>
+                <Button variant="ghost" size="sm" className="touch-area" data-testid="button-menu">
+                  <Menu size={20} />
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="left" className="p-0 w-64">
+                <StudioSidebar onNavigate={() => setSidebarOpen(false)} />
+              </SheetContent>
+            </Sheet>
+          </div>
+          <div className="container mx-auto px-4 py-8">
           <div className="max-w-4xl mx-auto">
             <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
             {/* Sidebar Navigation */}
@@ -287,6 +306,7 @@ export default function Settings() {
             </div>
           </div>
         </div>
+        </main>
       </div>
     </div>
   );

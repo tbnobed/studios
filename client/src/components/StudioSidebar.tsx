@@ -2,17 +2,23 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   Settings,
   Monitor,
   Video,
   Heart,
+  User,
+  Shield,
+  LogOut,
   PanelLeftClose,
   PanelLeftOpen,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
-import { getAuthHeaders } from "@/lib/authUtils";
+import { getAuthHeaders, removeAuthToken } from "@/lib/authUtils";
+import { useToast } from "@/hooks/use-toast";
 import { StudioWithStreams } from "@shared/schema";
+import tbnLogo from "@/assets/tbnlogo-white_1756354700943.png";
 import obLogo from "@assets/image_1756407804157.png";
 
 function hexToRgba(hex: string | null | undefined, alpha: number): string {
@@ -47,7 +53,9 @@ export default function StudioSidebar({
   onNavigate,
 }: StudioSidebarProps) {
   const { user } = useAuth();
+  const { toast } = useToast();
   const [, setLocation] = useLocation();
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(() => {
     try {
       return localStorage.getItem("sidebarCollapsed") === "true";
@@ -89,11 +97,37 @@ export default function StudioSidebar({
     onNavigate?.();
   };
 
+  const handleLogout = () => {
+    removeAuthToken();
+    toast({
+      title: "Signed Out",
+      description: "You have been successfully signed out",
+    });
+    setTimeout(() => {
+      window.location.href = "/";
+    }, 1000);
+  };
+
   return (
     <div
       className={`${sidebarCollapsed ? "w-20" : "w-64"} h-full bg-card/50 backdrop-blur border-r border-border/40 transition-all duration-300 flex flex-col`}
     >
-      <div className="p-6 flex-1">
+      {/* TBN Logo */}
+      <div className="px-3 py-4 border-b border-border/30 flex items-center justify-center shrink-0">
+        <button
+          onClick={() => handleNav("/dashboard")}
+          className="hover:opacity-80 transition-opacity cursor-pointer"
+          data-testid="link-home"
+        >
+          <img
+            src={tbnLogo}
+            alt="TBN Studios Logo"
+            className={`${sidebarCollapsed ? "h-8" : "h-14"} w-auto opacity-75`}
+          />
+        </button>
+      </div>
+
+      <div className="p-6 flex-1 overflow-y-auto">
         <div className="flex items-center justify-between mb-6">
           {!sidebarCollapsed && (
             <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-[0.1em] opacity-60">
@@ -269,6 +303,70 @@ export default function StudioSidebar({
             </div>
           </div>
         )}
+      </div>
+
+      {/* User Menu */}
+      <div className="p-3 border-t border-border/30 shrink-0 relative">
+        {userMenuOpen && (
+          <Card className="absolute bottom-full left-3 w-56 mb-2 z-[60] shadow-xl">
+            <CardContent className="p-2">
+              <div className="px-3 py-2 border-b border-border">
+                <p className="font-medium text-sm truncate">{user?.username}</p>
+                <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
+              </div>
+              {user?.role === "admin" && (
+                <button
+                  className="w-full flex items-center justify-start px-2 py-2 text-sm hover:bg-accent rounded-md transition-colors"
+                  onClick={() => {
+                    setUserMenuOpen(false);
+                    window.location.href = "/admin";
+                  }}
+                  data-testid="button-admin"
+                >
+                  <Shield className="mr-2" size={16} />
+                  Admin Panel
+                </button>
+              )}
+              <button
+                className="w-full flex items-center justify-start px-2 py-2 text-sm hover:bg-accent rounded-md transition-colors"
+                onClick={() => {
+                  setUserMenuOpen(false);
+                  handleNav("/settings");
+                }}
+                data-testid="button-settings"
+              >
+                <Settings className="mr-2" size={16} />
+                Settings
+              </button>
+              <button
+                className="w-full flex items-center justify-start px-2 py-2 text-sm text-destructive hover:bg-accent rounded-md transition-colors"
+                onClick={() => {
+                  setUserMenuOpen(false);
+                  handleLogout();
+                }}
+                data-testid="button-logout"
+              >
+                <LogOut className="mr-2" size={16} />
+                Sign Out
+              </button>
+            </CardContent>
+          </Card>
+        )}
+        <button
+          className={`w-full flex items-center ${sidebarCollapsed ? "justify-center" : "justify-between"} rounded-lg p-2 hover:bg-accent transition-colors touch-area`}
+          onClick={() => setUserMenuOpen(!userMenuOpen)}
+          data-testid="button-user-menu"
+          title={sidebarCollapsed ? user?.username ?? "Account" : undefined}
+        >
+          {!sidebarCollapsed && (
+            <span className="text-sm font-medium truncate">
+              {user?.firstName || user?.lastName
+                ? `${user?.firstName ?? ""} ${user?.lastName ?? ""}`.trim()
+                : user?.username}
+            </span>
+          )}
+          <User size={18} className="shrink-0" />
+        </button>
       </div>
 
       {/* OB Logo Footer */}

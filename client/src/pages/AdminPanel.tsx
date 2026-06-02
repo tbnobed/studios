@@ -8,14 +8,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Trash2, Edit, Plus, UserPlus, Video, Monitor, Settings2, ChevronDown, Copy, Check, Search, Layers } from "lucide-react";
+import { Trash2, Edit, Plus, UserPlus, Video, Monitor, Settings2, ChevronDown, Copy, Check, Search, Layers, Menu } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { UserWithPermissions, Studio, StudioWithStreams, Stream, InsertStream } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { getAuthHeaders } from "@/lib/authUtils";
-import SharedHeader from "@/components/SharedHeader";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import StudioSidebar from "@/components/StudioSidebar";
 
 export default function AdminPanel() {
   const { toast } = useToast();
@@ -48,6 +49,7 @@ export default function AdminPanel() {
   const [isEditStudioOpen, setIsEditStudioOpen] = useState(false);
   const [selectedStudioForStreams, setSelectedStudioForStreams] = useState<string>("");
   const [activeTab, setActiveTab] = useState("users");
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // Stream management UI state
   const [streamSearch, setStreamSearch] = useState("");
@@ -823,10 +825,27 @@ export default function AdminPanel() {
       {/* Glossy overlay effect */}
       <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent pointer-events-none"></div>
       
-      <SharedHeader />
-      
-      <div className="flex-1 pt-16 md:pt-0 relative z-10">
-        <div className="max-w-7xl mx-auto p-4 mt-6">
+      <div className="flex-1 flex relative z-10 overflow-hidden md:overflow-visible md:min-h-0">
+        {/* Desktop Sidebar */}
+        <div className="hidden lg:block">
+          <StudioSidebar />
+        </div>
+
+        <main className="flex-1 overflow-y-auto">
+          {/* Mobile Menu */}
+          <div className="lg:hidden px-4 pt-4" style={{ marginTop: 'env(safe-area-inset-top)' }}>
+            <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
+              <SheetTrigger asChild>
+                <Button variant="ghost" size="sm" className="touch-area" data-testid="button-menu">
+                  <Menu size={20} />
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="left" className="p-0 w-64">
+                <StudioSidebar onNavigate={() => setSidebarOpen(false)} />
+              </SheetContent>
+            </Sheet>
+          </div>
+          <div className="max-w-7xl mx-auto p-4 mt-6">
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <TabsList className="grid w-full grid-cols-3">
@@ -2038,6 +2057,7 @@ export default function AdminPanel() {
           {/* Settings Tab */}
         </Tabs>
         </div>
+        </main>
       </div>
     </div>
   );

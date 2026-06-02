@@ -33,7 +33,6 @@ import {
   Menu,
   Maximize,
 } from "lucide-react";
-import SharedHeader from "@/components/SharedHeader";
 import StudioSidebar from "@/components/StudioSidebar";
 import { StreamPlayer } from "@/components/StreamPlayer";
 import { StreamSingleView } from "@/components/StreamSingleView";
@@ -235,8 +234,6 @@ export default function Favorites() {
 
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-gray-900 via-slate-800 to-black">
-      <SharedHeader />
-
       <div className="flex-1 flex md:pt-0 relative z-10 overflow-hidden md:overflow-visible md:min-h-0">
         {/* Desktop Sidebar */}
         <div className="hidden lg:block">
@@ -246,7 +243,7 @@ export default function Favorites() {
         {/* Main Content */}
         <main className="flex-1 relative">
           {/* Favorites Header (matches studio header) */}
-          <div className="bg-card border-b border-border px-4 lg:px-6 py-4 studio-header" style={{ marginTop: 'max(64px, calc(env(safe-area-inset-top) + 64px))' }}>
+          <div className="bg-card border-b border-border px-4 lg:px-6 py-4 studio-header" style={{ marginTop: 'env(safe-area-inset-top)' }}>
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-3">
                 {/* Mobile Menu */}

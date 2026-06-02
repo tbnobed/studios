@@ -6,15 +6,12 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { 
   Menu, 
-  User, 
   Settings, 
-  LogOut, 
   Grid3X3, 
   Maximize, 
   ChevronLeft, 
   ChevronRight,
   Play,
-  Shield,
   PanelLeftClose,
   PanelLeftOpen,
   Monitor,
@@ -60,7 +57,6 @@ export default function Dashboard() {
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const [currentStreamIndex, setCurrentStreamIndex] = useState(0);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [streamStatuses, setStreamStatuses] = useState<Record<string, 'online' | 'offline' | 'error'>>({});
   const [currentStudioIndex, setCurrentStudioIndex] = useState(0);
 
@@ -160,11 +156,6 @@ export default function Dashboard() {
     }
   }, [studios]);
 
-  const handleLogout = () => {
-    removeAuthToken();
-    window.location.reload();
-  };
-
   const handleNextStream = () => {
     if (selectedStudio && selectedStudio.streams.length > 0) {
       setCurrentStreamIndex((prev) => 
@@ -218,131 +209,6 @@ export default function Dashboard() {
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-gray-900 via-slate-800 to-black relative overflow-hidden md:overflow-visible">
       {/* Glossy overlay effect */}
       <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent pointer-events-none"></div>
-      {/* Mobile Header */}
-      <header className="md:hidden px-4 py-3 flex items-center justify-between shrink-0 fixed left-0 right-0 z-30 bg-card/80 backdrop-blur border-b border-border" style={{ top: 'max(0px, env(safe-area-inset-top))' }}>
-        <div className="flex items-center space-x-2">
-          <span className="text-sm font-medium">
-            {user?.firstName} {user?.lastName}
-          </span>
-        </div>
-        
-        <Button
-          variant="ghost"
-          size="sm"
-          className="touch-area text-destructive hover:text-destructive"
-          onClick={handleLogout}
-          data-testid="button-mobile-logout"
-        >
-          <LogOut size={16} />
-        </Button>
-      </header>
-      {/* Desktop Header */}
-      <header className="hidden md:flex bg-card/80 backdrop-blur border-b border-border px-4 py-3 items-center justify-between shrink-0 relative z-20">
-        <div className="flex items-center space-x-3">
-          <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
-            <SheetTrigger asChild>
-              <Button variant="ghost" size="sm" className="lg:hidden touch-area" data-testid="button-menu">
-                <Menu size={20} />
-              </Button>
-            </SheetTrigger>
-            <SheetContent side="left" className="p-0 w-64">
-              <StudioSidebar
-                selectedStudioId={selectedStudio?.id}
-                onSelectStudio={handleSelectStudio}
-                onNavigate={() => setSidebarOpen(false)}
-              />
-            </SheetContent>
-          </Sheet>
-          
-          <button
-            onClick={() => window.location.href = '/'}
-            className="hover:opacity-80 transition-opacity cursor-pointer"
-            data-testid="link-home"
-          >
-            <img 
-              src={tbnLogo} 
-              alt="TBN Studios Logo" 
-              className="h-16 w-auto opacity-75"
-            />
-          </button>
-        </div>
-        
-        <div className="flex items-center space-x-2">
-          <span className="text-sm text-muted-foreground hidden sm:inline">
-            {user?.firstName} {user?.lastName}
-          </span>
-          <div className="relative">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="touch-area"
-              onClick={() => setUserMenuOpen(!userMenuOpen)}
-              data-testid="button-user-menu"
-            >
-              <User size={20} />
-            </Button>
-            
-            {/* User Menu Dropdown */}
-            {userMenuOpen && (
-              <Card className="absolute top-12 right-0 w-48 z-[60] shadow-xl">
-                <CardContent className="p-2">
-                  <div className="px-3 py-2 border-b border-border">
-                    <p className="font-medium text-sm">{user?.username}</p>
-                    <p className="text-xs text-muted-foreground">{user?.email}</p>
-                  </div>
-                  {user?.role === 'admin' && (
-                    <button
-                      className="w-full flex items-center justify-start px-2 py-2 text-sm hover:bg-accent rounded-md transition-colors"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        setUserMenuOpen(false);
-                        setTimeout(() => {
-                          window.location.href = '/admin';
-                        }, 50);
-                      }}
-                      data-testid="button-admin"
-                    >
-                      <Shield className="mr-2" size={16} />
-                      Admin Panel
-                    </button>
-                  )}
-                  <button
-                    className="w-full flex items-center justify-start px-2 py-2 text-sm hover:bg-accent rounded-md transition-colors"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      setUserMenuOpen(false);
-                      setTimeout(() => {
-                        window.location.href = '/settings';
-                      }, 50);
-                    }}
-                    data-testid="button-settings"
-                  >
-                    <Settings className="mr-2" size={16} />
-                    Settings
-                  </button>
-                  <button
-                    className="w-full flex items-center justify-start px-2 py-2 text-sm text-destructive hover:bg-accent rounded-md transition-colors"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      setUserMenuOpen(false);
-                      setTimeout(() => {
-                        handleLogout();
-                      }, 50);
-                    }}
-                    data-testid="button-logout"
-                  >
-                    <LogOut className="mr-2" size={16} />
-                    Sign Out
-                  </button>
-                </CardContent>
-              </Card>
-            )}
-          </div>
-        </div>
-      </header>
       <div className="flex-1 flex md:pt-0 relative z-10 overflow-hidden md:overflow-visible md:min-h-0">
         {/* Desktop Sidebar */}
         <div className="hidden lg:block">
@@ -356,9 +222,29 @@ export default function Dashboard() {
         <main className="flex-1 relative">
           {/* Studio Header */}
           {selectedStudio && (
-            <div className="bg-card border-b border-border px-4 lg:px-6 py-4 studio-header" style={{ marginTop: 'max(64px, calc(env(safe-area-inset-top) + 64px))' }}>
+            <div className="bg-card border-b border-border px-4 lg:px-6 py-4 studio-header" style={{ marginTop: 'env(safe-area-inset-top)' }}>
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-3">
+                  {/* Mobile Menu */}
+                  <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
+                    <SheetTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="lg:hidden touch-area"
+                        data-testid="button-menu"
+                      >
+                        <Menu size={20} />
+                      </Button>
+                    </SheetTrigger>
+                    <SheetContent side="left" className="p-0 w-64">
+                      <StudioSidebar
+                        selectedStudioId={selectedStudio?.id}
+                        onSelectStudio={handleSelectStudio}
+                        onNavigate={() => setSidebarOpen(false)}
+                      />
+                    </SheetContent>
+                  </Sheet>
                   {/* Mobile Back Button */}
                   <Button
                     variant="ghost"
@@ -409,6 +295,28 @@ export default function Dashboard() {
           <div className="flex-1 md:p-2 overflow-hidden md:overflow-visible md:h-auto">
             {!selectedStudio ? (
               <div className="h-full">
+                {/* Mobile Menu (no studio selected) */}
+                <div className="lg:hidden absolute z-30" style={{ top: 'max(12px, env(safe-area-inset-top))', left: '12px' }}>
+                  <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
+                    <SheetTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="touch-area bg-black/40 text-white hover:bg-black/60 hover:text-white backdrop-blur"
+                        data-testid="button-menu-carousel"
+                      >
+                        <Menu size={20} />
+                      </Button>
+                    </SheetTrigger>
+                    <SheetContent side="left" className="p-0 w-64">
+                      <StudioSidebar
+                        selectedStudioId={selectedStudio?.id}
+                        onSelectStudio={handleSelectStudio}
+                        onNavigate={() => setSidebarOpen(false)}
+                      />
+                    </SheetContent>
+                  </Sheet>
+                </div>
                 {/* Mobile Studio Selection with Full Screen Background */}
                 <GestureHandler
                   onSwipeLeft={() => {
