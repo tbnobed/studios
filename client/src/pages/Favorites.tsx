@@ -28,7 +28,7 @@ import {
   ChevronRight,
   GripVertical,
   X,
-  LayoutGrid,
+  Grid3X3,
   Move,
   Menu,
   Maximize,
@@ -237,64 +237,94 @@ export default function Favorites() {
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-gray-900 via-slate-800 to-black">
       <SharedHeader />
 
-      <div className="flex-1 flex overflow-hidden">
+      <div className="flex-1 flex md:pt-0 relative z-10 overflow-hidden md:overflow-visible md:min-h-0">
         {/* Desktop Sidebar */}
         <div className="hidden lg:block">
           <StudioSidebar activeFavorites />
         </div>
 
-        <main className="flex-1 p-4 pt-20 md:pt-4 overflow-auto">
-        <div className="max-w-7xl mx-auto">
-          {/* Toolbar */}
-          <div className="flex items-center justify-between mb-6 gap-2 flex-wrap">
-            <div className="flex items-center gap-2">
-              <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
-                <SheetTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="lg:hidden touch-area"
-                    data-testid="button-menu"
-                  >
-                    <Menu size={20} />
-                  </Button>
-                </SheetTrigger>
-                <SheetContent side="left" className="p-0 w-64">
-                  <StudioSidebar
-                    activeFavorites
-                    onNavigate={() => setSidebarOpen(false)}
-                  />
-                </SheetContent>
-              </Sheet>
-              <h1 className="text-xl font-semibold flex items-center gap-2">
-                Favorites
-              </h1>
-            </div>
-
-            {favorites.length > 0 && (
-              <div className="flex items-center gap-1 bg-card/50 rounded-lg p-1">
-                <Button
-                  variant={mode === "view" ? "secondary" : "ghost"}
-                  size="sm"
-                  onClick={() => setMode("view")}
-                  data-testid="button-mode-view"
-                >
-                  <LayoutGrid size={14} className="mr-1" />
-                  View
-                </Button>
-                <Button
-                  variant={mode === "arrange" ? "secondary" : "ghost"}
-                  size="sm"
-                  onClick={() => setMode("arrange")}
-                  data-testid="button-mode-arrange"
-                >
-                  <Move size={14} className="mr-1" />
-                  Arrange
-                </Button>
+        {/* Main Content */}
+        <main className="flex-1 relative">
+          {/* Favorites Header (matches studio header) */}
+          <div className="bg-card border-b border-border px-4 lg:px-6 py-4 studio-header" style={{ marginTop: 'max(64px, calc(env(safe-area-inset-top) + 64px))' }}>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                {/* Mobile Menu */}
+                <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
+                  <SheetTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="lg:hidden touch-area"
+                      data-testid="button-menu"
+                    >
+                      <Menu size={20} />
+                    </Button>
+                  </SheetTrigger>
+                  <SheetContent side="left" className="p-0 w-64">
+                    <StudioSidebar
+                      activeFavorites
+                      onNavigate={() => setSidebarOpen(false)}
+                    />
+                  </SheetContent>
+                </Sheet>
+                <div>
+                  <h2 className="text-xl font-bold" data-testid="favorites-title">
+                    Favorites
+                  </h2>
+                  <p className="text-sm text-muted-foreground">
+                    {favorites.length} streams available
+                  </p>
+                </div>
               </div>
-            )}
+              {favorites.length > 0 && (
+                <div className="flex items-center space-x-3">
+                  {/* View Mode Toggle */}
+                  <div className="flex bg-muted rounded-lg p-1">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className={`touch-area ${mode === "view" && singleViewIndex === null ? 'bg-primary text-primary-foreground' : ''}`}
+                      onClick={() => {
+                        setMode("view");
+                        setSingleViewIndex(null);
+                      }}
+                      data-testid="button-grid-view"
+                    >
+                      <Grid3X3 size={16} />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className={`hidden md:block touch-area ${singleViewIndex !== null ? 'bg-primary text-primary-foreground' : ''}`}
+                      onClick={() => {
+                        setMode("view");
+                        setSingleViewIndex((idx) => (idx === null ? 0 : idx));
+                      }}
+                      data-testid="button-single-view"
+                    >
+                      <Maximize size={16} />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className={`touch-area ${mode === "arrange" ? 'bg-primary text-primary-foreground' : ''}`}
+                      onClick={() => {
+                        setSingleViewIndex(null);
+                        setMode("arrange");
+                      }}
+                      data-testid="button-mode-arrange"
+                    >
+                      <Move size={16} />
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
 
+          {/* Video Content */}
+          <div className="flex-1 md:p-2 overflow-hidden md:overflow-visible md:h-auto">
           {/* Loading */}
           {isLoading ? (
             <div className="text-center py-20 text-muted-foreground">
@@ -344,27 +374,25 @@ export default function Favorites() {
               </DndContext>
             </div>
           ) : singleViewIndex !== null && favorites[singleViewIndex] ? (
-            // Single View Mode (in-panel, identical to studio tabs)
-            <div className="h-[calc(100vh-7rem)]">
-              <StreamSingleView
-                streams={favoriteStreams}
-                currentIndex={singleViewIndex}
-                onNext={() =>
-                  setSingleViewIndex((idx) =>
-                    idx === null ? idx : (idx + 1) % favorites.length
-                  )
-                }
-                onPrevious={() =>
-                  setSingleViewIndex((idx) =>
-                    idx === null
-                      ? idx
-                      : (idx - 1 + favorites.length) % favorites.length
-                  )
-                }
-                onExit={() => setSingleViewIndex(null)}
-                onStatusChange={handleStreamStatusChange}
-              />
-            </div>
+            // Single View Mode (identical to studio tabs)
+            <StreamSingleView
+              streams={favoriteStreams}
+              currentIndex={singleViewIndex}
+              onNext={() =>
+                setSingleViewIndex((idx) =>
+                  idx === null ? idx : (idx + 1) % favorites.length
+                )
+              }
+              onPrevious={() =>
+                setSingleViewIndex((idx) =>
+                  idx === null
+                    ? idx
+                    : (idx - 1 + favorites.length) % favorites.length
+                )
+              }
+              onExit={() => setSingleViewIndex(null)}
+              onStatusChange={handleStreamStatusChange}
+            />
           ) : (
             // View mode (paged live players)
             <div>
