@@ -204,10 +204,6 @@ export function StreamPlayer({
               {currentStatus === 'online' ? 'LIVE' : currentStatus.toUpperCase()}
             </span>
           </div>
-          
-          <div className="hidden md:block absolute bottom-2 left-2 bg-black/60 text-white px-2 py-1 rounded text-xs">
-            {stream.resolution} • {stream.fps}fps
-          </div>
         </>
       )}
     </div>
