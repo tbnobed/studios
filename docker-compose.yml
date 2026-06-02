@@ -24,6 +24,40 @@ services:
       timeout: 5s
       retries: 5
 
+  # One-shot database migrations. Runs every .sql file in ./migrations (in
+  # filename order) after Postgres is healthy and before the app starts.
+  # Migrations are written to be idempotent, so this is safe on every deploy.
+  migrate:
+    image: postgres:15-alpine
+    container_name: obtv_migrate
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PGHOST: postgres
+      PGPORT: 5432
+      PGDATABASE: ${POSTGRES_DB:-obtv_studio}
+      PGUSER: ${POSTGRES_USER:-obtv_user}
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - ./migrations:/migrations:ro
+    entrypoint:
+      - sh
+      - -c
+      - |
+        set -e
+        if ls /migrations/*.sql >/dev/null 2>&1; then
+          for f in /migrations/*.sql; do
+            echo "Applying migration: $$f"
+            psql -v ON_ERROR_STOP=1 -f "$$f"
+          done
+        else
+          echo "No migrations to apply."
+        fi
+    networks:
+      - obtv_network
+    restart: "no"
+
   # OBTV Studio Manager Application
   obtv_app:
     build:
@@ -34,6 +68,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
     environment:
       NODE_ENV: production
       DATABASE_URL: postgresql://${POSTGRES_USER:-obtv_user}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-obtv_studio}
