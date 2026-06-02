@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Trash2, Edit, Plus, UserPlus, Video, Monitor, Settings2, ChevronDown, Copy, Check, Search, Layers } from "lucide-react";
@@ -80,6 +80,10 @@ export default function AdminPanel() {
   const [editingUser, setEditingUser] = useState<(UserWithPermissions & { newPassword?: string }) | null>(null);
   const [selectedImageFile, setSelectedImageFile] = useState<File | null>(null);
   const [imageUploadPreview, setImageUploadPreview] = useState<string | null>(null);
+  const [isCreateStudioOpen, setIsCreateStudioOpen] = useState(false);
+  const [newStudio, setNewStudio] = useState({ name: "", location: "", description: "", colorCode: "#4A5568" });
+  const [newStudioImageFile, setNewStudioImageFile] = useState<File | null>(null);
+  const [newStudioImagePreview, setNewStudioImagePreview] = useState<string | null>(null);
 
   // Fetch all users (admin only)
   const { data: users = [], isLoading: usersLoading } = useQuery<UserWithPermissions[]>({
@@ -330,6 +334,71 @@ export default function AdminPanel() {
       });
     },
   });
+
+  const createStudioMutation = useMutation({
+    mutationFn: async ({ studioData, imageFile }: { studioData: typeof newStudio; imageFile?: File | null }) => {
+      const response = await apiRequest("POST", "/api/admin/studios", studioData, {
+        headers: getAuthHeaders(),
+      });
+      const studio = await response.json();
+
+      // Image upload route needs the studio id, so upload after creation.
+      if (imageFile) {
+        const formData = new FormData();
+        formData.append("image", imageFile);
+        formData.append("studioId", studio.id);
+        const uploadResponse = await fetch("/api/admin/upload-studio-image", {
+          method: "POST",
+          headers: getAuthHeaders(),
+          body: formData,
+        });
+        if (!uploadResponse.ok) {
+          // Studio already exists server-side at this point; surface the failure
+          // so the image issue isn't silently swallowed.
+          throw new Error("Studio was created, but the image upload failed. You can add an image by editing the studio.");
+        }
+        const { imageUrl } = await uploadResponse.json();
+        await apiRequest("PATCH", `/api/admin/studios/${studio.id}`, { imageUrl }, {
+          headers: getAuthHeaders(),
+        });
+      }
+      return studio;
+    },
+    onSuccess: () => {
+      setIsCreateStudioOpen(false);
+      setNewStudio({ name: "", location: "", description: "", colorCode: "#4A5568" });
+      setNewStudioImageFile(null);
+      setNewStudioImagePreview(null);
+      toast({ title: "Studio Created", description: "New studio has been successfully created" });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Failed to Create Studio", description: error.message, variant: "destructive" });
+    },
+    onSettled: () => {
+      // Studio may have been created even if a later step (image upload/patch) failed,
+      // so always refresh so the list reflects reality.
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/studios"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/studios"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/studios-with-streams"] });
+    },
+  });
+
+  const handleCreateStudio = () => {
+    if (!newStudio.name.trim()) {
+      toast({ title: "Missing Information", description: "Studio name is required", variant: "destructive" });
+      return;
+    }
+    createStudioMutation.mutate({ studioData: newStudio, imageFile: newStudioImageFile });
+  };
+
+  const handleNewStudioImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setNewStudioImageFile(file);
+    const reader = new FileReader();
+    reader.onload = () => setNewStudioImagePreview(reader.result as string);
+    reader.readAsDataURL(file);
+  };
 
   const handleCreateUser = () => {
     if (!newUser.username.trim() || !newUser.password.trim()) {
@@ -1120,8 +1189,20 @@ export default function AdminPanel() {
           <TabsContent value="studios" className="space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle>Studio Management</CardTitle>
-                <CardDescription>Manage studio details and images</CardDescription>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle>Studio Management</CardTitle>
+                    <CardDescription>Manage studio details and images</CardDescription>
+                  </div>
+                  <Button
+                    className="touch-area"
+                    onClick={() => setIsCreateStudioOpen(true)}
+                    data-testid="button-add-studio"
+                  >
+                    <Plus className="mr-2" size={16} />
+                    Add Studio
+                  </Button>
+                </div>
               </CardHeader>
               
               <CardContent>
@@ -1286,6 +1367,105 @@ export default function AdminPanel() {
                     </div>
                   </div>
                 )}
+              </DialogContent>
+            </Dialog>
+
+            {/* Create Studio Dialog */}
+            <Dialog open={isCreateStudioOpen} onOpenChange={(open) => {
+              setIsCreateStudioOpen(open);
+              if (!open) {
+                setNewStudio({ name: "", location: "", description: "", colorCode: "#4A5568" });
+                setNewStudioImageFile(null);
+                setNewStudioImagePreview(null);
+              }
+            }}>
+              <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                  <DialogTitle>Add Studio</DialogTitle>
+                  <DialogDescription>Create a new studio.</DialogDescription>
+                </DialogHeader>
+
+                <div className="space-y-4">
+                  <div>
+                    <Label htmlFor="newStudioName">Studio Name</Label>
+                    <Input
+                      id="newStudioName"
+                      value={newStudio.name}
+                      onChange={(e) => setNewStudio({ ...newStudio, name: e.target.value })}
+                      placeholder="Studio Name"
+                      data-testid="input-new-studio-name"
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="newStudioLocation">Location</Label>
+                    <Input
+                      id="newStudioLocation"
+                      value={newStudio.location}
+                      onChange={(e) => setNewStudio({ ...newStudio, location: e.target.value })}
+                      placeholder="City, State"
+                      data-testid="input-new-studio-location"
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="newStudioDescription">Description</Label>
+                    <Input
+                      id="newStudioDescription"
+                      value={newStudio.description}
+                      onChange={(e) => setNewStudio({ ...newStudio, description: e.target.value })}
+                      placeholder="Studio Description"
+                      data-testid="input-new-studio-description"
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="newStudioColor">Color Code</Label>
+                    <Input
+                      id="newStudioColor"
+                      type="color"
+                      value={newStudio.colorCode}
+                      onChange={(e) => setNewStudio({ ...newStudio, colorCode: e.target.value })}
+                      data-testid="input-new-studio-color"
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="newStudioImage">Studio Image</Label>
+                    <div className="space-y-2">
+                      <Input
+                        id="newStudioImage"
+                        type="file"
+                        accept="image/*"
+                        onChange={handleNewStudioImageSelect}
+                        data-testid="input-new-studio-image"
+                      />
+                      {newStudioImagePreview && (
+                        <div className="w-32 h-32 rounded-lg overflow-hidden bg-accent">
+                          <img src={newStudioImagePreview} alt="Preview" className="w-full h-full object-cover" />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="flex gap-2 mt-6">
+                    <Button
+                      onClick={handleCreateStudio}
+                      disabled={createStudioMutation.isPending}
+                      className="flex-1"
+                      data-testid="button-create-studio"
+                    >
+                      {createStudioMutation.isPending ? "Creating..." : "Create Studio"}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => setIsCreateStudioOpen(false)}
+                      className="flex-1"
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                </div>
               </DialogContent>
             </Dialog>
           </TabsContent>
