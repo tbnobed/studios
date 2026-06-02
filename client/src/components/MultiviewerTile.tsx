@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { Maximize2, Plus, X, Volume2, GripVertical } from "lucide-react";
+import { Maximize2, Plus, X, Volume2, GripVertical, AlertTriangle } from "lucide-react";
 import { useDraggable, useDroppable } from "@dnd-kit/core";
 import {
   Select,
@@ -20,6 +20,8 @@ interface MultiviewerTileProps {
   /** position of this tile within the layout's slots array */
   index: number;
   stream: Stream | null;
+  /** slot holds a stream id, but that source no longer exists / is not viewable */
+  unavailable?: boolean;
   editMode: boolean;
   studios: StudioWithStreams[];
   /** stream ids already used elsewhere in the layout (disabled in the picker) */
@@ -49,6 +51,7 @@ export const slotDndId = (index: number) => `slot-${index}`;
 export function MultiviewerTile({
   index,
   stream,
+  unavailable = false,
   editMode,
   studios,
   usedStreamIds,
@@ -86,24 +89,67 @@ export function MultiviewerTile({
 
   const dropHighlight = isOver && !isDragging ? "ring-2 ring-primary ring-offset-1 ring-offset-black" : "";
 
-  // Empty slot.
+  // Empty slot, or a slot whose saved source is no longer available.
   if (!stream) {
     return (
       <div
         ref={setRefs}
-        className={`relative h-full w-full rounded-lg border-2 border-dashed bg-black/40 flex items-center justify-center transition-colors ${
-          isOver ? "border-primary bg-primary/10" : "border-zinc-700/70"
+        className={`relative h-full w-full rounded-lg border-2 border-dashed flex items-center justify-center transition-colors ${
+          unavailable
+            ? "border-amber-500/60 bg-amber-950/30"
+            : isOver
+              ? "border-primary bg-primary/10"
+              : "border-zinc-700/70 bg-black/40"
         } ${dropHighlight}`}
-        data-testid={`multiviewer-tile-empty-${index}`}
+        data-testid={
+          unavailable
+            ? `multiviewer-tile-unavailable-${index}`
+            : `multiviewer-tile-empty-${index}`
+        }
       >
         {editMode ? (
-          <StreamPicker
-            studios={studios}
-            usedStreamIds={usedStreamIds}
-            value={null}
-            onChange={onAssign}
-            placeholder="Add a source"
-          />
+          <div className="flex w-full flex-col items-center gap-2 px-2">
+            {unavailable && (
+              <div className="flex items-center gap-1.5 text-amber-400">
+                <AlertTriangle size={14} className="shrink-0" />
+                <span className="text-[10px] font-semibold uppercase tracking-wider">
+                  Source unavailable
+                </span>
+              </div>
+            )}
+            <div className="flex w-full items-center gap-1">
+              <div className="min-w-0 flex-1">
+                <StreamPicker
+                  studios={studios}
+                  usedStreamIds={usedStreamIds}
+                  value={null}
+                  onChange={onAssign}
+                  placeholder={unavailable ? "Replace source" : "Add a source"}
+                />
+              </div>
+              {unavailable && (
+                <button
+                  type="button"
+                  className="shrink-0 rounded bg-black/70 p-1 text-white hover:bg-red-600/80"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onAssign(null);
+                  }}
+                  data-testid={`button-clear-unavailable-${index}`}
+                  aria-label="Clear unavailable source"
+                >
+                  <X size={12} />
+                </button>
+              )}
+            </div>
+          </div>
+        ) : unavailable ? (
+          <div className="flex flex-col items-center px-2 text-center text-amber-400">
+            <AlertTriangle size={featured ? 24 : 18} />
+            <span className="mt-1 text-[10px] font-semibold uppercase tracking-wider">
+              Source unavailable
+            </span>
+          </div>
         ) : (
           <div className="flex flex-col items-center text-zinc-600">
             <Plus size={20} />

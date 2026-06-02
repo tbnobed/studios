@@ -90,6 +90,8 @@ export default function Multiviewer() {
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
   const [layoutName, setLayoutName] = useState("");
   const appliedDefaultRef = useRef(false);
+  // Layout id awaiting a "some sources unavailable" check once streams load.
+  const pendingLayoutCheckRef = useRef<string | null>(null);
 
   const { data: studiosData } = useQuery<StudioWithStreams[]>({
     queryKey: ["/api/studios"],
@@ -131,7 +133,28 @@ export default function Multiviewer() {
     setSlots(fitSlots(layout.slots ?? [], slotCount(type)));
     setCurrentLayoutId(layout.id);
     setEditMode(false);
+    // Flag this layout so we can warn (once) about any stale sources after
+    // the studios/streams have loaded.
+    pendingLayoutCheckRef.current = layout.id;
   };
+
+  // After a layout is applied and streams are loaded, warn once if some of
+  // its slots reference sources that no longer exist / are no longer viewable.
+  useEffect(() => {
+    if (!pendingLayoutCheckRef.current) return;
+    // Wait until the studios query has resolved before judging availability.
+    if (!studiosData) return;
+    const missing = slots.filter((id) => id && !streamMap.has(id)).length;
+    pendingLayoutCheckRef.current = null;
+    if (missing > 0) {
+      toast({
+        title: "Some sources unavailable",
+        description: `${missing} source${missing === 1 ? "" : "s"} in this layout ${
+          missing === 1 ? "is" : "are"
+        } no longer available.`,
+      });
+    }
+  }, [studiosData, streamMap, slots, toast]);
 
   const changeLayoutType = (type: MultiviewerLayoutType) => {
     setLayoutType(type);
@@ -307,11 +330,14 @@ export default function Multiviewer() {
   const renderTile = (index: number, featured = false) => {
     const id = slots[index] ?? null;
     const stream = id ? streamMap.get(id) ?? null : null;
+    // The slot holds a stream id, but that stream is gone or no longer viewable.
+    const unavailable = Boolean(id) && !stream;
     return (
       <MultiviewerTile
         key={index}
         index={index}
         stream={stream}
+        unavailable={unavailable}
         editMode={editMode}
         studios={studios}
         usedStreamIds={usedStreamIds}
