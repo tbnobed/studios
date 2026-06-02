@@ -32,6 +32,21 @@ import obLogo from "@assets/image_1756407804157.png";
 
 type ViewMode = 'grid' | 'single';
 
+function hexToRgba(hex: string | null | undefined, alpha: number): string {
+  const fallback = '#64748b'; // slate-500
+  let h = (hex || fallback).replace('#', '');
+  if (h.length === 3) {
+    h = h.split('').map((c) => c + c).join('');
+  }
+  if (h.length !== 6 || /[^0-9a-fA-F]/.test(h)) {
+    h = fallback.replace('#', '');
+  }
+  const r = parseInt(h.slice(0, 2), 16);
+  const g = parseInt(h.slice(2, 4), 16);
+  const b = parseInt(h.slice(4, 6), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
 export default function Dashboard() {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -141,11 +156,21 @@ export default function Dashboard() {
               key={studio.id}
               className={`w-full ${sidebarCollapsed ? 'p-3 h-12 justify-center' : 'p-4 h-16 justify-between'} 
                 group relative overflow-hidden rounded-xl border transition-all duration-200 
-                text-left flex items-center touch-area transform hover:scale-[1.02] ${
-                selectedStudio?.id === studio.id 
-                  ? 'border-primary bg-gradient-to-r from-orange-500/25 to-orange-400/15 shadow-md ring-1 ring-orange-500/30' 
-                  : 'border-border/20 hover:border-border/40 bg-gradient-to-r from-slate-500/30 to-slate-400/20 backdrop-blur hover:from-slate-500/40 hover:to-slate-400/30 hover:shadow-sm'
+                text-left flex items-center touch-area transform hover:scale-[1.02] backdrop-blur ${
+                selectedStudio?.id === studio.id ? 'shadow-md' : 'hover:shadow-sm'
               }`}
+              style={
+                selectedStudio?.id === studio.id
+                  ? {
+                      backgroundColor: hexToRgba(studio.colorCode, 0.18),
+                      borderColor: hexToRgba(studio.colorCode, 0.55),
+                      boxShadow: `0 1px 8px ${hexToRgba(studio.colorCode, 0.25)}`,
+                    }
+                  : {
+                      backgroundColor: hexToRgba(studio.colorCode, 0.07),
+                      borderColor: hexToRgba(studio.colorCode, 0.18),
+                    }
+              }
               onClick={() => handleSelectStudio(studio)}
               data-testid={`studio-card-${studio.name.toLowerCase()}`}
               title={sidebarCollapsed ? `${studio.name} - ${studio.streams.length} streams available` : undefined}
