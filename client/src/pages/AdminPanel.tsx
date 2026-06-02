@@ -427,10 +427,40 @@ export default function AdminPanel() {
   const collapseAllStudios = () => setExpandedStudios(new Set());
 
   const handleCopy = async (text: string, id: string) => {
-    try {
-      await navigator.clipboard.writeText(text);
+    const markCopied = () => {
       setCopiedId(id);
       setTimeout(() => setCopiedId((c) => (c === id ? null : c)), 1500);
+    };
+
+    // navigator.clipboard only exists in secure contexts (HTTPS/localhost).
+    // Our site runs over plain HTTP, so fall back to a temporary textarea + execCommand.
+    if (navigator.clipboard?.writeText) {
+      try {
+        await navigator.clipboard.writeText(text);
+        markCopied();
+        return;
+      } catch {
+        // fall through to legacy fallback
+      }
+    }
+
+    try {
+      const textarea = document.createElement("textarea");
+      textarea.value = text;
+      textarea.setAttribute("readonly", "");
+      textarea.style.position = "fixed";
+      textarea.style.top = "-9999px";
+      textarea.style.opacity = "0";
+      document.body.appendChild(textarea);
+      textarea.focus();
+      textarea.select();
+      const ok = document.execCommand("copy");
+      document.body.removeChild(textarea);
+      if (ok) {
+        markCopied();
+      } else {
+        throw new Error("execCommand returned false");
+      }
     } catch {
       toast({ title: "Copy failed", description: "Could not access clipboard", variant: "destructive" });
     }
