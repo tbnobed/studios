@@ -21,17 +21,19 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import {
   Heart,
   ChevronLeft,
   ChevronRight,
-  ArrowLeft,
   GripVertical,
   X,
   LayoutGrid,
   Move,
+  Menu,
 } from "lucide-react";
 import SharedHeader from "@/components/SharedHeader";
+import StudioSidebar from "@/components/StudioSidebar";
 import { StreamPlayer } from "@/components/StreamPlayer";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -111,6 +113,7 @@ export default function Favorites() {
   const [mode, setMode] = useState<Mode>("view");
   const [currentPage, setCurrentPage] = useState(0);
   const [order, setOrder] = useState<FavoriteWithStream[]>([]);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const { data: favorites = [], isLoading } = useQuery<FavoriteWithStream[]>({
     queryKey: ["/api/favorites"],
@@ -207,22 +210,36 @@ export default function Favorites() {
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-gray-900 via-slate-800 to-black">
       <SharedHeader />
 
-      <main className="flex-1 p-4 pt-20 md:pt-4">
+      <div className="flex-1 flex overflow-hidden">
+        {/* Desktop Sidebar */}
+        <div className="hidden lg:block">
+          <StudioSidebar activeFavorites />
+        </div>
+
+        <main className="flex-1 p-4 pt-20 md:pt-4 overflow-auto">
         <div className="max-w-7xl mx-auto">
           {/* Toolbar */}
           <div className="flex items-center justify-between mb-6 gap-2 flex-wrap">
             <div className="flex items-center gap-2">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setLocation("/dashboard")}
-                data-testid="button-back-dashboard"
-              >
-                <ArrowLeft size={16} className="mr-1" />
-                Studios
-              </Button>
+              <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
+                <SheetTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="lg:hidden touch-area"
+                    data-testid="button-menu"
+                  >
+                    <Menu size={20} />
+                  </Button>
+                </SheetTrigger>
+                <SheetContent side="left" className="p-0 w-64">
+                  <StudioSidebar
+                    activeFavorites
+                    onNavigate={() => setSidebarOpen(false)}
+                  />
+                </SheetContent>
+              </Sheet>
               <h1 className="text-xl font-semibold flex items-center gap-2">
-                <Heart className="text-red-500 fill-red-500" size={20} />
                 Favorites
               </h1>
             </div>
@@ -359,7 +376,8 @@ export default function Favorites() {
             </div>
           )}
         </div>
-      </main>
+        </main>
+      </div>
     </div>
   );
 }

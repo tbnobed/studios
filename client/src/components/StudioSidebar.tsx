@@ -1,0 +1,288 @@
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { useLocation } from "wouter";
+import { Button } from "@/components/ui/button";
+import {
+  Settings,
+  Monitor,
+  Video,
+  Heart,
+  PanelLeftClose,
+  PanelLeftOpen,
+} from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
+import { getAuthHeaders } from "@/lib/authUtils";
+import { StudioWithStreams } from "@shared/schema";
+import obLogo from "@assets/image_1756407804157.png";
+
+function hexToRgba(hex: string | null | undefined, alpha: number): string {
+  const fallback = "#64748b"; // slate-500
+  let h = (hex || fallback).replace("#", "");
+  if (h.length === 3) {
+    h = h
+      .split("")
+      .map((c) => c + c)
+      .join("");
+  }
+  if (h.length !== 6 || /[^0-9a-fA-F]/.test(h)) {
+    h = fallback.replace("#", "");
+  }
+  const r = parseInt(h.slice(0, 2), 16);
+  const g = parseInt(h.slice(2, 4), 16);
+  const b = parseInt(h.slice(4, 6), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+interface StudioSidebarProps {
+  selectedStudioId?: string | null;
+  onSelectStudio?: (studio: StudioWithStreams) => void;
+  activeFavorites?: boolean;
+  onNavigate?: () => void;
+}
+
+export default function StudioSidebar({
+  selectedStudioId,
+  onSelectStudio,
+  activeFavorites,
+  onNavigate,
+}: StudioSidebarProps) {
+  const { user } = useAuth();
+  const [, setLocation] = useLocation();
+  const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem("sidebarCollapsed") === "true";
+    } catch {
+      return false;
+    }
+  });
+
+  const toggleCollapsed = () => {
+    setSidebarCollapsed((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem("sidebarCollapsed", String(next));
+      } catch {
+        // ignore
+      }
+      return next;
+    });
+  };
+
+  const { data: studios = [] } = useQuery<StudioWithStreams[]>({
+    queryKey: ["/api/studios"],
+    meta: {
+      headers: getAuthHeaders(),
+    },
+  });
+
+  const handleStudioClick = (studio: StudioWithStreams) => {
+    if (onSelectStudio) {
+      onSelectStudio(studio);
+    } else {
+      setLocation(`/dashboard?studio=${studio.id}`);
+    }
+    onNavigate?.();
+  };
+
+  const handleNav = (path: string) => {
+    setLocation(path);
+    onNavigate?.();
+  };
+
+  return (
+    <div
+      className={`${sidebarCollapsed ? "w-20" : "w-64"} h-full bg-card/50 backdrop-blur border-r border-border/40 transition-all duration-300 flex flex-col`}
+    >
+      <div className="p-6 flex-1">
+        <div className="flex items-center justify-between mb-6">
+          {!sidebarCollapsed && (
+            <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-[0.1em] opacity-60">
+              Studios
+            </h2>
+          )}
+          <Button
+            variant="ghost"
+            size="sm"
+            className="touch-area h-6 w-6 p-0 opacity-50 hover:opacity-100 transition-opacity"
+            onClick={toggleCollapsed}
+            data-testid="button-toggle-sidebar"
+          >
+            {sidebarCollapsed ? <PanelLeftOpen size={14} /> : <PanelLeftClose size={14} />}
+          </Button>
+        </div>
+
+        <div className="space-y-2">
+          {studios.map((studio) => (
+            <button
+              key={studio.id}
+              className={`w-full ${sidebarCollapsed ? "p-3 h-12 justify-center" : "p-4 h-16 justify-between"} 
+                group relative overflow-hidden rounded-xl border transition-all duration-200 
+                text-left flex items-center touch-area transform hover:scale-[1.02] backdrop-blur ${
+                  selectedStudioId === studio.id ? "shadow-md" : "hover:shadow-sm"
+                }`}
+              style={
+                selectedStudioId === studio.id
+                  ? {
+                      backgroundColor: hexToRgba(studio.colorCode, 0.18),
+                      borderColor: hexToRgba(studio.colorCode, 0.55),
+                      boxShadow: `0 1px 8px ${hexToRgba(studio.colorCode, 0.25)}`,
+                    }
+                  : {
+                      backgroundColor: hexToRgba(studio.colorCode, 0.07),
+                      borderColor: hexToRgba(studio.colorCode, 0.18),
+                    }
+              }
+              onClick={() => handleStudioClick(studio)}
+              data-testid={`studio-card-${studio.name.toLowerCase()}`}
+              title={
+                sidebarCollapsed
+                  ? `${studio.name} - ${studio.streams.length} streams available`
+                  : undefined
+              }
+            >
+              {sidebarCollapsed ? (
+                <div className="flex flex-col items-center space-y-1">
+                  <span
+                    className={`text-sm font-medium transition-colors duration-200 ${
+                      selectedStudioId === studio.id ? "text-primary" : "opacity-80"
+                    }`}
+                  >
+                    {studio.name.charAt(0)}
+                  </span>
+                  <div
+                    className={`w-1.5 h-1.5 rounded-full transition-colors duration-200 ${
+                      selectedStudioId === studio.id ? "bg-primary" : "bg-green-400"
+                    }`}
+                  ></div>
+                </div>
+              ) : (
+                <>
+                  <div className="text-left flex-1 min-w-0">
+                    <h3 className="text-sm font-medium truncate">{studio.name}</h3>
+                    <p className="text-xs text-muted-foreground opacity-70">
+                      {studio.streams.length} streams
+                    </p>
+                  </div>
+                  <div className="flex items-center space-x-2 shrink-0">
+                    <div
+                      className={`w-1.5 h-1.5 rounded-full transition-colors duration-200 ${
+                        selectedStudioId === studio.id ? "bg-primary" : "bg-green-400"
+                      }`}
+                    ></div>
+                    <span
+                      className={`text-[10px] font-bold uppercase tracking-wider transition-colors duration-200 ${
+                        selectedStudioId === studio.id ? "text-orange-300" : "opacity-60"
+                      }`}
+                    >
+                      {selectedStudioId === studio.id ? "Selected" : "Live"}
+                    </span>
+                  </div>
+                </>
+              )}
+            </button>
+          ))}
+        </div>
+
+        {/* Favorites Link */}
+        <div className="border-t border-border/30 mt-8 pt-6">
+          <button
+            className={`w-full ${sidebarCollapsed ? "p-3 h-12 justify-center" : "p-3 h-12 justify-start"}
+              group relative overflow-hidden rounded-lg border transition-all duration-200 hover:shadow-sm
+              bg-gradient-to-r from-red-500/25 to-red-400/15 backdrop-blur
+              hover:from-red-500/35 hover:to-red-400/25
+              text-left flex items-center touch-area ${
+                activeFavorites ? "border-red-400/60 shadow-sm" : "border-border/20 hover:border-border/40"
+              }`}
+            onClick={() => handleNav("/favorites")}
+            data-testid="button-nav-favorites"
+            title={sidebarCollapsed ? "Favorites" : undefined}
+          >
+            <Heart
+              className={sidebarCollapsed ? "" : "mr-3"}
+              size={14}
+              opacity={activeFavorites ? 1 : 0.7}
+              fill={activeFavorites ? "currentColor" : "none"}
+            />
+            {!sidebarCollapsed && (
+              <span className="text-xs font-medium opacity-80">Favorites</span>
+            )}
+          </button>
+        </div>
+
+        {/* Admin Section */}
+        {user?.role === "admin" && (
+          <div className="border-t border-border/30 mt-8 pt-6">
+            {!sidebarCollapsed && (
+              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-[0.1em] opacity-60 mb-4">
+                Admin
+              </h3>
+            )}
+            <div className="space-y-2">
+              <button
+                className={`w-full ${sidebarCollapsed ? "p-3 h-12 justify-center" : "p-3 h-12 justify-start"}
+                  group relative overflow-hidden rounded-lg border border-border/20 hover:border-border/40
+                  bg-gradient-to-r from-emerald-500/25 to-emerald-400/15 backdrop-blur
+                  hover:from-emerald-500/35 hover:to-emerald-400/25 
+                  transition-all duration-200 hover:shadow-sm
+                  text-left flex items-center touch-area`}
+                onClick={() => (window.location.href = "/admin")}
+                data-testid="button-manage-users"
+                title={sidebarCollapsed ? "Manage Users" : undefined}
+              >
+                <Settings className={sidebarCollapsed ? "" : "mr-3"} size={14} opacity={0.7} />
+                {!sidebarCollapsed && (
+                  <span className="text-xs font-medium opacity-80">Manage Users</span>
+                )}
+              </button>
+              <button
+                className={`w-full ${sidebarCollapsed ? "p-3 h-12 justify-center" : "p-3 h-12 justify-start"}
+                  group relative overflow-hidden rounded-lg border border-border/20 hover:border-border/40
+                  bg-gradient-to-r from-blue-500/25 to-blue-400/15 backdrop-blur
+                  hover:from-blue-500/35 hover:to-blue-400/25 
+                  transition-all duration-200 hover:shadow-sm
+                  text-left flex items-center touch-area`}
+                onClick={() => (window.location.href = "/admin?tab=studios")}
+                data-testid="button-manage-studios"
+                title={sidebarCollapsed ? "Manage Studios" : undefined}
+              >
+                <Monitor className={sidebarCollapsed ? "" : "mr-3"} size={14} opacity={0.7} />
+                {!sidebarCollapsed && (
+                  <span className="text-xs font-medium opacity-80">Manage Studios</span>
+                )}
+              </button>
+              <button
+                className={`w-full ${sidebarCollapsed ? "p-3 h-12 justify-center" : "p-3 h-12 justify-start"}
+                  group relative overflow-hidden rounded-lg border border-border/20 hover:border-border/40
+                  bg-gradient-to-r from-purple-500/25 to-purple-400/15 backdrop-blur
+                  hover:from-purple-500/35 hover:to-purple-400/25 
+                  transition-all duration-200 hover:shadow-sm
+                  text-left flex items-center touch-area`}
+                onClick={() => (window.location.href = "/admin?tab=streams")}
+                data-testid="button-manage-streams"
+                title={sidebarCollapsed ? "Manage Streams" : undefined}
+              >
+                <Video className={sidebarCollapsed ? "" : "mr-3"} size={14} opacity={0.7} />
+                {!sidebarCollapsed && (
+                  <span className="text-xs font-medium opacity-80">Manage Streams</span>
+                )}
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* OB Logo Footer */}
+      <div className="p-4 border-t border-border/30">
+        <div
+          className={`flex items-center ${sidebarCollapsed ? "justify-center" : "justify-start space-x-2"}`}
+        >
+          <img
+            src={obLogo}
+            alt="OB Logo"
+            className="w-24 h-24 opacity-75 ml-[84px] mr-[84px]"
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
