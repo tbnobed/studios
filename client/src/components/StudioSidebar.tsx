@@ -305,6 +305,19 @@ export default function StudioSidebar({
         )}
       </div>
 
+      {/* OB Logo Footer */}
+      <div className="p-4 border-t border-border/30">
+        <div
+          className={`flex items-center ${sidebarCollapsed ? "justify-center" : "justify-start space-x-2"}`}
+        >
+          <img
+            src={obLogo}
+            alt="OB Logo"
+            className="w-24 h-24 opacity-75 ml-[84px] mr-[84px]"
+          />
+        </div>
+      </div>
+
       {/* User Menu */}
       <div className="p-3 border-t border-border/30 shrink-0 relative">
         {userMenuOpen && (
