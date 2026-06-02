@@ -39,9 +39,12 @@ export interface IStorage {
 
   // Stream operations
   getStreamsByStudio(studioId: string): Promise<Stream[]>;
+  getAllStreamsByStudio(studioId: string): Promise<Stream[]>;
   getStream(id: string): Promise<Stream | undefined>;
   createStream(stream: InsertStream): Promise<Stream>;
+  createStreamsBulk(streams: InsertStream[]): Promise<Stream[]>;
   updateStream(id: string, data: Partial<InsertStream>): Promise<Stream>;
+  deleteStream(id: string): Promise<void>;
 
   // Permission operations
   getUserStudioPermission(userId: string, studioId: string): Promise<UserStudioPermission | undefined>;
@@ -201,6 +204,12 @@ export class DatabaseStorage implements IStorage {
     ).orderBy(asc(streams.name));
   }
 
+  async getAllStreamsByStudio(studioId: string): Promise<Stream[]> {
+    return db.select().from(streams)
+      .where(eq(streams.studioId, studioId))
+      .orderBy(asc(streams.name));
+  }
+
   async getStream(id: string): Promise<Stream | undefined> {
     const [stream] = await db.select().from(streams).where(eq(streams.id, id));
     return stream;
@@ -211,6 +220,11 @@ export class DatabaseStorage implements IStorage {
     return stream;
   }
 
+  async createStreamsBulk(streamData: InsertStream[]): Promise<Stream[]> {
+    if (streamData.length === 0) return [];
+    return db.insert(streams).values(streamData).returning();
+  }
+
   async updateStream(id: string, data: Partial<InsertStream>): Promise<Stream> {
     const [stream] = await db
       .update(streams)
@@ -218,6 +232,10 @@ export class DatabaseStorage implements IStorage {
       .where(eq(streams.id, id))
       .returning();
     return stream;
+  }
+
+  async deleteStream(id: string): Promise<void> {
+    await db.delete(streams).where(eq(streams.id, id));
   }
 
   // Permission operations

@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import jwt from "jsonwebtoken";
 import { insertUserSchema, insertStudioSchema, insertStreamSchema } from "@shared/schema";
+import { z } from "zod";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
@@ -481,7 +482,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const studios = await storage.getAllStudios();
       const studiosWithStreams = await Promise.all(
         studios.map(async (studio) => {
-          const streams = await storage.getStreamsByStudio(studio.id);
+          const streams = await storage.getAllStreamsByStudio(studio.id);
           return { 
             ...studio, 
             streams, 
@@ -518,6 +519,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post("/api/admin/streams/bulk", requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const bulkSchema = z.object({
+        streams: z.array(insertStreamSchema).min(1).max(200),
+      });
+      const { streams: streamList } = bulkSchema.parse(req.body);
+      const created = await storage.createStreamsBulk(streamList);
+      res.status(201).json(created);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid stream data", errors: error.errors });
+      }
+      console.error("Error creating streams in bulk:", error);
+      res.status(500).json({ message: "Failed to create streams" });
+    }
+  });
+
   app.patch("/api/admin/streams/:id", requireAuth, requireAdmin, async (req, res) => {
     try {
       const { id } = req.params;
@@ -533,8 +551,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete("/api/admin/streams/:id", requireAuth, requireAdmin, async (req, res) => {
     try {
       const { id } = req.params;
-      // Instead of hard delete, deactivate the stream
-      await storage.updateStream(id, { isActive: false });
+      await storage.deleteStream(id);
       res.json({ message: "Stream deleted successfully" });
     } catch (error) {
       console.error("Error deleting stream:", error);

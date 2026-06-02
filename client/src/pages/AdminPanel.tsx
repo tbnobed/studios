@@ -8,7 +8,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Trash2, Edit, Plus, UserPlus, Video, Monitor, Settings2 } from "lucide-react";
+import { Trash2, Edit, Plus, UserPlus, Video, Monitor, Settings2, ChevronDown, Copy, Check, Search, Layers } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { UserWithPermissions, Studio, StudioWithStreams, Stream, InsertStream } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -45,6 +47,22 @@ export default function AdminPanel() {
   const [isEditStudioOpen, setIsEditStudioOpen] = useState(false);
   const [selectedStudioForStreams, setSelectedStudioForStreams] = useState<string>("");
   const [activeTab, setActiveTab] = useState("users");
+
+  // Stream management UI state
+  const [streamSearch, setStreamSearch] = useState("");
+  const [streamStatusFilter, setStreamStatusFilter] = useState<"all" | "active" | "inactive">("all");
+  const [expandedStudios, setExpandedStudios] = useState<Set<string>>(new Set());
+  const [isBulkAddOpen, setIsBulkAddOpen] = useState(false);
+  const [bulkAdd, setBulkAdd] = useState({
+    studioId: "",
+    baseName: "Camera",
+    startNumber: 1,
+    count: 10,
+    resolution: "1080p",
+    fps: 30,
+  });
+  const [quickAddNames, setQuickAddNames] = useState<Record<string, string>>({});
+  const [copiedId, setCopiedId] = useState<string | null>(null);
 
   // Handle URL parameters for tab selection
   useEffect(() => {
@@ -320,6 +338,144 @@ export default function AdminPanel() {
     }
     
     createUserMutation.mutate(newUser);
+  };
+
+  // Quick single-add stream mutation (no dialog)
+  const quickCreateStreamMutation = useMutation({
+    mutationFn: async (streamData: InsertStream) => {
+      const response = await apiRequest("POST", "/api/admin/streams", streamData, {
+        headers: getAuthHeaders(),
+      });
+      return response.json();
+    },
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/studios-with-streams"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/studios"] });
+      setQuickAddNames((prev) => ({ ...prev, [variables.studioId]: "" }));
+      toast({ title: "Stream Added", description: `${variables.name} was added` });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Failed to Add Stream", description: error.message, variant: "destructive" });
+    },
+  });
+
+  // Bulk-add streams mutation
+  const bulkCreateStreamMutation = useMutation({
+    mutationFn: async (streamsToCreate: InsertStream[]) => {
+      const response = await apiRequest("POST", "/api/admin/streams/bulk", { streams: streamsToCreate }, {
+        headers: getAuthHeaders(),
+      });
+      return response.json();
+    },
+    onSuccess: (created: Stream[]) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/studios-with-streams"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/studios"] });
+      setIsBulkAddOpen(false);
+      toast({ title: "Streams Created", description: `${created.length} streams created successfully` });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Failed to Create Streams", description: error.message, variant: "destructive" });
+    },
+  });
+
+  // Build the WHEP stream URL from a studio + stream name (matches single-add behavior)
+  const buildStreamUrl = (studioName: string, streamName: string) => {
+    const studioSlug = studioName.toLowerCase().replace(/\s+/g, "");
+    const streamSlug = streamName.toLowerCase().replace(/\s+/g, "_");
+    return `http://cdn1.obedtv.live:2022/rtc/v1/whep/?app=live&stream=${studioSlug}_${streamSlug}`;
+  };
+
+  const hasStreamFilter = streamSearch.trim() !== "" || streamStatusFilter !== "all";
+
+  const filteredStudios = studiosWithStreams.map((studio) => {
+    const query = streamSearch.trim().toLowerCase();
+    const filteredStreams = (studio.streams || []).filter((s) => {
+      const matchesStatus =
+        streamStatusFilter === "all" ||
+        (streamStatusFilter === "active" ? s.isActive : !s.isActive);
+      const matchesSearch =
+        !query ||
+        s.name.toLowerCase().includes(query) ||
+        (s.description || "").toLowerCase().includes(query) ||
+        s.streamUrl.toLowerCase().includes(query);
+      return matchesStatus && matchesSearch;
+    });
+    return { ...studio, filteredStreams };
+  });
+
+  const isStudioOpen = (id: string, hasMatches: boolean) =>
+    hasStreamFilter ? hasMatches : expandedStudios.has(id);
+
+  const toggleStudio = (id: string) => {
+    if (hasStreamFilter) return;
+    setExpandedStudios((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const expandAllStudios = () =>
+    setExpandedStudios(new Set(studiosWithStreams.map((s) => s.id)));
+  const collapseAllStudios = () => setExpandedStudios(new Set());
+
+  const handleCopy = async (text: string, id: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedId(id);
+      setTimeout(() => setCopiedId((c) => (c === id ? null : c)), 1500);
+    } catch {
+      toast({ title: "Copy failed", description: "Could not access clipboard", variant: "destructive" });
+    }
+  };
+
+  const handleCopyAll = async (studio: StudioWithStreams) => {
+    const urls = (studio.streams || []).map((s) => s.streamUrl).join("\n");
+    try {
+      await navigator.clipboard.writeText(urls);
+      toast({ title: "Copied", description: `${studio.streams?.length || 0} stream URLs copied` });
+    } catch {
+      toast({ title: "Copy failed", description: "Could not access clipboard", variant: "destructive" });
+    }
+  };
+
+  const handleQuickAdd = (studio: StudioWithStreams) => {
+    const name = (quickAddNames[studio.id] || "").trim();
+    if (!name) return;
+    quickCreateStreamMutation.mutate({
+      studioId: studio.id,
+      name,
+      description: "",
+      streamUrl: buildStreamUrl(studio.name, name),
+      resolution: "1080p",
+      fps: 30,
+    });
+  };
+
+  const handleBulkAdd = () => {
+    const studio = studios.find((s) => s.id === bulkAdd.studioId);
+    if (!studio) {
+      toast({ title: "Missing Information", description: "Please select a studio", variant: "destructive" });
+      return;
+    }
+    if (!bulkAdd.baseName.trim()) {
+      toast({ title: "Missing Information", description: "Base name is required", variant: "destructive" });
+      return;
+    }
+    const count = Math.max(1, Math.min(200, bulkAdd.count || 1));
+    const streamsToCreate: InsertStream[] = Array.from({ length: count }, (_, i) => {
+      const name = `${bulkAdd.baseName.trim()} ${bulkAdd.startNumber + i}`;
+      return {
+        studioId: studio.id,
+        name,
+        description: "",
+        streamUrl: buildStreamUrl(studio.name, name),
+        resolution: bulkAdd.resolution,
+        fps: bulkAdd.fps,
+      };
+    });
+    bulkCreateStreamMutation.mutate(streamsToCreate);
   };
 
   const handleCreateStream = () => {
@@ -1086,6 +1242,90 @@ export default function AdminPanel() {
                     <CardTitle>Stream Management</CardTitle>
                     <CardDescription>Configure streaming endpoints for each studio</CardDescription>
                   </div>
+                  <div className="flex gap-2">
+                  <Dialog open={isBulkAddOpen} onOpenChange={setIsBulkAddOpen}>
+                    <DialogTrigger asChild>
+                      <Button variant="outline" className="touch-area" data-testid="button-bulk-add-streams">
+                        <Layers className="mr-2" size={16} />
+                        Bulk Add
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="sm:max-w-md">
+                      <DialogHeader>
+                        <DialogTitle>Bulk Add Streams</DialogTitle>
+                      </DialogHeader>
+                      <div className="space-y-4">
+                        <div>
+                          <Label>Studio</Label>
+                          <Select value={bulkAdd.studioId} onValueChange={(v) => setBulkAdd({ ...bulkAdd, studioId: v })}>
+                            <SelectTrigger data-testid="select-bulk-studio"><SelectValue placeholder="Select studio" /></SelectTrigger>
+                            <SelectContent>
+                              {studios.map((studio) => (
+                                <SelectItem key={studio.id} value={studio.id}>{studio.name}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div>
+                          <Label htmlFor="bulkBaseName">Base name</Label>
+                          <Input id="bulkBaseName" value={bulkAdd.baseName} onChange={(e) => setBulkAdd({ ...bulkAdd, baseName: e.target.value })} placeholder="Camera" data-testid="input-bulk-base-name" />
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <Label htmlFor="bulkStart">Start number</Label>
+                            <Input id="bulkStart" type="number" min={0} value={bulkAdd.startNumber} onChange={(e) => setBulkAdd({ ...bulkAdd, startNumber: parseInt(e.target.value) || 0 })} data-testid="input-bulk-start" />
+                          </div>
+                          <div>
+                            <Label htmlFor="bulkCount">How many</Label>
+                            <Input id="bulkCount" type="number" min={1} max={200} value={bulkAdd.count} onChange={(e) => setBulkAdd({ ...bulkAdd, count: parseInt(e.target.value) || 1 })} data-testid="input-bulk-count" />
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <Label>Resolution</Label>
+                            <Select value={bulkAdd.resolution} onValueChange={(v) => setBulkAdd({ ...bulkAdd, resolution: v })}>
+                              <SelectTrigger data-testid="select-bulk-resolution"><SelectValue /></SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="720p">720p HD</SelectItem>
+                                <SelectItem value="1080p">1080p Full HD</SelectItem>
+                                <SelectItem value="1440p">1440p QHD</SelectItem>
+                                <SelectItem value="4K">4K Ultra HD</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div>
+                            <Label>Frame rate</Label>
+                            <Select value={bulkAdd.fps.toString()} onValueChange={(v) => setBulkAdd({ ...bulkAdd, fps: parseInt(v) })}>
+                              <SelectTrigger data-testid="select-bulk-fps"><SelectValue /></SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="24">24 fps</SelectItem>
+                                <SelectItem value="30">30 fps</SelectItem>
+                                <SelectItem value="60">60 fps</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+                        <div className="rounded-md bg-secondary/40 p-3 text-xs text-muted-foreground">
+                          {bulkAdd.studioId ? (
+                            <>
+                              Will create{" "}
+                              <span className="font-medium text-foreground">{Math.max(1, Math.min(200, bulkAdd.count || 1))}</span>{" "}
+                              streams:{" "}
+                              <span className="font-medium text-foreground">{bulkAdd.baseName} {bulkAdd.startNumber}</span>
+                              {" … "}
+                              <span className="font-medium text-foreground">{bulkAdd.baseName} {bulkAdd.startNumber + Math.max(1, Math.min(200, bulkAdd.count || 1)) - 1}</span>
+                            </>
+                          ) : "Select a studio to preview generated streams. URLs auto-generate from studio + stream name."}
+                        </div>
+                      </div>
+                      <div className="flex gap-2 mt-6">
+                        <Button onClick={handleBulkAdd} disabled={bulkCreateStreamMutation.isPending} className="flex-1" data-testid="button-create-bulk-streams">
+                          {bulkCreateStreamMutation.isPending ? "Creating..." : "Create Streams"}
+                        </Button>
+                        <Button variant="outline" onClick={() => setIsBulkAddOpen(false)} className="flex-1">Cancel</Button>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
                   <Dialog open={isCreateStreamOpen} onOpenChange={setIsCreateStreamOpen}>
                     <DialogTrigger asChild>
                       <Button className="touch-area" data-testid="button-add-stream">
@@ -1211,6 +1451,7 @@ export default function AdminPanel() {
                       </div>
                     </DialogContent>
                   </Dialog>
+                  </div>
                 </div>
               </CardHeader>
               
@@ -1328,91 +1569,163 @@ export default function AdminPanel() {
               </Dialog>
               
               <CardContent>
-                <div className="space-y-4">
-                  {studiosWithStreams.map((studio) => (
-                    <Card key={studio.id} className="border-l-4" style={{ borderLeftColor: studio.primaryColor }}>
-                      <CardHeader className="pb-3">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <Monitor size={20} style={{ color: studio.primaryColor }} />
-                            <div>
-                              <h3 className="font-semibold">{studio.name}</h3>
-                              <p className="text-sm text-muted-foreground">
-                                {studio.streams?.length || 0} streams configured
-                              </p>
-                            </div>
-                          </div>
-                          <Badge variant="outline" style={{ color: studio.primaryColor, borderColor: studio.primaryColor }}>
-                            {studio.location}
-                          </Badge>
-                        </div>
-                      </CardHeader>
-                      
-                      <CardContent className="pt-0">
-                        {studio.streams && studio.streams.length > 0 ? (
-                          <div className="grid gap-3">
-                            {studio.streams.map((stream) => (
-                              <div 
-                                key={stream.id}
-                                className="flex items-center justify-between p-3 bg-secondary/30 rounded-lg"
-                              >
-                                <div className="flex-1">
-                                  <div className="flex items-center gap-2 mb-1">
-                                    <h4 className="font-medium">{stream.name}</h4>
-                                    <Badge 
-                                      variant={stream.isActive ? "default" : "secondary"}
-                                      className="text-xs"
-                                    >
-                                      {stream.isActive ? "Active" : "Inactive"}
-                                    </Badge>
-                                  </div>
-                                  <p className="text-sm text-muted-foreground mb-1">
-                                    {stream.description}
+                {/* Search + filter toolbar */}
+                <div className="flex flex-col sm:flex-row gap-3 mb-4">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
+                    <Input
+                      value={streamSearch}
+                      onChange={(e) => setStreamSearch(e.target.value)}
+                      placeholder="Search streams by name, description, or URL..."
+                      className="pl-9"
+                      data-testid="input-stream-search"
+                    />
+                  </div>
+                  <Select value={streamStatusFilter} onValueChange={(v) => setStreamStatusFilter(v as "all" | "active" | "inactive")}>
+                    <SelectTrigger className="w-full sm:w-44" data-testid="select-stream-status-filter">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All statuses</SelectItem>
+                      <SelectItem value="active">Active only</SelectItem>
+                      <SelectItem value="inactive">Inactive only</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <div className="flex gap-2">
+                    <Button variant="outline" onClick={expandAllStudios} data-testid="button-expand-all">Expand all</Button>
+                    <Button variant="outline" onClick={collapseAllStudios} data-testid="button-collapse-all">Collapse all</Button>
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  {filteredStudios.map((studio) => {
+                    const total = studio.streams?.length || 0;
+                    const activeCount = (studio.streams || []).filter((s) => s.isActive).length;
+                    const shown = studio.filteredStreams.length;
+                    const open = isStudioOpen(studio.id, shown > 0);
+                    return (
+                      <Collapsible key={studio.id} open={open} onOpenChange={() => toggleStudio(studio.id)}>
+                        <Card className="border-l-4 overflow-hidden" style={{ borderLeftColor: studio.primaryColor }}>
+                          <CollapsibleTrigger asChild>
+                            <div className="flex items-center justify-between p-4 cursor-pointer hover:bg-secondary/30 transition-colors" data-testid={`studio-header-${studio.id}`}>
+                              <div className="flex items-center gap-3">
+                                <ChevronDown className={`transition-transform ${open ? "" : "-rotate-90"}`} size={18} />
+                                <Monitor size={20} style={{ color: studio.primaryColor }} />
+                                <div>
+                                  <h3 className="font-semibold">{studio.name}</h3>
+                                  <p className="text-sm text-muted-foreground">
+                                    {hasStreamFilter ? `${shown} of ${total}` : total} streams · {activeCount} active
                                   </p>
-                                  <p className="text-xs text-muted-foreground font-mono break-all">
-                                    {stream.streamUrl}
-                                  </p>
-                                  <div className="flex gap-3 mt-1 text-xs text-muted-foreground">
-                                    <span>{stream.resolution}</span>
-                                    <span>{stream.fps} fps</span>
-                                  </div>
-                                </div>
-                                
-                                <div className="flex items-center gap-2">
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="touch-area"
-                                    onClick={() => handleEditStream(stream)}
-                                    data-testid={`button-edit-stream-${stream.id}`}
-                                  >
-                                    <Edit size={16} />
-                                  </Button>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="text-destructive hover:text-destructive touch-area"
-                                    onClick={() => handleDeleteStream(stream.id)}
-                                    disabled={deleteStreamMutation.isPending}
-                                    data-testid={`button-delete-stream-${stream.id}`}
-                                  >
-                                    <Trash2 size={16} />
-                                  </Button>
                                 </div>
                               </div>
-                            ))}
-                          </div>
-                        ) : (
-                          <div className="text-center py-8 text-muted-foreground">
-                            <Video className="mx-auto mb-2 opacity-50" size={48} />
-                            <p>No streams configured for this studio</p>
-                            <p className="text-sm">Add streams to enable viewing</p>
-                          </div>
-                        )}
-                      </CardContent>
-                    </Card>
-                  ))}
-                  
+                              <Badge variant="outline" style={{ color: studio.primaryColor, borderColor: studio.primaryColor }}>
+                                {studio.location}
+                              </Badge>
+                            </div>
+                          </CollapsibleTrigger>
+
+                          <CollapsibleContent>
+                            <div className="px-4 pb-4">
+                              {/* Quick add + copy all */}
+                              <div className="flex flex-col sm:flex-row gap-2 mb-3">
+                                <Input
+                                  value={quickAddNames[studio.id] || ""}
+                                  onChange={(e) => setQuickAddNames({ ...quickAddNames, [studio.id]: e.target.value })}
+                                  onKeyDown={(e) => { if (e.key === "Enter") handleQuickAdd(studio); }}
+                                  placeholder="Quick add — type a stream name, press Enter"
+                                  className="flex-1"
+                                  data-testid={`input-quick-add-${studio.id}`}
+                                />
+                                <div className="flex gap-2">
+                                  <Button
+                                    onClick={() => handleQuickAdd(studio)}
+                                    disabled={quickCreateStreamMutation.isPending || !(quickAddNames[studio.id] || "").trim()}
+                                    data-testid={`button-quick-add-${studio.id}`}
+                                  >
+                                    <Plus size={16} className="mr-1" /> Add
+                                  </Button>
+                                  {total > 0 && (
+                                    <Button variant="outline" onClick={() => handleCopyAll(studio)} data-testid={`button-copy-all-${studio.id}`}>
+                                      <Copy size={16} className="mr-1" /> Copy all
+                                    </Button>
+                                  )}
+                                </div>
+                              </div>
+
+                              {shown > 0 ? (
+                                <div className="rounded-lg border overflow-hidden">
+                                  <Table>
+                                    <TableHeader>
+                                      <TableRow>
+                                        <TableHead>Name</TableHead>
+                                        <TableHead className="w-24">Status</TableHead>
+                                        <TableHead className="w-32">Quality</TableHead>
+                                        <TableHead>URL</TableHead>
+                                        <TableHead className="w-24 text-right">Actions</TableHead>
+                                      </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                      {studio.filteredStreams.map((stream) => (
+                                        <TableRow key={stream.id} data-testid={`stream-row-${stream.id}`}>
+                                          <TableCell>
+                                            <div className="font-medium">{stream.name}</div>
+                                            {stream.description && (
+                                              <div className="text-xs text-muted-foreground">{stream.description}</div>
+                                            )}
+                                          </TableCell>
+                                          <TableCell>
+                                            <Badge variant={stream.isActive ? "default" : "secondary"} className="text-xs">
+                                              {stream.isActive ? "Active" : "Inactive"}
+                                            </Badge>
+                                          </TableCell>
+                                          <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
+                                            {stream.resolution} · {stream.fps}fps
+                                          </TableCell>
+                                          <TableCell>
+                                            <div className="flex items-center gap-2 max-w-[320px]">
+                                              <span className="text-xs font-mono truncate text-muted-foreground" title={stream.streamUrl}>
+                                                {stream.streamUrl}
+                                              </span>
+                                              <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                className="h-7 w-7 shrink-0"
+                                                onClick={() => handleCopy(stream.streamUrl, stream.id)}
+                                                data-testid={`button-copy-stream-${stream.id}`}
+                                              >
+                                                {copiedId === stream.id ? <Check size={14} className="text-green-500" /> : <Copy size={14} />}
+                                              </Button>
+                                            </div>
+                                          </TableCell>
+                                          <TableCell className="text-right">
+                                            <div className="flex items-center justify-end gap-1">
+                                              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleEditStream(stream)} data-testid={`button-edit-stream-${stream.id}`}>
+                                                <Edit size={15} />
+                                              </Button>
+                                              <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => handleDeleteStream(stream.id)} disabled={deleteStreamMutation.isPending} data-testid={`button-delete-stream-${stream.id}`}>
+                                                <Trash2 size={15} />
+                                              </Button>
+                                            </div>
+                                          </TableCell>
+                                        </TableRow>
+                                      ))}
+                                    </TableBody>
+                                  </Table>
+                                </div>
+                              ) : (
+                                <div className="text-center py-6 text-muted-foreground text-sm">
+                                  {total === 0
+                                    ? "No streams configured for this studio yet."
+                                    : "No streams match your search in this studio."}
+                                </div>
+                              )}
+                            </div>
+                          </CollapsibleContent>
+                        </Card>
+                      </Collapsible>
+                    );
+                  })}
+
                   {studiosWithStreams.length === 0 && (
                     <div className="text-center py-12 text-muted-foreground">
                       <Monitor className="mx-auto mb-4 opacity-50" size={64} />
