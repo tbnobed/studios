@@ -26,7 +26,7 @@ export default function AdminPanel() {
     password: "",
     firstName: "",
     lastName: "",
-    role: "viewer" as "admin" | "operator" | "viewer",
+    role: "viewer" as "admin" | "viewer",
   });
   
   const [newStream, setNewStream] = useState({
@@ -416,7 +416,6 @@ export default function AdminPanel() {
           userId: editingUser.id,
           studioId: permission.studioId,
           canView: true,
-          canControl: editingUser.role !== 'viewer',
         }, {
           headers: getAuthHeaders(),
         });
@@ -521,7 +520,6 @@ export default function AdminPanel() {
   const getRoleBadgeColor = (role: string) => {
     switch (role) {
       case 'admin': return 'bg-red-500/20 text-red-400 border-red-500/20';
-      case 'operator': return 'bg-blue-500/20 text-blue-400 border-blue-500/20';
       case 'viewer': return 'bg-green-500/20 text-green-400 border-green-500/20';
       default: return 'bg-gray-500/20 text-gray-400 border-gray-500/20';
     }
@@ -649,14 +647,13 @@ export default function AdminPanel() {
                           <Label htmlFor="role">Role</Label>
                           <Select 
                             value={newUser.role} 
-                            onValueChange={(value: "admin" | "operator" | "viewer") => setNewUser({ ...newUser, role: value })}
+                            onValueChange={(value: "admin" | "viewer") => setNewUser({ ...newUser, role: value })}
                           >
                             <SelectTrigger data-testid="select-role">
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
                               <SelectItem value="viewer">Viewer</SelectItem>
-                              <SelectItem value="operator">Operator</SelectItem>
                               <SelectItem value="admin">Admin</SelectItem>
                             </SelectContent>
                           </Select>
@@ -759,14 +756,13 @@ export default function AdminPanel() {
                         <Label htmlFor="editRole">Role</Label>
                         <Select 
                           value={editingUser.role} 
-                          onValueChange={(value: "admin" | "operator" | "viewer") => setEditingUser({ ...editingUser, role: value })}
+                          onValueChange={(value: "admin" | "viewer") => setEditingUser({ ...editingUser, role: value })}
                         >
                           <SelectTrigger data-testid="select-edit-role">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="viewer">Viewer</SelectItem>
-                            <SelectItem value="operator">Operator</SelectItem>
                             <SelectItem value="admin">Admin</SelectItem>
                           </SelectContent>
                         </Select>
@@ -797,7 +793,6 @@ export default function AdminPanel() {
                                             userId: editingUser.id,
                                             studioId: studio.id,
                                             canView: true,
-                                            canControl: editingUser.role !== 'viewer',
                                             createdAt: new Date(),
                                             studio: studio
                                           }

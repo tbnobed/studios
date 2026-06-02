@@ -42,7 +42,6 @@ export interface IStorage {
   getStream(id: string): Promise<Stream | undefined>;
   createStream(stream: InsertStream): Promise<Stream>;
   updateStream(id: string, data: Partial<InsertStream>): Promise<Stream>;
-  updateStreamStatus(id: string, status: 'online' | 'offline' | 'error'): Promise<void>;
 
   // Permission operations
   getUserStudioPermission(userId: string, studioId: string): Promise<UserStudioPermission | undefined>;
@@ -219,13 +218,6 @@ export class DatabaseStorage implements IStorage {
       .where(eq(streams.id, id))
       .returning();
     return stream;
-  }
-
-  async updateStreamStatus(id: string, status: 'online' | 'offline' | 'error'): Promise<void> {
-    await db
-      .update(streams)
-      .set({ status, updatedAt: new Date() })
-      .where(eq(streams.id, id));
   }
 
   // Permission operations

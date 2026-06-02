@@ -399,30 +399,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/streams/:id/status", requireAuth, async (req: any, res) => {
-    try {
-      const { id } = req.params;
-      const { status } = req.body;
-      
-      const stream = await storage.getStream(id);
-      if (!stream) {
-        return res.status(404).json({ message: "Stream not found" });
-      }
-
-      // Check user permission for control
-      const permission = await storage.getUserStudioPermission(req.user.id, stream.studioId);
-      if (!permission?.canControl && req.user.role !== "admin") {
-        return res.status(403).json({ message: "No control access to this stream" });
-      }
-
-      await storage.updateStreamStatus(id, status);
-      res.json({ message: "Stream status updated" });
-    } catch (error) {
-      console.error("Error updating stream status:", error);
-      res.status(500).json({ message: "Failed to update stream status" });
-    }
-  });
-
   // Admin routes
   app.get("/api/admin/users", requireAuth, requireAdmin, async (req, res) => {
     try {
@@ -568,13 +544,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/admin/permissions", requireAuth, requireAdmin, async (req, res) => {
     try {
-      const { userId, studioId, canView = true, canControl = false } = req.body;
+      const { userId, studioId, canView = true } = req.body;
       
       const permission = await storage.setUserStudioPermission({
         userId,
         studioId,
         canView,
-        canControl,
       });
       
       res.status(201).json(permission);

@@ -14,7 +14,7 @@ import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
 // Enums
-export const userRoleEnum = pgEnum("user_role", ["admin", "operator", "viewer"]);
+export const userRoleEnum = pgEnum("user_role", ["admin", "viewer"]);
 export const streamStatusEnum = pgEnum("stream_status", ["online", "offline", "error"]);
 
 // Users table
@@ -65,7 +65,6 @@ export const userStudioPermissions = pgTable("user_studio_permissions", {
   userId: varchar("user_id").notNull().references(() => users.id),
   studioId: varchar("studio_id").notNull().references(() => studios.id),
   canView: boolean("can_view").notNull().default(true),
-  canControl: boolean("can_control").notNull().default(false),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

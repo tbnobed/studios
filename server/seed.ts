@@ -114,36 +114,10 @@ async function seed() {
         userId: adminUser.id,
         studioId: studio.id,
         canView: true,
-        canControl: true,
       }));
 
       await db.insert(userStudioPermissions).values(permissions).onConflictDoNothing();
       console.log("✅ Granted admin user access to all studios");
-    }
-
-    // Create a sample operator user
-    const operatorPassword = await bcrypt.hash("operator123", 10);
-    const [operatorUser] = await db.insert(users).values({
-      username: "operator",
-      email: "operator@obtv.com", 
-      password: operatorPassword,
-      firstName: "Studio",
-      lastName: "Operator",
-      role: "operator",
-      isActive: true,
-    }).onConflictDoNothing().returning();
-
-    if (operatorUser && createdStudios.length > 0) {
-      // Give operator access to first two studios
-      const operatorPermissions = createdStudios.slice(0, 2).map(studio => ({
-        userId: operatorUser.id,
-        studioId: studio.id,
-        canView: true,
-        canControl: true,
-      }));
-
-      await db.insert(userStudioPermissions).values(operatorPermissions).onConflictDoNothing();
-      console.log("✅ Created operator user - Username: operator, Password: operator123");
     }
 
     // Create a sample viewer user
@@ -164,7 +138,6 @@ async function seed() {
         userId: viewerUser.id,
         studioId: createdStudios[0].id,
         canView: true,
-        canControl: false,
       }).onConflictDoNothing();
       console.log("✅ Created viewer user - Username: viewer, Password: viewer123");
     }
@@ -172,7 +145,6 @@ async function seed() {
     console.log("\n🎉 Database seeded successfully!");
     console.log("\nLogin credentials:");
     console.log("Admin: admin / admin123");
-    console.log("Operator: operator / operator123");
     console.log("Viewer: viewer / viewer123");
 
   } catch (error) {

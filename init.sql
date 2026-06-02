@@ -20,7 +20,7 @@ ALTER TABLE sessions ADD CONSTRAINT session_pkey PRIMARY KEY (sid) NOT DEFERRABL
 CREATE INDEX IF NOT EXISTS IDX_session_expire ON sessions(expire);
 
 -- Create user role enum
-CREATE TYPE user_role AS ENUM ('admin', 'operator', 'viewer');
+CREATE TYPE user_role AS ENUM ('admin', 'viewer');
 
 -- Create users table
 CREATE TABLE IF NOT EXISTS users (
@@ -73,7 +73,6 @@ CREATE TABLE IF NOT EXISTS user_studio_permissions (
     user_id VARCHAR NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     studio_id VARCHAR NOT NULL REFERENCES studios(id) ON DELETE CASCADE,
     can_view BOOLEAN NOT NULL DEFAULT true,
-    can_control BOOLEAN NOT NULL DEFAULT false,
     created_at TIMESTAMP DEFAULT NOW(),
     UNIQUE(user_id, studio_id)
 );
@@ -119,11 +118,11 @@ INSERT INTO streams (studio_id, name, description, stream_url, resolution, fps) 
 ON CONFLICT DO NOTHING;
 
 -- Grant admin user access to all studios
-INSERT INTO user_studio_permissions (user_id, studio_id, can_view, can_control) VALUES 
-    ('admin-user-id-12345', '4813376b-ea45-47ca-b7d5-0090b1f2aab7', true, true),  -- SoCal
-    ('admin-user-id-12345', 'f2c8a3b1-4d6e-4a2b-8c9d-1e5f7a9b3c2d', true, true),  -- Plex  
-    ('admin-user-id-12345', 'a7b2c9d4-3f8e-4b1a-9c6d-2e8f1a4b7c5d', true, true),  -- Irving
-    ('admin-user-id-12345', 'c5d8f1a3-2b7e-4c9a-8d5f-3e1f6a2b9c8d', true, true)   -- Nashville
+INSERT INTO user_studio_permissions (user_id, studio_id, can_view) VALUES 
+    ('admin-user-id-12345', '4813376b-ea45-47ca-b7d5-0090b1f2aab7', true),  -- SoCal
+    ('admin-user-id-12345', 'f2c8a3b1-4d6e-4a2b-8c9d-1e5f7a9b3c2d', true),  -- Plex  
+    ('admin-user-id-12345', 'a7b2c9d4-3f8e-4b1a-9c6d-2e8f1a4b7c5d', true),  -- Irving
+    ('admin-user-id-12345', 'c5d8f1a3-2b7e-4c9a-8d5f-3e1f6a2b9c8d', true)   -- Nashville
 ON CONFLICT (user_id, studio_id) DO NOTHING;
 
 -- Create indexes for performance
