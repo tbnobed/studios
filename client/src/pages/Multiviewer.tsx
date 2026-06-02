@@ -1,6 +1,17 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import {
+  DndContext,
+  DragOverlay,
+  PointerSensor,
+  TouchSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+  type DragStartEvent,
+} from "@dnd-kit/core";
+import {
   Grid2x2,
   Grid3x3,
   LayoutGrid,
@@ -31,7 +42,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import StudioSidebar from "@/components/StudioSidebar";
-import { MultiviewerTile } from "@/components/MultiviewerTile";
+import { MultiviewerTile, slotDndId } from "@/components/MultiviewerTile";
 import { StreamSingleView } from "@/components/StreamSingleView";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -139,6 +150,45 @@ export default function Multiviewer() {
       next[index] = streamId;
       return next;
     });
+  };
+
+  // Move/swap the contents of two slots (drag-and-drop in edit mode).
+  const swapSlots = (from: number, to: number) => {
+    setSlots((prev) => {
+      if (from === to || from < 0 || to < 0) return prev;
+      if (from >= prev.length || to >= prev.length) return prev;
+      const next = [...prev];
+      const tmp = next[to];
+      next[to] = next[from];
+      next[from] = tmp;
+      return next;
+    });
+  };
+
+  const [activeSlot, setActiveSlot] = useState<number | null>(null);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(TouchSensor, {
+      activationConstraint: { delay: 150, tolerance: 5 },
+    })
+  );
+
+  // dnd ids are `slot-<index>`; recover the numeric index.
+  const slotIndexFromId = (id: string | number): number => {
+    const num = Number(String(id).replace("slot-", ""));
+    return Number.isNaN(num) ? -1 : num;
+  };
+
+  const handleDragStart = (event: DragStartEvent) => {
+    setActiveSlot(slotIndexFromId(event.active.id));
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    setActiveSlot(null);
+    const { active, over } = event;
+    if (!over) return;
+    swapSlots(slotIndexFromId(active.id), slotIndexFromId(over.id));
   };
 
   const usedStreamIds = useMemo(
@@ -260,6 +310,7 @@ export default function Multiviewer() {
     return (
       <MultiviewerTile
         key={index}
+        index={index}
         stream={stream}
         editMode={editMode}
         studios={studios}
@@ -270,6 +321,11 @@ export default function Multiviewer() {
       />
     );
   };
+
+  const activeStream =
+    activeSlot !== null && slots[activeSlot]
+      ? streamMap.get(slots[activeSlot] as string) ?? null
+      : null;
 
   const gridClass =
     layoutType === "2x2"
@@ -471,19 +527,38 @@ export default function Multiviewer() {
                 }
                 onExit={() => setSoloStreamId(null)}
               />
-            ) : layoutType === "featured" ? (
-              <div className="h-full flex flex-col gap-2">
-                <div className="flex-[3] min-h-0">{renderTile(0, true)}</div>
-                <div className="flex-1 min-h-0 grid grid-cols-3 sm:grid-cols-6 gap-2">
-                  {Array.from({ length: 6 }, (_, i) => renderTile(i + 1))}
-                </div>
-              </div>
             ) : (
-              <div className={`h-full ${gridClass}`}>
-                {Array.from({ length: slotCount(layoutType) }, (_, i) =>
-                  renderTile(i)
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragStart={handleDragStart}
+                onDragEnd={handleDragEnd}
+                onDragCancel={() => setActiveSlot(null)}
+              >
+                {layoutType === "featured" ? (
+                  <div className="h-full flex flex-col gap-2">
+                    <div className="flex-[3] min-h-0">{renderTile(0, true)}</div>
+                    <div className="flex-1 min-h-0 grid grid-cols-3 sm:grid-cols-6 gap-2">
+                      {Array.from({ length: 6 }, (_, i) => renderTile(i + 1))}
+                    </div>
+                  </div>
+                ) : (
+                  <div className={`h-full ${gridClass}`}>
+                    {Array.from({ length: slotCount(layoutType) }, (_, i) =>
+                      renderTile(i)
+                    )}
+                  </div>
                 )}
-              </div>
+                <DragOverlay dropAnimation={null}>
+                  {activeStream ? (
+                    <div className="flex items-center gap-2 rounded-lg border-2 border-primary bg-black/90 px-3 py-2 text-sm font-semibold text-white shadow-2xl">
+                      <span className="truncate max-w-[160px]">
+                        {activeStream.name}
+                      </span>
+                    </div>
+                  ) : null}
+                </DragOverlay>
+              </DndContext>
             )}
           </div>
         </main>

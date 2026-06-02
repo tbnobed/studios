@@ -1,5 +1,6 @@
 import { useRef, useState } from "react";
-import { Maximize2, Plus, X, Volume2 } from "lucide-react";
+import { Maximize2, Plus, X, Volume2, GripVertical } from "lucide-react";
+import { useDraggable, useDroppable } from "@dnd-kit/core";
 import {
   Select,
   SelectContent,
@@ -16,6 +17,8 @@ import type { Stream, StudioWithStreams } from "@shared/schema";
 type TileStatus = "loading" | "online" | "offline" | "error";
 
 interface MultiviewerTileProps {
+  /** position of this tile within the layout's slots array */
+  index: number;
   stream: Stream | null;
   editMode: boolean;
   studios: StudioWithStreams[];
@@ -40,7 +43,11 @@ const STATUS_DOT: Record<TileStatus, string> = {
   error: "bg-red-500",
 };
 
+/** Shared id namespace so draggable + droppable line up by slot index. */
+export const slotDndId = (index: number) => `slot-${index}`;
+
 export function MultiviewerTile({
+  index,
   stream,
   editMode,
   studios,
@@ -49,18 +56,45 @@ export function MultiviewerTile({
   onSolo,
   featured = false,
 }: MultiviewerTileProps) {
-  const containerRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement | null>(null);
   const meterRef = useRef<HTMLDivElement>(null);
   const [status, setStatus] = useState<TileStatus>("loading");
 
   useAudioLevel(containerRef, meterRef, Boolean(stream));
 
+  const dndId = slotDndId(index);
+  const { setNodeRef: setDropRef, isOver } = useDroppable({
+    id: dndId,
+    disabled: !editMode,
+  });
+  const {
+    attributes,
+    listeners,
+    setNodeRef: setDragRef,
+    isDragging,
+  } = useDraggable({
+    id: dndId,
+    disabled: !editMode || !stream,
+  });
+
+  // One element acts as both the drag source and the drop target for its slot.
+  const setRefs = (node: HTMLDivElement | null) => {
+    containerRef.current = node;
+    setDropRef(node);
+    setDragRef(node);
+  };
+
+  const dropHighlight = isOver && !isDragging ? "ring-2 ring-primary ring-offset-1 ring-offset-black" : "";
+
   // Empty slot.
   if (!stream) {
     return (
       <div
-        className="relative h-full w-full rounded-lg border-2 border-dashed border-zinc-700/70 bg-black/40 flex items-center justify-center"
-        data-testid="multiviewer-tile-empty"
+        ref={setRefs}
+        className={`relative h-full w-full rounded-lg border-2 border-dashed bg-black/40 flex items-center justify-center transition-colors ${
+          isOver ? "border-primary bg-primary/10" : "border-zinc-700/70"
+        } ${dropHighlight}`}
+        data-testid={`multiviewer-tile-empty-${index}`}
       >
         {editMode ? (
           <StreamPicker
@@ -82,10 +116,10 @@ export function MultiviewerTile({
 
   return (
     <div
-      ref={containerRef}
+      ref={setRefs}
       className={`group relative h-full w-full overflow-hidden rounded-lg border-2 bg-black transition-colors ${STATUS_BORDER[status]} ${
         editMode ? "" : "cursor-pointer"
-      }`}
+      } ${isDragging ? "opacity-40" : ""} ${dropHighlight}`}
       onClick={editMode ? undefined : onSolo}
       data-testid={`multiviewer-tile-${stream.id}`}
     >
@@ -145,6 +179,17 @@ export function MultiviewerTile({
       {/* Edit controls */}
       {editMode && (
         <div className="absolute inset-x-1 top-1 flex items-center gap-1">
+          <button
+            type="button"
+            className="shrink-0 touch-none cursor-grab rounded bg-black/70 p-1 text-white hover:bg-black/90 active:cursor-grabbing"
+            onClick={(e) => e.stopPropagation()}
+            data-testid={`drag-handle-${stream.id}`}
+            aria-label="Drag source to another tile"
+            {...attributes}
+            {...listeners}
+          >
+            <GripVertical size={12} />
+          </button>
           <div className="flex-1" onClick={(e) => e.stopPropagation()}>
             <StreamPicker
               studios={studios}
