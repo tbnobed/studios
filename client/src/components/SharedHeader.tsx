@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { User, Shield, Settings, LogOut } from "lucide-react";
+import { User, Shield, Settings, LogOut, Heart } from "lucide-react";
 import { removeAuthToken } from "@/lib/authUtils";
 import { useToast } from "@/hooks/use-toast";
 import obedtvLogo from "@/assets/obedtv-logo.png";
@@ -110,6 +110,21 @@ export default function SharedHeader() {
                       Admin Panel
                     </button>
                   )}
+                  <button
+                    className="w-full flex items-center justify-start px-2 py-2 text-sm hover:bg-accent rounded-md transition-colors"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setUserMenuOpen(false);
+                      setTimeout(() => {
+                        window.location.href = '/favorites';
+                      }, 50);
+                    }}
+                    data-testid="button-favorites"
+                  >
+                    <Heart className="mr-2" size={16} />
+                    Favorites
+                  </button>
                   <button
                     className="w-full flex items-center justify-start px-2 py-2 text-sm hover:bg-accent rounded-md transition-colors"
                     onClick={(e) => {

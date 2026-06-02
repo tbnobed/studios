@@ -8,6 +8,7 @@ import Landing from "@/pages/Landing";
 import Dashboard from "@/pages/Dashboard";
 import AdminPanel from "@/pages/AdminPanel";
 import Settings from "@/pages/Settings";
+import Favorites from "@/pages/Favorites";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -31,6 +32,7 @@ function Router() {
       ) : (
         <>
           <Route path="/" component={Dashboard} />
+          <Route path="/favorites" component={Favorites} />
           <Route path="/settings" component={Settings} />
           {user?.role === 'admin' && (
             <Route path="/admin" component={AdminPanel} />

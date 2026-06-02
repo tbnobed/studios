@@ -1,1 +1,2 @@
 - [Stream data model](stream-data-model.md) — isActive is a real visibility toggle (not soft-delete); delete is hard; admin uses all-streams path, viewer uses active-only; WHEP URL slug rule.
+- [Read-path authz](read-path-authz.md) — endpoints returning stream data must filter by current user_studio_permissions.can_view, not just at write time, or revoked access leaks.

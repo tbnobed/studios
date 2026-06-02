@@ -81,6 +81,18 @@ CREATE TABLE IF NOT EXISTS user_studio_permissions (
     UNIQUE(user_id, studio_id)
 );
 
+-- Create favorites table: per-user favorite streams, up to 8 per page and up
+-- to 5 pages (40 total). page is 1-5, position is 0-7.
+CREATE TABLE IF NOT EXISTS favorites (
+    id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id VARCHAR NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    stream_id VARCHAR NOT NULL REFERENCES streams(id) ON DELETE CASCADE,
+    page INTEGER NOT NULL DEFAULT 1,
+    position INTEGER NOT NULL DEFAULT 0,
+    created_at TIMESTAMP DEFAULT NOW(),
+    CONSTRAINT favorites_user_stream_unique UNIQUE(user_id, stream_id)
+);
+
 -- Insert default admin user (password: admin123)
 INSERT INTO users (id, username, email, first_name, last_name, password, role) VALUES 
     ('admin-user-id-12345', 'admin', 'admin@obtv.live', 'Admin', 'User', '$2b$10$2LO.379Pa7N3HcWZ6Xvy6.okmNOASrXIdBWfyCqsslJUJXOWK4v0K', 'admin')
@@ -133,6 +145,8 @@ ON CONFLICT (user_id, studio_id) DO NOTHING;
 CREATE INDEX IF NOT EXISTS idx_streams_studio_id ON streams(studio_id);
 CREATE INDEX IF NOT EXISTS idx_user_studio_permissions_user_id ON user_studio_permissions(user_id);
 CREATE INDEX IF NOT EXISTS idx_user_studio_permissions_studio_id ON user_studio_permissions(studio_id);
+CREATE INDEX IF NOT EXISTS idx_favorites_user_id ON favorites(user_id);
+CREATE INDEX IF NOT EXISTS idx_favorites_stream_id ON favorites(stream_id);
 CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
 CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
 

@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -17,15 +18,17 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   Monitor,
-  Video
+  Video,
+  Heart
 } from "lucide-react";
 import { StreamPlayer } from "@/components/StreamPlayer";
 import { GestureHandler } from "@/components/GestureHandler";
 import { StudioCarousel } from "@/components/StudioCarousel";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
-import { StudioWithStreams, Stream } from "@shared/schema";
+import { StudioWithStreams, Stream, FavoriteWithStream } from "@shared/schema";
 import { removeAuthToken, getAuthHeaders, isUnauthorizedError } from "@/lib/authUtils";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import obedtvLogo from "@assets/image_1756407804157.png";
 import tbnLogo from "../assets/tbnlogo-white_1756354700943.png";
 import obLogo from "@assets/image_1756407804157.png";
@@ -50,6 +53,7 @@ function hexToRgba(hex: string | null | undefined, alpha: number): string {
 export default function Dashboard() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const [, setLocation] = useLocation();
   const [selectedStudio, setSelectedStudio] = useState<StudioWithStreams | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const [currentStreamIndex, setCurrentStreamIndex] = useState(0);
@@ -66,6 +70,59 @@ export default function Dashboard() {
       headers: getAuthHeaders(),
     },
   });
+
+  // Fetch user's favorites to drive the heart toggle state.
+  const { data: favorites = [] } = useQuery<FavoriteWithStream[]>({
+    queryKey: ["/api/favorites"],
+    meta: {
+      headers: getAuthHeaders(),
+    },
+  });
+  const favoriteStreamIds = new Set(favorites.map((f) => f.streamId));
+
+  const addFavoriteMutation = useMutation({
+    mutationFn: async (streamId: string) => {
+      const res = await apiRequest("POST", "/api/favorites", { streamId });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/favorites"] });
+    },
+    onError: (error: Error) => {
+      const full = error.message.includes("Favorites are full");
+      toast({
+        title: full ? "Favorites are full" : "Could not add favorite",
+        description: full
+          ? "You can have up to 40 favorites. Remove some first."
+          : "Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const removeFavoriteMutation = useMutation({
+    mutationFn: async (streamId: string) => {
+      await apiRequest("DELETE", `/api/favorites/${streamId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/favorites"] });
+    },
+    onError: () => {
+      toast({
+        title: "Could not remove favorite",
+        description: "Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const toggleFavorite = (streamId: string) => {
+    if (favoriteStreamIds.has(streamId)) {
+      removeFavoriteMutation.mutate(streamId);
+    } else {
+      addFavoriteMutation.mutate(streamId);
+    }
+  };
 
   useEffect(() => {
     if (studiosError && isUnauthorizedError(studiosError as Error)) {
@@ -208,6 +265,24 @@ export default function Dashboard() {
           ))}
         </div>
         
+        {/* Favorites Link */}
+        <div className="border-t border-border/30 mt-8 pt-6">
+          <button
+            className={`w-full ${sidebarCollapsed ? 'p-3 h-12 justify-center' : 'p-3 h-12 justify-start'}
+              group relative overflow-hidden rounded-lg border border-border/20 hover:border-border/40
+              bg-gradient-to-r from-red-500/25 to-red-400/15 backdrop-blur
+              hover:from-red-500/35 hover:to-red-400/25
+              transition-all duration-200 hover:shadow-sm
+              text-left flex items-center touch-area`}
+            onClick={() => setLocation('/favorites')}
+            data-testid="button-nav-favorites"
+            title={sidebarCollapsed ? 'Favorites' : undefined}
+          >
+            <Heart className={sidebarCollapsed ? '' : 'mr-3'} size={14} opacity={0.7} />
+            {!sidebarCollapsed && <span className="text-xs font-medium opacity-80">Favorites</span>}
+          </button>
+        </div>
+
         {/* Admin Section */}
         {user?.role === 'admin' && (
           <div className="border-t border-border/30 mt-8 pt-6">
@@ -657,18 +732,34 @@ export default function Dashboard() {
                         onStatusChange={(status) => handleStreamStatusChange(stream.id, status)}
                       />
                       
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        className="absolute top-2 right-2 bg-black/60 hover:bg-black/80 text-white touch-area"
-                        onClick={() => {
-                          setCurrentStreamIndex(selectedStudio.streams.indexOf(stream));
-                          setViewMode('single');
-                        }}
-                        data-testid={`button-fullscreen-${stream.id}`}
-                      >
-                        <Maximize size={12} />
-                      </Button>
+                      <div className="absolute top-2 right-2 flex items-center space-x-2">
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          className="bg-black/60 hover:bg-black/80 text-white touch-area"
+                          onClick={() => toggleFavorite(stream.id)}
+                          disabled={addFavoriteMutation.isPending || removeFavoriteMutation.isPending}
+                          data-testid={`button-favorite-${stream.id}`}
+                          aria-label={favoriteStreamIds.has(stream.id) ? "Remove from favorites" : "Add to favorites"}
+                        >
+                          <Heart
+                            size={12}
+                            className={favoriteStreamIds.has(stream.id) ? "fill-red-500 text-red-500" : ""}
+                          />
+                        </Button>
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          className="bg-black/60 hover:bg-black/80 text-white touch-area"
+                          onClick={() => {
+                            setCurrentStreamIndex(selectedStudio.streams.indexOf(stream));
+                            setViewMode('single');
+                          }}
+                          data-testid={`button-fullscreen-${stream.id}`}
+                        >
+                          <Maximize size={12} />
+                        </Button>
+                      </div>
                     </div>
                     
                     <CardContent className="p-3">

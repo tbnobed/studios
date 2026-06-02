@@ -7,7 +7,8 @@ import {
   integer, 
   boolean, 
   pgEnum,
-  jsonb
+  jsonb,
+  unique
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
@@ -70,9 +71,35 @@ export const userStudioPermissions = pgTable("user_studio_permissions", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Per-user favorite streams. Each user can favorite up to 8 streams per page,
+// across up to 5 pages (40 total). `page` is 1-5 and `position` is 0-7,
+// together describing where the stream sits on the user's favorites pages.
+export const favorites = pgTable("favorites", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  streamId: varchar("stream_id").notNull().references(() => streams.id, { onDelete: "cascade" }),
+  page: integer("page").notNull().default(1),
+  position: integer("position").notNull().default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  uniqueUserStream: unique("favorites_user_stream_unique").on(table.userId, table.streamId),
+}));
+
 // Relations
 export const usersRelations = relations(users, ({ many }) => ({
   studioPermissions: many(userStudioPermissions),
+  favorites: many(favorites),
+}));
+
+export const favoritesRelations = relations(favorites, ({ one }) => ({
+  user: one(users, {
+    fields: [favorites.userId],
+    references: [users.id],
+  }),
+  stream: one(streams, {
+    fields: [favorites.streamId],
+    references: [streams.id],
+  }),
 }));
 
 export const studiosRelations = relations(studios, ({ many }) => ({
@@ -80,11 +107,12 @@ export const studiosRelations = relations(studios, ({ many }) => ({
   userPermissions: many(userStudioPermissions),
 }));
 
-export const streamsRelations = relations(streams, ({ one }) => ({
+export const streamsRelations = relations(streams, ({ one, many }) => ({
   studio: one(studios, {
     fields: [streams.studioId],
     references: [studios.id],
   }),
+  favorites: many(favorites),
 }));
 
 export const userStudioPermissionsRelations = relations(userStudioPermissions, ({ one }) => ({
@@ -122,6 +150,11 @@ export const insertUserStudioPermissionSchema = createInsertSchema(userStudioPer
   createdAt: true,
 });
 
+export const insertFavoriteSchema = createInsertSchema(favorites).omit({
+  id: true,
+  createdAt: true,
+});
+
 // Types
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -134,6 +167,9 @@ export type InsertStream = z.infer<typeof insertStreamSchema>;
 
 export type UserStudioPermission = typeof userStudioPermissions.$inferSelect;
 export type InsertUserStudioPermission = z.infer<typeof insertUserStudioPermissionSchema>;
+
+export type Favorite = typeof favorites.$inferSelect;
+export type InsertFavorite = z.infer<typeof insertFavoriteSchema>;
 
 // Extended types for API responses
 export type StudioWithStreams = Studio & {
@@ -149,4 +185,12 @@ export type UserWithPermissions = User & {
   studioPermissions?: (UserStudioPermission & {
     studio: Studio;
   })[];
+};
+
+// A favorite enriched with its stream and that stream's studio, for rendering
+// the Favorites page.
+export type FavoriteWithStream = Favorite & {
+  stream: Stream & {
+    studio: Studio;
+  };
 };

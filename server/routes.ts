@@ -400,6 +400,83 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Favorites routes (per-user, scoped to the authenticated user)
+  app.get("/api/favorites", requireAuth, async (req: any, res) => {
+    try {
+      const favorites = await storage.getUserFavorites(req.user.id);
+      res.json(favorites);
+    } catch (error) {
+      console.error("Error fetching favorites:", error);
+      res.status(500).json({ message: "Failed to fetch favorites" });
+    }
+  });
+
+  app.post("/api/favorites", requireAuth, async (req: any, res) => {
+    try {
+      const { streamId } = req.body;
+      if (!streamId || typeof streamId !== "string") {
+        return res.status(400).json({ message: "streamId is required" });
+      }
+
+      // Ensure the stream exists and the user can access its studio.
+      const stream = await storage.getStream(streamId);
+      if (!stream) {
+        return res.status(404).json({ message: "Stream not found" });
+      }
+      const permission = await storage.getUserStudioPermission(req.user.id, stream.studioId);
+      if (!permission?.canView) {
+        return res.status(403).json({ message: "No access to this stream" });
+      }
+
+      const favorite = await storage.addFavorite(req.user.id, streamId);
+      res.status(201).json(favorite);
+    } catch (error: any) {
+      if (error?.message === "FAVORITES_FULL") {
+        return res.status(400).json({ message: "Favorites are full (maximum 40)" });
+      }
+      console.error("Error adding favorite:", error);
+      res.status(500).json({ message: "Failed to add favorite" });
+    }
+  });
+
+  app.delete("/api/favorites/:streamId", requireAuth, async (req: any, res) => {
+    try {
+      const { streamId } = req.params;
+      await storage.removeFavorite(req.user.id, streamId);
+      res.status(204).end();
+    } catch (error) {
+      console.error("Error removing favorite:", error);
+      res.status(500).json({ message: "Failed to remove favorite" });
+    }
+  });
+
+  app.put("/api/favorites/reorder", requireAuth, async (req: any, res) => {
+    try {
+      const { items } = req.body;
+      if (!Array.isArray(items)) {
+        return res.status(400).json({ message: "items must be an array" });
+      }
+
+      // We only need the order of streamIds; page/position are derived
+      // canonically server-side from that order.
+      const orderedStreamIds: string[] = [];
+      for (const item of items) {
+        const streamId = typeof item === "string" ? item : item?.streamId;
+        if (typeof streamId !== "string") {
+          return res.status(400).json({ message: "Invalid items payload" });
+        }
+        orderedStreamIds.push(streamId);
+      }
+
+      await storage.reorderFavorites(req.user.id, orderedStreamIds);
+      const favorites = await storage.getUserFavorites(req.user.id);
+      res.json(favorites);
+    } catch (error) {
+      console.error("Error reordering favorites:", error);
+      res.status(500).json({ message: "Failed to reorder favorites" });
+    }
+  });
+
   // Admin routes
   app.get("/api/admin/users", requireAuth, requireAdmin, async (req, res) => {
     try {

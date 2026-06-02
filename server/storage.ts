@@ -3,6 +3,7 @@ import {
   studios, 
   streams, 
   userStudioPermissions,
+  favorites,
   type User, 
   type InsertUser,
   type Studio,
@@ -12,11 +13,18 @@ import {
   type UserStudioPermission,
   type InsertUserStudioPermission,
   type StudioWithStreams,
-  type UserWithPermissions
+  type UserWithPermissions,
+  type Favorite,
+  type FavoriteWithStream
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, asc } from "drizzle-orm";
 import bcrypt from "bcrypt";
+
+// Favorites limits: up to 8 streams per page across up to 5 pages.
+export const FAVORITES_PER_PAGE = 8;
+export const FAVORITES_MAX_PAGES = 5;
+export const FAVORITES_MAX = FAVORITES_PER_PAGE * FAVORITES_MAX_PAGES;
 
 export interface IStorage {
   // User operations
@@ -50,6 +58,12 @@ export interface IStorage {
   getUserStudioPermission(userId: string, studioId: string): Promise<UserStudioPermission | undefined>;
   setUserStudioPermission(permission: InsertUserStudioPermission): Promise<UserStudioPermission>;
   removeUserStudioPermission(userId: string, studioId: string): Promise<void>;
+
+  // Favorites operations
+  getUserFavorites(userId: string): Promise<FavoriteWithStream[]>;
+  addFavorite(userId: string, streamId: string): Promise<Favorite>;
+  removeFavorite(userId: string, streamId: string): Promise<void>;
+  reorderFavorites(userId: string, orderedStreamIds: string[]): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -283,6 +297,117 @@ export class DatabaseStorage implements IStorage {
           eq(userStudioPermissions.studioId, studioId)
         )
       );
+  }
+
+  // Favorites operations
+  async getUserFavorites(userId: string): Promise<FavoriteWithStream[]> {
+    const favs = await db.query.favorites.findMany({
+      where: eq(favorites.userId, userId),
+      with: {
+        stream: {
+          with: {
+            studio: true,
+          },
+        },
+      },
+      orderBy: [asc(favorites.page), asc(favorites.position)],
+    });
+
+    // Only return favorites the user can currently view. If studio access is
+    // revoked, those favorites are hidden (matching the POST permission check).
+    const perms = await db
+      .select()
+      .from(userStudioPermissions)
+      .where(eq(userStudioPermissions.userId, userId));
+    const allowedStudioIds = new Set(
+      perms.filter((p) => p.canView).map((p) => p.studioId)
+    );
+
+    return favs.filter((f) => allowedStudioIds.has(f.stream.studioId));
+  }
+
+  async addFavorite(userId: string, streamId: string): Promise<Favorite> {
+    // Idempotent: if the stream is already favorited, return the existing row.
+    const [existing] = await db
+      .select()
+      .from(favorites)
+      .where(and(eq(favorites.userId, userId), eq(favorites.streamId, streamId)));
+    if (existing) {
+      return existing;
+    }
+
+    // Favorites are kept contiguous, so the new one goes at the end.
+    const current = await db
+      .select()
+      .from(favorites)
+      .where(eq(favorites.userId, userId));
+    if (current.length >= FAVORITES_MAX) {
+      throw new Error("FAVORITES_FULL");
+    }
+
+    const index = current.length;
+    const page = Math.floor(index / FAVORITES_PER_PAGE) + 1;
+    const position = index % FAVORITES_PER_PAGE;
+
+    const [favorite] = await db
+      .insert(favorites)
+      .values({ userId, streamId, page, position })
+      .returning();
+    return favorite;
+  }
+
+  async removeFavorite(userId: string, streamId: string): Promise<void> {
+    await db.transaction(async (tx) => {
+      await tx
+        .delete(favorites)
+        .where(and(eq(favorites.userId, userId), eq(favorites.streamId, streamId)));
+
+      // Re-pack the remaining favorites so page/position stay contiguous.
+      const remaining = await tx
+        .select()
+        .from(favorites)
+        .where(eq(favorites.userId, userId))
+        .orderBy(asc(favorites.page), asc(favorites.position));
+
+      for (let i = 0; i < remaining.length; i++) {
+        const page = Math.floor(i / FAVORITES_PER_PAGE) + 1;
+        const position = i % FAVORITES_PER_PAGE;
+        const fav = remaining[i];
+        if (fav.page !== page || fav.position !== position) {
+          await tx
+            .update(favorites)
+            .set({ page, position })
+            .where(eq(favorites.id, fav.id));
+        }
+      }
+    });
+  }
+
+  async reorderFavorites(userId: string, orderedStreamIds: string[]): Promise<void> {
+    await db.transaction(async (tx) => {
+      const owned = await tx
+        .select()
+        .from(favorites)
+        .where(eq(favorites.userId, userId));
+      const ownedIds = new Set(owned.map((f) => f.streamId));
+
+      // page/position are derived canonically from the requested order so the
+      // result is always contiguous and within bounds, regardless of what the
+      // client sent. Foreign/unknown ids are skipped.
+      let index = 0;
+      for (const streamId of orderedStreamIds) {
+        if (!ownedIds.has(streamId)) {
+          continue;
+        }
+        const page = Math.floor(index / FAVORITES_PER_PAGE) + 1;
+        const position = index % FAVORITES_PER_PAGE;
+        index++;
+        await tx
+          .update(favorites)
+          .set({ page, position })
+          .where(and(eq(favorites.userId, userId), eq(favorites.streamId, streamId)));
+      }
+    });
   }
 }
 
