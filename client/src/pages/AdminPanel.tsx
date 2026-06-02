@@ -36,6 +36,7 @@ export default function AdminPanel() {
     name: "",
     description: "",
     streamUrl: "",
+    streamType: "webrtc" as "webrtc" | "hls",
     resolution: "1080p",
     fps: 30,
   });
@@ -63,6 +64,7 @@ export default function AdminPanel() {
   });
   const [quickAddNames, setQuickAddNames] = useState<Record<string, string>>({});
   const [quickAddUrls, setQuickAddUrls] = useState<Record<string, string>>({});
+  const [quickAddTypes, setQuickAddTypes] = useState<Record<string, "webrtc" | "hls">>({});
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
   // Handle URL parameters for tab selection
@@ -210,6 +212,7 @@ export default function AdminPanel() {
         name: "",
         description: "",
         streamUrl: "",
+        streamType: "webrtc",
         resolution: "1080p",
         fps: 30,
       });
@@ -354,6 +357,7 @@ export default function AdminPanel() {
       queryClient.invalidateQueries({ queryKey: ["/api/studios"] });
       setQuickAddNames((prev) => ({ ...prev, [variables.studioId]: "" }));
       setQuickAddUrls((prev) => ({ ...prev, [variables.studioId]: "" }));
+      setQuickAddTypes((prev) => ({ ...prev, [variables.studioId]: "webrtc" }));
       toast({ title: "Stream Added", description: `${variables.name} was added` });
     },
     onError: (error: Error) => {
@@ -436,11 +440,21 @@ export default function AdminPanel() {
     const name = (quickAddNames[studio.id] || "").trim();
     if (!name) return;
     const typedUrl = (quickAddUrls[studio.id] || "").trim();
+    const type = quickAddTypes[studio.id] || "webrtc";
+    if (type === "hls" && !typedUrl) {
+      toast({
+        title: "Stream address required",
+        description: "HLS streams need a full .m3u8 URL — it can't be auto-generated.",
+        variant: "destructive",
+      });
+      return;
+    }
     quickCreateStreamMutation.mutate({
       studioId: studio.id,
       name,
       description: "",
       streamUrl: typedUrl || buildStreamUrl(studio.name, name),
+      streamType: type,
       resolution: "1080p",
       fps: 30,
     });
@@ -464,6 +478,7 @@ export default function AdminPanel() {
         name,
         description: "",
         streamUrl: buildStreamUrl(studio.name, name),
+        streamType: "webrtc" as const,
         resolution: bulkAdd.resolution,
         fps: bulkAdd.fps,
       };
@@ -481,9 +496,17 @@ export default function AdminPanel() {
       return;
     }
 
-    // Auto-generate URL if not provided
     const finalStreamData = { ...newStream };
     if (!finalStreamData.streamUrl.trim()) {
+      // HLS streams need an explicit .m3u8 URL — only WebRTC can be auto-generated.
+      if (finalStreamData.streamType === "hls") {
+        toast({
+          title: "Stream address required",
+          description: "HLS streams need a full .m3u8 URL — it can't be auto-generated.",
+          variant: "destructive",
+        });
+        return;
+      }
       const selectedStudio = studios.find(s => s.id === newStream.studioId);
       if (selectedStudio) {
         const studioName = selectedStudio.name.toLowerCase().replace(/\s+/g, '');
@@ -645,10 +668,21 @@ export default function AdminPanel() {
   const handleUpdateStream = () => {
     if (!editingStream) return;
 
+    const streamType = editingStream.streamType || "webrtc";
+    if (streamType === "hls" && !(editingStream.streamUrl || "").trim()) {
+      toast({
+        title: "Stream address required",
+        description: "HLS streams need a full .m3u8 URL — it can't be auto-generated.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     const updateData = {
       name: editingStream.name,
       description: editingStream.description,
       streamUrl: editingStream.streamUrl,
+      streamType,
       resolution: editingStream.resolution,
       fps: editingStream.fps,
       isActive: editingStream.isActive,
@@ -1374,16 +1408,36 @@ export default function AdminPanel() {
                         </div>
 
                         <div>
+                          <Label htmlFor="streamType">Stream Type</Label>
+                          <Select
+                            value={newStream.streamType}
+                            onValueChange={(value) => setNewStream({ ...newStream, streamType: value as "webrtc" | "hls" })}
+                          >
+                            <SelectTrigger data-testid="select-stream-type">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="webrtc">WebRTC (low-latency, WHEP)</SelectItem>
+                              <SelectItem value="hls">HLS (.m3u8)</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        <div>
                           <Label htmlFor="streamUrl">Stream URL</Label>
                           <Input
                             id="streamUrl"
                             value={newStream.streamUrl}
                             onChange={(e) => setNewStream({ ...newStream, streamUrl: e.target.value })}
-                            placeholder="http://cdn1.obedtv.live:2022/rtc/v1/whep/?app=live&stream=..."
+                            placeholder={newStream.streamType === "hls"
+                              ? "https://your-server/live/stream.m3u8"
+                              : "http://cdn1.obedtv.live:2022/rtc/v1/whep/?app=live&stream=..."}
                             data-testid="input-stream-url"
                           />
                           <p className="text-xs text-muted-foreground mt-1">
-                            Or leave blank to auto-generate based on studio and stream name
+                            {newStream.streamType === "hls"
+                              ? "Required for HLS — paste the full .m3u8 playlist URL."
+                              : "Or leave blank to auto-generate based on studio and stream name"}
                           </p>
                         </div>
 
@@ -1480,12 +1534,30 @@ export default function AdminPanel() {
                       </div>
 
                       <div>
+                        <Label htmlFor="editStreamType">Stream Type</Label>
+                        <Select
+                          value={editingStream.streamType || "webrtc"}
+                          onValueChange={(value) => setEditingStream({ ...editingStream, streamType: value as "webrtc" | "hls" })}
+                        >
+                          <SelectTrigger data-testid="select-edit-stream-type">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="webrtc">WebRTC (low-latency, WHEP)</SelectItem>
+                            <SelectItem value="hls">HLS (.m3u8)</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div>
                         <Label htmlFor="editStreamUrl">Stream URL</Label>
                         <Input
                           id="editStreamUrl"
                           value={editingStream.streamUrl}
                           onChange={(e) => setEditingStream({ ...editingStream, streamUrl: e.target.value })}
-                          placeholder="http://cdn1.obedtv.live:2022/rtc/v1/whep/?app=live&stream=..."
+                          placeholder={editingStream.streamType === "hls"
+                            ? "https://your-server/live/stream.m3u8"
+                            : "http://cdn1.obedtv.live:2022/rtc/v1/whep/?app=live&stream=..."}
                           data-testid="input-edit-stream-url"
                         />
                       </div>
@@ -1633,11 +1705,25 @@ export default function AdminPanel() {
                                   value={quickAddUrls[studio.id] || ""}
                                   onChange={(e) => setQuickAddUrls({ ...quickAddUrls, [studio.id]: e.target.value })}
                                   onKeyDown={(e) => { if (e.key === "Enter") handleQuickAdd(studio); }}
-                                  placeholder="Stream address / URL (leave blank to auto-generate)"
+                                  placeholder={(quickAddTypes[studio.id] || "webrtc") === "hls"
+                                    ? "HLS .m3u8 URL (required)"
+                                    : "Stream address / URL (leave blank to auto-generate)"}
                                   className="flex-1 font-mono text-xs"
                                   data-testid={`input-quick-add-url-${studio.id}`}
                                 />
                                 <div className="flex gap-2">
+                                  <Select
+                                    value={quickAddTypes[studio.id] || "webrtc"}
+                                    onValueChange={(v) => setQuickAddTypes({ ...quickAddTypes, [studio.id]: v as "webrtc" | "hls" })}
+                                  >
+                                    <SelectTrigger className="w-28" data-testid={`select-quick-add-type-${studio.id}`}>
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="webrtc">WebRTC</SelectItem>
+                                      <SelectItem value="hls">HLS</SelectItem>
+                                    </SelectContent>
+                                  </Select>
                                   <Button
                                     onClick={() => handleQuickAdd(studio)}
                                     disabled={quickCreateStreamMutation.isPending || !(quickAddNames[studio.id] || "").trim()}
@@ -1664,7 +1750,12 @@ export default function AdminPanel() {
                                       {studio.filteredStreams.map((stream) => (
                                         <TableRow key={stream.id} data-testid={`stream-row-${stream.id}`}>
                                           <TableCell>
-                                            <div className="font-medium">{stream.name}</div>
+                                            <div className="flex items-center gap-2">
+                                              <span className="font-medium">{stream.name}</span>
+                                              <Badge variant="outline" className="text-[10px] uppercase">
+                                                {stream.streamType === "hls" ? "HLS" : "WebRTC"}
+                                              </Badge>
+                                            </div>
                                             {stream.description && (
                                               <div className="text-xs text-muted-foreground">{stream.description}</div>
                                             )}

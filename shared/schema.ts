@@ -16,6 +16,7 @@ import { z } from "zod";
 // Enums
 export const userRoleEnum = pgEnum("user_role", ["admin", "viewer"]);
 export const streamStatusEnum = pgEnum("stream_status", ["online", "offline", "error"]);
+export const streamTypeEnum = pgEnum("stream_type", ["webrtc", "hls"]);
 
 // Users table
 export const users = pgTable("users", {
@@ -51,6 +52,7 @@ export const streams = pgTable("streams", {
   name: varchar("name", { length: 100 }).notNull(),
   description: text("description"),
   streamUrl: text("stream_url").notNull(),
+  streamType: streamTypeEnum("stream_type").notNull().default("webrtc"),
   resolution: varchar("resolution", { length: 20 }).default("1080p"),
   fps: integer("fps").default(30),
   status: streamStatusEnum("status").notNull().default("offline"),

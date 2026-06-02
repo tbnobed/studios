@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import Hls from "hls.js";
 import { Stream } from "@shared/schema";
 
 interface StreamPlayerProps {
@@ -26,20 +27,90 @@ export function StreamPlayer({
 }: StreamPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const sdkRef = useRef<any>(null);
+  const hlsRef = useRef<Hls | null>(null);
   const [currentStatus, setCurrentStatus] = useState<'online' | 'offline' | 'error'>('offline');
+
+  const streamType = (stream as any).streamType ?? 'webrtc';
 
   useEffect(() => {
     if (!videoRef.current || !stream.streamUrl) return;
 
+    let cancelled = false;
+    let videoCheckTimer: ReturnType<typeof setTimeout> | null = null;
+
+    const cleanup = () => {
+      cancelled = true;
+      if (videoCheckTimer) {
+        clearTimeout(videoCheckTimer);
+        videoCheckTimer = null;
+      }
+      if (sdkRef.current) {
+        sdkRef.current.close();
+        sdkRef.current = null;
+      }
+      if (hlsRef.current) {
+        hlsRef.current.destroy();
+        hlsRef.current = null;
+      }
+      if (videoRef.current) {
+        videoRef.current.srcObject = null;
+        videoRef.current.removeAttribute('src');
+      }
+    };
+
+    const initializeHls = () => {
+      const video = videoRef.current;
+      if (!video) return;
+
+      const onReady = () => {
+        setCurrentStatus('online');
+        onStatusChange?.('online');
+        if (autoPlay) video.play().catch(console.error);
+      };
+
+      if (Hls.isSupported()) {
+        const hls = new Hls({ enableWorker: true, lowLatencyMode: true });
+        hlsRef.current = hls;
+        hls.loadSource(stream.streamUrl);
+        hls.attachMedia(video);
+        hls.on(Hls.Events.MANIFEST_PARSED, () => {
+          if (autoPlay) video.play().catch(console.error);
+        });
+        hls.on(Hls.Events.FRAG_BUFFERED, onReady);
+        hls.on(Hls.Events.ERROR, (_evt, data) => {
+          if (data.fatal) {
+            console.error('HLS fatal error for', stream.name, data.type);
+            setCurrentStatus('error');
+            onStatusChange?.('error');
+          }
+        });
+      } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+        // Native HLS (Safari / iOS)
+        video.src = stream.streamUrl;
+        video.addEventListener('loadeddata', onReady, { once: true });
+        video.addEventListener('error', () => {
+          setCurrentStatus('error');
+          onStatusChange?.('error');
+        }, { once: true });
+        if (autoPlay) video.play().catch(console.error);
+      } else {
+        console.error('HLS not supported in this browser');
+        setCurrentStatus('error');
+        onStatusChange?.('error');
+      }
+    };
+
     const initializeStream = async () => {
       try {
         // Clean up existing connection
-        if (sdkRef.current) {
-          sdkRef.current.close();
-          sdkRef.current = null;
+        cleanup();
+
+        if (streamType === 'hls') {
+          initializeHls();
+          return;
         }
 
-        // Initialize SRS SDK
+        // Initialize SRS SDK (WebRTC / WHEP)
         if (window.SrsRtcWhipWhepAsync) {
           sdkRef.current = new window.SrsRtcWhipWhepAsync();
           
@@ -59,6 +130,7 @@ export function StreamPlayer({
           const maxChecks = 6; // Check for 3 seconds
           
           const checkVideoData = () => {
+            if (cancelled) return;
             videoCheckCount++;
             
             if (videoRef.current) {
@@ -81,7 +153,7 @@ export function StreamPlayer({
             }
             
             if (videoCheckCount < maxChecks) {
-              setTimeout(checkVideoData, 500);
+              videoCheckTimer = setTimeout(checkVideoData, 500);
             } else {
               console.warn('No valid video stream detected for:', stream.name);
               setCurrentStatus('error');
@@ -89,7 +161,7 @@ export function StreamPlayer({
             }
           };
           
-          setTimeout(checkVideoData, 500); // Start checking after 500ms
+          videoCheckTimer = setTimeout(checkVideoData, 500); // Start checking after 500ms
         } else {
           console.error('SRS SDK not loaded');
           setCurrentStatus('error');
@@ -104,13 +176,8 @@ export function StreamPlayer({
 
     initializeStream();
 
-    return () => {
-      if (sdkRef.current) {
-        sdkRef.current.close();
-        sdkRef.current = null;
-      }
-    };
-  }, [stream.streamUrl]);
+    return cleanup;
+  }, [stream.streamUrl, streamType]);
 
   return (
     <div className={`relative ${className}`}>

@@ -19,3 +19,12 @@ description: Non-obvious conventions for streams, isActive semantics, and admin 
   `http://cdn1.obedtv.live:2022/rtc/v1/whep/?app=live&stream=${studioSlug}_${streamSlug}` where
   `studioSlug = name.toLowerCase().replace(/\s+/g,"")` and
   `streamSlug = name.toLowerCase().replace(/\s+/g,"_")`.
+- `streamType` enum is `webrtc | hls` (default `webrtc`). Only WebRTC URLs can be auto-generated from the
+  WHEP rule above; **HLS streams must carry an explicit `.m3u8` URL** — every create path (single dialog,
+  quick-add, edit dialog) must block submit when type is HLS and the URL is blank. Bulk-add is WebRTC-only
+  by design (no m3u8 pattern to generate). **Why:** there is no deterministic way to synthesize an HLS
+  playlist URL, so silently auto-generating one produces dead streams.
+- StreamPlayer branches on `streamType`: HLS uses hls.js (or native Safari `application/vnd.apple.mpegurl`),
+  WebRTC uses the SRS WHEP SDK. The shared `cleanup()` must tear down BOTH (sdk.close + hls.destroy) and
+  cancel the WebRTC `checkVideoData` polling timer (cancellation flag + cleared timeout) or stale timers
+  fire setState after unmount/stream-switch.
