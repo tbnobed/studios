@@ -8,7 +8,8 @@ import {
   boolean, 
   pgEnum,
   jsonb,
-  unique
+  unique,
+  uniqueIndex
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
@@ -85,10 +86,39 @@ export const favorites = pgTable("favorites", {
   uniqueUserStream: unique("favorites_user_stream_unique").on(table.userId, table.streamId),
 }));
 
+// Per-user saved multiviewer layouts. `layoutType` is one of the supported
+// mosaics (2x2, 3x3, 4x4, featured). `slots` is an ordered array of stream ids
+// (or null for an empty slot) whose length matches the layout's slot count.
+export const multiviewerLayouts = pgTable("multiviewer_layouts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  name: varchar("name", { length: 100 }).notNull(),
+  layoutType: varchar("layout_type", { length: 20 }).notNull().default("2x2"),
+  slots: jsonb("slots").$type<(string | null)[]>().notNull().default([]),
+  isDefault: boolean("is_default").notNull().default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  // Enforce "at most one default layout per user" at the DB level so concurrent
+  // requests can't both win and leave two defaults. Partial unique index only
+  // applies to rows where is_default = true.
+  oneDefaultPerUser: uniqueIndex("multiviewer_layouts_one_default_per_user")
+    .on(table.userId)
+    .where(sql`${table.isDefault} = true`),
+}));
+
 // Relations
 export const usersRelations = relations(users, ({ many }) => ({
   studioPermissions: many(userStudioPermissions),
   favorites: many(favorites),
+  multiviewerLayouts: many(multiviewerLayouts),
+}));
+
+export const multiviewerLayoutsRelations = relations(multiviewerLayouts, ({ one }) => ({
+  user: one(users, {
+    fields: [multiviewerLayouts.userId],
+    references: [users.id],
+  }),
 }));
 
 export const favoritesRelations = relations(favorites, ({ one }) => ({
@@ -155,6 +185,18 @@ export const insertFavoriteSchema = createInsertSchema(favorites).omit({
   createdAt: true,
 });
 
+export const MULTIVIEWER_LAYOUT_TYPES = ["2x2", "3x3", "4x4", "featured"] as const;
+
+export const insertMultiviewerLayoutSchema = createInsertSchema(multiviewerLayouts, {
+  layoutType: z.enum(MULTIVIEWER_LAYOUT_TYPES),
+  slots: z.array(z.string().nullable()),
+}).omit({
+  id: true,
+  userId: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 // Types
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -170,6 +212,10 @@ export type InsertUserStudioPermission = z.infer<typeof insertUserStudioPermissi
 
 export type Favorite = typeof favorites.$inferSelect;
 export type InsertFavorite = z.infer<typeof insertFavoriteSchema>;
+
+export type MultiviewerLayout = typeof multiviewerLayouts.$inferSelect;
+export type InsertMultiviewerLayout = z.infer<typeof insertMultiviewerLayoutSchema>;
+export type MultiviewerLayoutType = (typeof MULTIVIEWER_LAYOUT_TYPES)[number];
 
 // Extended types for API responses
 export type StudioWithStreams = Studio & {

@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import jwt from "jsonwebtoken";
-import { insertUserSchema, insertStudioSchema, insertStreamSchema } from "@shared/schema";
+import { insertUserSchema, insertStudioSchema, insertStreamSchema, insertMultiviewerLayoutSchema } from "@shared/schema";
 import { z } from "zod";
 import multer from "multer";
 import path from "path";
@@ -474,6 +474,97 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error reordering favorites:", error);
       res.status(500).json({ message: "Failed to reorder favorites" });
+    }
+  });
+
+  // Multiviewer layout routes -------------------------------------------------
+  app.get("/api/multiviewer-layouts", requireAuth, async (req: any, res) => {
+    try {
+      const layouts = await storage.getUserMultiviewerLayouts(req.user.id);
+      res.json(layouts);
+    } catch (error) {
+      console.error("Error fetching multiviewer layouts:", error);
+      res.status(500).json({ message: "Failed to fetch multiviewer layouts" });
+    }
+  });
+
+  // Reject any slot stream ids the user can't actually view, so a layout can't
+  // be used to reference streams outside the user's studio permissions.
+  const validateSlotAccess = async (
+    userId: string,
+    slots: (string | null)[] | undefined
+  ): Promise<string | null> => {
+    if (!slots || slots.length === 0) return null;
+    const ids = slots.filter((s): s is string => Boolean(s));
+    if (ids.length === 0) return null;
+    const studios = await storage.getUserStudios(userId);
+    const viewable = new Set<string>();
+    for (const studio of studios) {
+      for (const stream of studio.streams) viewable.add(stream.id);
+    }
+    const invalid = ids.find((id) => !viewable.has(id));
+    return invalid ? `Stream not accessible: ${invalid}` : null;
+  };
+
+  app.post("/api/multiviewer-layouts", requireAuth, async (req: any, res) => {
+    try {
+      const parsed = insertMultiviewerLayoutSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ message: "Invalid layout", errors: parsed.error.flatten() });
+      }
+      const slotError = await validateSlotAccess(req.user.id, parsed.data.slots);
+      if (slotError) {
+        return res.status(403).json({ message: slotError });
+      }
+      const layout = await storage.createMultiviewerLayout(req.user.id, parsed.data);
+      res.status(201).json(layout);
+    } catch (error) {
+      console.error("Error creating multiviewer layout:", error);
+      res.status(500).json({ message: "Failed to create multiviewer layout" });
+    }
+  });
+
+  app.patch("/api/multiviewer-layouts/:id", requireAuth, async (req: any, res) => {
+    try {
+      const parsed = insertMultiviewerLayoutSchema.partial().safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ message: "Invalid layout", errors: parsed.error.flatten() });
+      }
+      const slotError = await validateSlotAccess(req.user.id, parsed.data.slots);
+      if (slotError) {
+        return res.status(403).json({ message: slotError });
+      }
+      const layout = await storage.updateMultiviewerLayout(req.user.id, req.params.id, parsed.data);
+      if (!layout) {
+        return res.status(404).json({ message: "Layout not found" });
+      }
+      res.json(layout);
+    } catch (error) {
+      console.error("Error updating multiviewer layout:", error);
+      res.status(500).json({ message: "Failed to update multiviewer layout" });
+    }
+  });
+
+  app.delete("/api/multiviewer-layouts/:id", requireAuth, async (req: any, res) => {
+    try {
+      await storage.deleteMultiviewerLayout(req.user.id, req.params.id);
+      res.status(204).end();
+    } catch (error) {
+      console.error("Error deleting multiviewer layout:", error);
+      res.status(500).json({ message: "Failed to delete multiviewer layout" });
+    }
+  });
+
+  app.post("/api/multiviewer-layouts/:id/default", requireAuth, async (req: any, res) => {
+    try {
+      const layout = await storage.setDefaultMultiviewerLayout(req.user.id, req.params.id);
+      if (!layout) {
+        return res.status(404).json({ message: "Layout not found" });
+      }
+      res.json(layout);
+    } catch (error) {
+      console.error("Error setting default multiviewer layout:", error);
+      res.status(500).json({ message: "Failed to set default multiviewer layout" });
     }
   });
 

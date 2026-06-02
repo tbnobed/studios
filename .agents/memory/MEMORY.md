@@ -1,2 +1,3 @@
-- [Favorites render loop → streams show offline](favorites-render-loop.md) — unstable useQuery `= []` default caused infinite re-render that tore down StreamPlayers; fix with useMemo(data ?? []).
-- [Stream status detection](stream-status-detection.md) — StreamPlayer needs ~0.5–3s uninterrupted to flip from initial 'offline' to LIVE; parent re-renders that remount it keep it stuck offline.
+- [Schema is provisioned in three places](schema-three-places.md) — Drizzle `shared/schema.ts`, `init.sql`, and `migrations/` must be kept in lockstep for every DDL change.
+- [Web Audio metering must share one AudioContext](audio-metering-scaling.md) — browsers cap concurrent AudioContexts (~6); per-tile contexts break large mosaics.
+- [Pre-existing Dashboard.tsx tsc errors](preexisting-tsc-errors.md) — `Property 'id' does not exist on type 'never'` in Dashboard.tsx predates current work; not a regression.

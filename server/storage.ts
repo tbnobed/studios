@@ -4,6 +4,7 @@ import {
   streams, 
   userStudioPermissions,
   favorites,
+  multiviewerLayouts,
   type User, 
   type InsertUser,
   type Studio,
@@ -15,10 +16,12 @@ import {
   type StudioWithStreams,
   type UserWithPermissions,
   type Favorite,
-  type FavoriteWithStream
+  type FavoriteWithStream,
+  type MultiviewerLayout,
+  type InsertMultiviewerLayout
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, asc } from "drizzle-orm";
+import { eq, and, asc, desc } from "drizzle-orm";
 import bcrypt from "bcrypt";
 
 // Favorites limits: up to 8 streams per page across up to 5 pages.
@@ -64,6 +67,14 @@ export interface IStorage {
   addFavorite(userId: string, streamId: string): Promise<Favorite>;
   removeFavorite(userId: string, streamId: string): Promise<void>;
   reorderFavorites(userId: string, orderedStreamIds: string[]): Promise<void>;
+
+  // Multiviewer layout operations
+  getUserMultiviewerLayouts(userId: string): Promise<MultiviewerLayout[]>;
+  getMultiviewerLayout(userId: string, id: string): Promise<MultiviewerLayout | undefined>;
+  createMultiviewerLayout(userId: string, data: InsertMultiviewerLayout): Promise<MultiviewerLayout>;
+  updateMultiviewerLayout(userId: string, id: string, data: Partial<InsertMultiviewerLayout>): Promise<MultiviewerLayout | undefined>;
+  deleteMultiviewerLayout(userId: string, id: string): Promise<void>;
+  setDefaultMultiviewerLayout(userId: string, id: string): Promise<MultiviewerLayout | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -407,6 +418,98 @@ export class DatabaseStorage implements IStorage {
           .set({ page, position })
           .where(and(eq(favorites.userId, userId), eq(favorites.streamId, streamId)));
       }
+    });
+  }
+
+  // Multiviewer layout operations -----------------------------------------
+
+  async getUserMultiviewerLayouts(userId: string): Promise<MultiviewerLayout[]> {
+    return db
+      .select()
+      .from(multiviewerLayouts)
+      .where(eq(multiviewerLayouts.userId, userId))
+      .orderBy(desc(multiviewerLayouts.isDefault), asc(multiviewerLayouts.name));
+  }
+
+  async getMultiviewerLayout(userId: string, id: string): Promise<MultiviewerLayout | undefined> {
+    const [layout] = await db
+      .select()
+      .from(multiviewerLayouts)
+      .where(and(eq(multiviewerLayouts.id, id), eq(multiviewerLayouts.userId, userId)));
+    return layout;
+  }
+
+  async createMultiviewerLayout(userId: string, data: InsertMultiviewerLayout): Promise<MultiviewerLayout> {
+    return db.transaction(async (tx) => {
+      // A user has at most one default layout; setting a new default clears the
+      // previous one.
+      if (data.isDefault) {
+        await tx
+          .update(multiviewerLayouts)
+          .set({ isDefault: false })
+          .where(eq(multiviewerLayouts.userId, userId));
+      }
+      const [layout] = await tx
+        .insert(multiviewerLayouts)
+        .values({ ...data, userId })
+        .returning();
+      return layout;
+    });
+  }
+
+  async updateMultiviewerLayout(
+    userId: string,
+    id: string,
+    data: Partial<InsertMultiviewerLayout>
+  ): Promise<MultiviewerLayout | undefined> {
+    return db.transaction(async (tx) => {
+      const [existing] = await tx
+        .select()
+        .from(multiviewerLayouts)
+        .where(and(eq(multiviewerLayouts.id, id), eq(multiviewerLayouts.userId, userId)));
+      if (!existing) {
+        return undefined;
+      }
+      if (data.isDefault) {
+        await tx
+          .update(multiviewerLayouts)
+          .set({ isDefault: false })
+          .where(eq(multiviewerLayouts.userId, userId));
+      }
+      const [layout] = await tx
+        .update(multiviewerLayouts)
+        .set({ ...data, updatedAt: new Date() })
+        .where(and(eq(multiviewerLayouts.id, id), eq(multiviewerLayouts.userId, userId)))
+        .returning();
+      return layout;
+    });
+  }
+
+  async deleteMultiviewerLayout(userId: string, id: string): Promise<void> {
+    await db
+      .delete(multiviewerLayouts)
+      .where(and(eq(multiviewerLayouts.id, id), eq(multiviewerLayouts.userId, userId)));
+  }
+
+  async setDefaultMultiviewerLayout(userId: string, id: string): Promise<MultiviewerLayout | undefined> {
+    return db.transaction(async (tx) => {
+      const [existing] = await tx
+        .select()
+        .from(multiviewerLayouts)
+        .where(and(eq(multiviewerLayouts.id, id), eq(multiviewerLayouts.userId, userId)));
+      if (!existing) {
+        return undefined;
+      }
+      await tx
+        .update(multiviewerLayouts)
+        .set({ isDefault: false })
+        .where(eq(multiviewerLayouts.userId, userId));
+      const [layout] = await tx
+        .update(multiviewerLayouts)
+        .set({ isDefault: true, updatedAt: new Date() })
+        .where(and(eq(multiviewerLayouts.id, id), eq(multiviewerLayouts.userId, userId)))
+        .returning();
+      return layout;
     });
   }
 }

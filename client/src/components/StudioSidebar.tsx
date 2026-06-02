@@ -8,6 +8,7 @@ import {
   Monitor,
   Video,
   Heart,
+  LayoutGrid,
   User,
   Shield,
   LogOut,
@@ -43,6 +44,7 @@ interface StudioSidebarProps {
   selectedStudioId?: string | null;
   onSelectStudio?: (studio: StudioWithStreams) => void;
   activeFavorites?: boolean;
+  activeMultiviewer?: boolean;
   onNavigate?: () => void;
 }
 
@@ -50,6 +52,7 @@ export default function StudioSidebar({
   selectedStudioId,
   onSelectStudio,
   activeFavorites,
+  activeMultiviewer,
   onNavigate,
 }: StudioSidebarProps) {
   const { user } = useAuth();
@@ -217,8 +220,8 @@ export default function StudioSidebar({
           ))}
         </div>
 
-        {/* Favorites Link */}
-        <div className="border-t border-border/30 mt-8 pt-6">
+        {/* Favorites + Multiviewer Links */}
+        <div className="border-t border-border/30 mt-8 pt-6 space-y-2">
           <button
             className={`w-full ${sidebarCollapsed ? "p-3 h-12 justify-center" : "p-3 h-12 justify-start"}
               group relative overflow-hidden rounded-lg border transition-all duration-200 hover:shadow-sm
@@ -239,6 +242,28 @@ export default function StudioSidebar({
             />
             {!sidebarCollapsed && (
               <span className="text-xs font-medium opacity-80">Favorites</span>
+            )}
+          </button>
+
+          <button
+            className={`w-full ${sidebarCollapsed ? "p-3 h-12 justify-center" : "p-3 h-12 justify-start"}
+              group relative overflow-hidden rounded-lg border transition-all duration-200 hover:shadow-sm
+              bg-gradient-to-r from-sky-500/25 to-sky-400/15 backdrop-blur
+              hover:from-sky-500/35 hover:to-sky-400/25
+              text-left flex items-center touch-area ${
+                activeMultiviewer ? "border-sky-400/60 shadow-sm" : "border-border/20 hover:border-border/40"
+              }`}
+            onClick={() => handleNav("/multiviewer")}
+            data-testid="button-nav-multiviewer"
+            title={sidebarCollapsed ? "Multiviewer" : undefined}
+          >
+            <LayoutGrid
+              className={sidebarCollapsed ? "" : "mr-3"}
+              size={14}
+              opacity={activeMultiviewer ? 1 : 0.7}
+            />
+            {!sidebarCollapsed && (
+              <span className="text-xs font-medium opacity-80">Multiviewer</span>
             )}
           </button>
         </div>

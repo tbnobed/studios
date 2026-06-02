@@ -9,6 +9,7 @@ import Dashboard from "@/pages/Dashboard";
 import AdminPanel from "@/pages/AdminPanel";
 import Settings from "@/pages/Settings";
 import Favorites from "@/pages/Favorites";
+import Multiviewer from "@/pages/Multiviewer";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -33,6 +34,7 @@ function Router() {
         <>
           <Route path="/" component={Favorites} />
           <Route path="/favorites" component={Favorites} />
+          <Route path="/multiviewer" component={Multiviewer} />
           <Route path="/dashboard" component={Dashboard} />
           <Route path="/settings" component={Settings} />
           {user?.role === 'admin' && (

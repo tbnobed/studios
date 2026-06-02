@@ -1,0 +1,162 @@
+import { useEffect } from "react";
+
+/**
+ * Drives a vertical audio meter directly from a tile's <video> element without
+ * triggering React re-renders. The hook polls the container for the video
+ * element rendered by StreamPlayer, taps its audio (MediaStream for WebRTC, the
+ * media element for HLS) through a Web Audio AnalyserNode, and writes the
+ * smoothed level straight onto `barRef`'s height.
+ *
+ * Scaling notes (a multiviewer can show up to 16 tiles at once):
+ * - All tiles share ONE AudioContext via the module-level singleton below.
+ *   Browsers cap the number of concurrent AudioContexts (~6), so one context
+ *   per tile would break large mosaics.
+ * - A single set of resume listeners (click/touch) is shared across all tiles
+ *   rather than each tile registering its own.
+ * - The analyser is reconnected when the tile's underlying stream identity
+ *   changes (WebRTC srcObject swap), so a tile that switches sources doesn't
+ *   keep metering the old stream.
+ * - The polling loop is throttled to ~20fps instead of running every animation
+ *   frame, which keeps CPU usage sane with many tiles.
+ *
+ * Browsers may start the AudioContext suspended (autoplay policy); we attempt
+ * to resume it and also resume on the first user gesture. When audio is
+ * unavailable (suspended context, no audio track, cross-origin taint) the meter
+ * simply stays at zero rather than throwing.
+ */
+
+// Shared AudioContext + resume wiring, created lazily on first use.
+let sharedCtx: AudioContext | null = null;
+let resumeBound = false;
+
+function getSharedCtx(): AudioContext | null {
+  try {
+    const Ctx = window.AudioContext || (window as any).webkitAudioContext;
+    if (!Ctx) return null;
+    if (!sharedCtx) sharedCtx = new Ctx();
+    if (!resumeBound) {
+      const resume = () => sharedCtx?.resume().catch(() => {});
+      window.addEventListener("click", resume);
+      window.addEventListener("touchstart", resume);
+      resumeBound = true;
+    }
+    if (sharedCtx.state === "suspended") sharedCtx.resume().catch(() => {});
+    return sharedCtx;
+  } catch {
+    return null;
+  }
+}
+
+const UPDATE_INTERVAL_MS = 50; // ~20fps
+
+export function useAudioLevel(
+  containerRef: React.RefObject<HTMLElement>,
+  barRef: React.RefObject<HTMLElement>,
+  enabled: boolean
+) {
+  useEffect(() => {
+    if (!enabled) return;
+
+    let stopped = false;
+    let raf = 0;
+    let lastUpdate = 0;
+    let analyser: AnalyserNode | null = null;
+    let source: AudioNode | null = null;
+    let connectedEl: HTMLVideoElement | null = null;
+    // Track the exact audio source identity so we reconnect when a tile swaps
+    // streams. For WebRTC this is the MediaStream object; for HLS we key off the
+    // media element itself (createMediaElementSource can only run once per el).
+    let connectedSrcObject: MediaStream | null = null;
+    let level = 0;
+    const data = new Uint8Array(128);
+
+    const disconnect = () => {
+      try {
+        source?.disconnect();
+      } catch {}
+      try {
+        analyser?.disconnect();
+      } catch {}
+      source = null;
+      analyser = null;
+      connectedEl = null;
+      connectedSrcObject = null;
+    };
+
+    const ensureConnected = () => {
+      const video = containerRef.current?.querySelector(
+        "video"
+      ) as HTMLVideoElement | null;
+      if (!video) {
+        if (analyser) disconnect();
+        return;
+      }
+
+      const srcObj = video.srcObject as MediaStream | null;
+
+      // Already connected to this exact source — nothing to do.
+      if (connectedEl === video && connectedSrcObject === srcObj) return;
+
+      // Source identity changed (stream swap). Tear down before rebuilding.
+      // Note: a MediaElementSource can't be recreated for the same element, so
+      // for the HLS path we only (re)connect when the element itself is new.
+      if (connectedEl && (connectedEl !== video || connectedSrcObject !== srcObj)) {
+        if (srcObj || connectedEl !== video) disconnect();
+      }
+
+      const ctx = getSharedCtx();
+      if (!ctx) return;
+
+      try {
+        if (srcObj && typeof srcObj.getAudioTracks === "function") {
+          if (srcObj.getAudioTracks().length === 0) return; // no audio yet
+          source = ctx.createMediaStreamSource(srcObj);
+          connectedSrcObject = srcObj;
+        } else if (!srcObj) {
+          if (connectedEl === video) return; // element already tapped
+          source = ctx.createMediaElementSource(video);
+          connectedSrcObject = null;
+        } else {
+          return; // MediaStream present but not ready
+        }
+
+        analyser = ctx.createAnalyser();
+        analyser.fftSize = 256;
+        source.connect(analyser);
+        connectedEl = video;
+      } catch {
+        // Ignore; will retry on the next frame.
+        analyser = null;
+        source = null;
+      }
+    };
+
+    const loop = (now: number) => {
+      if (stopped) return;
+      if (now - lastUpdate >= UPDATE_INTERVAL_MS) {
+        lastUpdate = now;
+        ensureConnected();
+        if (analyser) {
+          analyser.getByteFrequencyData(data);
+          let sum = 0;
+          for (let i = 0; i < data.length; i++) sum += data[i] * data[i];
+          const rms = Math.sqrt(sum / data.length) / 255;
+          level = level * 0.7 + rms * 0.3;
+          if (barRef.current) {
+            barRef.current.style.height = `${Math.min(100, level * 140)}%`;
+          }
+        }
+      }
+      raf = requestAnimationFrame(loop);
+    };
+    raf = requestAnimationFrame(loop);
+
+    return () => {
+      stopped = true;
+      cancelAnimationFrame(raf);
+      disconnect();
+      // The shared AudioContext is intentionally left open; it is reused by
+      // other tiles and across remounts.
+    };
+  }, [enabled, containerRef, barRef]);
+}
