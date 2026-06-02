@@ -432,16 +432,6 @@ export default function AdminPanel() {
     }
   };
 
-  const handleCopyAll = async (studio: StudioWithStreams) => {
-    const urls = (studio.streams || []).map((s) => s.streamUrl).join("\n");
-    try {
-      await navigator.clipboard.writeText(urls);
-      toast({ title: "Copied", description: `${studio.streams?.length || 0} stream URLs copied` });
-    } catch {
-      toast({ title: "Copy failed", description: "Could not access clipboard", variant: "destructive" });
-    }
-  };
-
   const handleQuickAdd = (studio: StudioWithStreams) => {
     const name = (quickAddNames[studio.id] || "").trim();
     if (!name) return;
@@ -1655,11 +1645,6 @@ export default function AdminPanel() {
                                   >
                                     <Plus size={16} className="mr-1" /> Add
                                   </Button>
-                                  {total > 0 && (
-                                    <Button variant="outline" onClick={() => handleCopyAll(studio)} data-testid={`button-copy-all-${studio.id}`}>
-                                      <Copy size={16} className="mr-1" /> Copy all
-                                    </Button>
-                                  )}
                                 </div>
                               </div>
 
