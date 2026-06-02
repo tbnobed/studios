@@ -62,6 +62,7 @@ export default function AdminPanel() {
     fps: 30,
   });
   const [quickAddNames, setQuickAddNames] = useState<Record<string, string>>({});
+  const [quickAddUrls, setQuickAddUrls] = useState<Record<string, string>>({});
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
   // Handle URL parameters for tab selection
@@ -352,6 +353,7 @@ export default function AdminPanel() {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/studios-with-streams"] });
       queryClient.invalidateQueries({ queryKey: ["/api/studios"] });
       setQuickAddNames((prev) => ({ ...prev, [variables.studioId]: "" }));
+      setQuickAddUrls((prev) => ({ ...prev, [variables.studioId]: "" }));
       toast({ title: "Stream Added", description: `${variables.name} was added` });
     },
     onError: (error: Error) => {
@@ -443,11 +445,12 @@ export default function AdminPanel() {
   const handleQuickAdd = (studio: StudioWithStreams) => {
     const name = (quickAddNames[studio.id] || "").trim();
     if (!name) return;
+    const typedUrl = (quickAddUrls[studio.id] || "").trim();
     quickCreateStreamMutation.mutate({
       studioId: studio.id,
       name,
       description: "",
-      streamUrl: buildStreamUrl(studio.name, name),
+      streamUrl: typedUrl || buildStreamUrl(studio.name, name),
       resolution: "1080p",
       fps: 30,
     });
@@ -1632,9 +1635,17 @@ export default function AdminPanel() {
                                   value={quickAddNames[studio.id] || ""}
                                   onChange={(e) => setQuickAddNames({ ...quickAddNames, [studio.id]: e.target.value })}
                                   onKeyDown={(e) => { if (e.key === "Enter") handleQuickAdd(studio); }}
-                                  placeholder="Quick add — type a stream name, press Enter"
-                                  className="flex-1"
+                                  placeholder="Stream name"
+                                  className="sm:w-48"
                                   data-testid={`input-quick-add-${studio.id}`}
+                                />
+                                <Input
+                                  value={quickAddUrls[studio.id] || ""}
+                                  onChange={(e) => setQuickAddUrls({ ...quickAddUrls, [studio.id]: e.target.value })}
+                                  onKeyDown={(e) => { if (e.key === "Enter") handleQuickAdd(studio); }}
+                                  placeholder="Stream address / URL (leave blank to auto-generate)"
+                                  className="flex-1 font-mono text-xs"
+                                  data-testid={`input-quick-add-url-${studio.id}`}
                                 />
                                 <div className="flex gap-2">
                                   <Button
