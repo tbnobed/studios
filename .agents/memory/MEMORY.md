@@ -1,1 +1,2 @@
-- [Favorites render loop (pre-existing)](favorites-render-loop.md) — Favorites useEffect emits "Maximum update depth" dev warning; not caused by nav/layout changes.
+- [Favorites render loop → streams show offline](favorites-render-loop.md) — unstable useQuery `= []` default caused infinite re-render that tore down StreamPlayers; fix with useMemo(data ?? []).
+- [Stream status detection](stream-status-detection.md) — StreamPlayer needs ~0.5–3s uninterrupted to flip from initial 'offline' to LIVE; parent re-renders that remount it keep it stuck offline.

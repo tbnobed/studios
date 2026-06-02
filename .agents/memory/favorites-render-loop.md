@@ -1,18 +1,22 @@
 ---
-name: Favorites render loop (pre-existing)
-description: Favorites page emits a React "Maximum update depth exceeded" dev warning from its own useEffect, independent of navigation/layout work.
+name: Literal fallback identities in effect deps cause render loops
+description: Avoid array/object literal fallbacks for values used in useEffect dependency arrays; they create a new identity every render and loop.
 ---
 
-# Favorites "Maximum update depth exceeded" warning
+# Don't put literal fallback identities in effect dependencies
 
-The Favorites page logs a React dev warning ("Maximum update depth exceeded",
-sometimes paired with "Invalid hook call") originating from one of its own
-`useEffect`s that syncs local order/index state with the `favorites` query.
+**Rule:** A value used in a `useEffect` dependency array (or passed as a prop that
+drives a child's effects) must have a stable identity across renders. Inline
+fallbacks like `useQuery(...) // data: x = []`, `x ?? []`, or `?? {}` create a NEW
+reference every render, so the effect re-runs every render → `setState` → re-render →
+"Maximum update depth exceeded".
 
-**Why:** This predates the sidebar/header refactor — it is NOT caused by removing
-the top bar, the shared header, or adding the StudioSidebar nav. Verified via git
-diff: nav changes never touched the offending effect.
+**Why:** This shipped on the Favorites page and was painful to diagnose because the
+*visible* symptom was unrelated: every stream tile showed "OFFLINE" while video was
+clearly playing. The render loop kept remounting child media players faster than
+their async live-detection could complete, so they never left their initial offline
+state. The streaming code was fine; the parent loop was the cause.
 
-**How to apply:** If you see this warning after touching navigation/layout, do not
-assume you introduced it. The actual fix (if requested) is to stabilize the effect's
-dependencies / guard the setState in Favorites — out of scope for nav work.
+**How to apply:** Stabilize with `useMemo(() => data ?? [], [data])` (don't destructure
+with `= []`). When child media/players look stuck loading/offline, suspect a parent
+re-render loop before touching player logic — see `stream-status-detection.md`.

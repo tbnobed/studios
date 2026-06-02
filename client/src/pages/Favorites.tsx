@@ -131,10 +131,14 @@ export default function Favorites() {
     setStreamStatuses((prev) => ({ ...prev, [streamId]: status }));
   };
 
-  const { data: favorites = [], isLoading } = useQuery<FavoriteWithStream[]>({
+  const { data, isLoading } = useQuery<FavoriteWithStream[]>({
     queryKey: ["/api/favorites"],
     meta: { headers: getAuthHeaders() },
   });
+  // Stable reference so the effect below only runs when the data actually
+  // changes. Using `data ?? []` inline would create a new array every render,
+  // causing an infinite setState loop that tears down the stream players.
+  const favorites = useMemo(() => data ?? [], [data]);
 
   // Keep the local arrange order in sync with the server data.
   useEffect(() => {
