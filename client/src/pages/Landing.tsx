@@ -8,7 +8,7 @@ import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { setAuthToken } from "@/lib/authUtils";
-import obLogo from "@assets/obedtv-300x244_1756343612842.png";
+import obLogo from "@assets/image_1756407804157.png";
 import authBackground from "@assets/generated_images/Dark_modern_auth_background_1e344dc8.png";
 
 export default function Landing() {
