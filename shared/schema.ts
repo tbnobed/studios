@@ -185,7 +185,20 @@ export const insertFavoriteSchema = createInsertSchema(favorites).omit({
   createdAt: true,
 });
 
-export const MULTIVIEWER_LAYOUT_TYPES = ["2x2", "3x3", "4x4", "featured"] as const;
+export const MULTIVIEWER_LAYOUT_TYPES = [
+  // Basic equal grids
+  "1x1", "2x2", "3x3", "4x4",
+  // Spotlight (one large tile + supporting tiles)
+  "featured", "ULeft", "URight", "DLeft", "DRight", "Left", "Right",
+  "QuadLR", "QuadUL", "QuadUR", "QuadLL",
+  // Horizontal bands
+  "H2", "H3", "H4",
+  "H1-2", "H2-1", "H1-3", "H3-1", "H2-3", "H3-2", "H2-4", "H4-2", "H3-3",
+  "H3-4", "H4-3", "H4-4",
+  "H2-4-4", "H4-2-4", "H4-4-2", "H2-5-5", "H2-6-6", "H4-4-4",
+  // Vertical bands
+  "V2", "V3", "V2-4-4", "V4-4-2",
+] as const;
 
 export const insertMultiviewerLayoutSchema = createInsertSchema(multiviewerLayouts, {
   layoutType: z.enum(MULTIVIEWER_LAYOUT_TYPES),

@@ -2,3 +2,4 @@
 - [Web Audio metering must share one AudioContext](audio-metering-scaling.md) — browsers cap concurrent AudioContexts (~6); per-tile contexts break large mosaics.
 - [Pre-existing Dashboard.tsx tsc errors](preexisting-tsc-errors.md) — `Property 'id' does not exist on type 'never'` in Dashboard.tsx predates current work; not a regression.
 - [StreamPlayer status detection](stream-status-detection.md) — WebRTC "stuck on LOADING" trap: don't let init teardown set the `cancelled` flag, or status callbacks never fire.
+- [Multiviewer layout system](multiviewer-layouts.md) — layouts live in one registry; adding one needs the Zod enum AND LAYOUT_DEFS in lockstep (no DB migration).

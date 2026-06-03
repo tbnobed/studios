@@ -12,10 +12,6 @@ import {
   type DragStartEvent,
 } from "@dnd-kit/core";
 import {
-  Grid2x2,
-  Grid3x3,
-  LayoutGrid,
-  PictureInPicture2,
   Save,
   Trash2,
   Star,
@@ -45,6 +41,9 @@ import {
 import StudioSidebar, { sourceDndId } from "@/components/StudioSidebar";
 import { MultiviewerTile, slotDndId } from "@/components/MultiviewerTile";
 import { StreamSingleView } from "@/components/StreamSingleView";
+import { MultiviewerGrid } from "@/components/MultiviewerGrid";
+import { LayoutPicker } from "@/components/LayoutPicker";
+import { slotCount, fitSlots } from "@/lib/multiviewerLayouts";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { getAuthHeaders } from "@/lib/authUtils";
@@ -56,29 +55,6 @@ import type {
 } from "@shared/schema";
 
 type TileStream = Stream & { studio?: { id: string; name: string } };
-
-const LAYOUTS: {
-  type: MultiviewerLayoutType;
-  label: string;
-  slots: number;
-  icon: typeof Grid2x2;
-}[] = [
-  { type: "2x2", label: "2 × 2", slots: 4, icon: Grid2x2 },
-  { type: "3x3", label: "3 × 3", slots: 9, icon: Grid3x3 },
-  { type: "4x4", label: "4 × 4", slots: 16, icon: LayoutGrid },
-  { type: "featured", label: "Featured", slots: 7, icon: PictureInPicture2 },
-];
-
-function slotCount(type: MultiviewerLayoutType): number {
-  return LAYOUTS.find((l) => l.type === type)?.slots ?? 4;
-}
-
-// Resize a slots array to `count`, preserving existing assignments.
-function fitSlots(slots: (string | null)[], count: number): (string | null)[] {
-  const next = slots.slice(0, count);
-  while (next.length < count) next.push(null);
-  return next;
-}
 
 // Where the in-progress (unsaved) arrangement is stashed so a refresh or
 // accidental navigation doesn't lose it before the operator presses Save.
@@ -513,13 +489,6 @@ export default function Multiviewer() {
       ? streamMap.get(slots[activeSlot] as string) ?? null
       : null;
 
-  const gridClass =
-    layoutType === "2x2"
-      ? "grid grid-cols-2 grid-rows-2 gap-2"
-      : layoutType === "3x3"
-        ? "grid grid-cols-3 grid-rows-3 gap-2"
-        : "grid grid-cols-4 grid-rows-4 gap-2";
-
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-gray-900 via-slate-800 to-black">
       <DndContext
@@ -586,23 +555,7 @@ export default function Multiviewer() {
 
               <div className="flex items-center gap-2 flex-wrap">
                 {/* Layout type selector */}
-                <div className="flex bg-muted rounded-lg p-1">
-                  {LAYOUTS.map(({ type, label, icon: Icon }) => (
-                    <Button
-                      key={type}
-                      variant="ghost"
-                      size="sm"
-                      className={`touch-area px-2 ${
-                        layoutType === type ? "bg-primary text-primary-foreground" : ""
-                      }`}
-                      onClick={() => changeLayoutType(type)}
-                      data-testid={`button-layout-${type}`}
-                      title={label}
-                    >
-                      <Icon size={16} />
-                    </Button>
-                  ))}
-                </div>
+                <LayoutPicker value={layoutType} onChange={changeLayoutType} />
 
                 {/* Saved layouts */}
                 <Select
@@ -770,19 +723,11 @@ export default function Multiviewer() {
                 }
                 onExit={() => setSoloStreamId(null)}
               />
-            ) : layoutType === "featured" ? (
-              <div className="h-full flex flex-col gap-2">
-                <div className="flex-[3] min-h-0">{renderTile(0, true)}</div>
-                <div className="flex-1 min-h-0 grid grid-cols-3 sm:grid-cols-6 gap-2">
-                  {Array.from({ length: 6 }, (_, i) => renderTile(i + 1))}
-                </div>
-              </div>
             ) : (
-              <div className={`h-full ${gridClass}`}>
-                {Array.from({ length: slotCount(layoutType) }, (_, i) =>
-                  renderTile(i)
-                )}
-              </div>
+              <MultiviewerGrid
+                type={layoutType}
+                renderCell={(i, big) => renderTile(i, big)}
+              />
             )}
           </div>
         </main>

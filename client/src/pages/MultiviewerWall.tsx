@@ -4,6 +4,8 @@ import { useQuery } from "@tanstack/react-query";
 import { Monitor } from "lucide-react";
 import { MultiviewerTile } from "@/components/MultiviewerTile";
 import { StreamSingleView } from "@/components/StreamSingleView";
+import { MultiviewerGrid } from "@/components/MultiviewerGrid";
+import { slotCount, fitSlots } from "@/lib/multiviewerLayouts";
 import { getAuthHeaders } from "@/lib/authUtils";
 import type {
   MultiviewerLayout,
@@ -13,23 +15,6 @@ import type {
 } from "@shared/schema";
 
 type TileStream = Stream & { studio?: { id: string; name: string } };
-
-const SLOT_COUNTS: Record<MultiviewerLayoutType, number> = {
-  "2x2": 4,
-  "3x3": 9,
-  "4x4": 16,
-  featured: 7,
-};
-
-function slotCount(type: MultiviewerLayoutType): number {
-  return SLOT_COUNTS[type] ?? 4;
-}
-
-function fitSlots(slots: (string | null)[], count: number): (string | null)[] {
-  const next = slots.slice(0, count);
-  while (next.length < count) next.push(null);
-  return next;
-}
 
 // A distraction-free, chrome-less multiviewer wall meant to be popped out into
 // its own window (TV / second monitor). It renders nothing but the grid for a
@@ -98,13 +83,6 @@ export default function MultiviewerWall() {
     if (soloStreamId && soloIndex === -1) setSoloStreamId(null);
   }, [soloStreamId, soloIndex]);
 
-  const gridClass =
-    layoutType === "2x2"
-      ? "grid grid-cols-2 grid-rows-2 gap-2"
-      : layoutType === "3x3"
-        ? "grid grid-cols-3 grid-rows-3 gap-2"
-        : "grid grid-cols-4 grid-rows-4 gap-2";
-
   const renderTile = (index: number, featured = false) => {
     const id = slots[index] ?? null;
     const stream = id ? streamMap.get(id) ?? null : null;
@@ -153,20 +131,12 @@ export default function MultiviewerWall() {
         onExit={() => setSoloStreamId(null)}
       />
     );
-  } else if (layoutType === "featured") {
-    body = (
-      <div className="h-full flex flex-col gap-2">
-        <div className="flex-[3] min-h-0">{renderTile(0, true)}</div>
-        <div className="flex-1 min-h-0 grid grid-cols-3 sm:grid-cols-6 gap-2">
-          {Array.from({ length: 6 }, (_, i) => renderTile(i + 1))}
-        </div>
-      </div>
-    );
   } else {
     body = (
-      <div className={`h-full ${gridClass}`}>
-        {Array.from({ length: slotCount(layoutType) }, (_, i) => renderTile(i))}
-      </div>
+      <MultiviewerGrid
+        type={layoutType}
+        renderCell={(i, big) => renderTile(i, big)}
+      />
     );
   }
 
