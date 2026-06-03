@@ -21,8 +21,12 @@ app.use((req, res, next) => {
   res.on("finish", () => {
     const duration = Date.now() - start;
     if (path.startsWith("/api")) {
-      let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
-      if (capturedJsonResponse) {
+      // Invite links carry a single-use token in the URL/response. Never write
+      // those to logs, or anyone with log access could hijack the invite.
+      const isInvitePath = path.startsWith("/api/invite");
+      const loggedPath = isInvitePath ? "/api/invite/[redacted]" : path;
+      let logLine = `${req.method} ${loggedPath} ${res.statusCode} in ${duration}ms`;
+      if (capturedJsonResponse && !isInvitePath && !("inviteUrl" in capturedJsonResponse)) {
         logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
       }
 

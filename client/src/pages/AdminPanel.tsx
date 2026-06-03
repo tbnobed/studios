@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Trash2, Edit, Plus, UserPlus, Video, Monitor, Settings2, ChevronDown, Copy, Check, Search, Layers, Menu } from "lucide-react";
+import { Trash2, Edit, Plus, UserPlus, Video, Monitor, Settings2, ChevronDown, Copy, Check, Search, Layers, Menu, Mail, Clock } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { UserWithPermissions, Studio, StudioWithStreams, Stream, InsertStream, GroupWithStreams } from "@shared/schema";
@@ -137,11 +137,20 @@ export default function AdminPanel() {
   const [newUser, setNewUser] = useState({
     username: "",
     email: "",
-    password: "",
     firstName: "",
     lastName: "",
     role: "viewer" as "admin" | "viewer",
   });
+
+  // Invite dialog: pre-assigned group membership + add-only stream grants.
+  const [inviteGroupIds, setInviteGroupIds] = useState<Set<string>>(new Set());
+  const [inviteStreamIds, setInviteStreamIds] = useState<Set<string>>(new Set());
+  // Holds the result of an invite/resend so the admin can copy the link
+  // (works even when email isn't configured).
+  const [inviteResult, setInviteResult] = useState<
+    { inviteUrl: string; emailSent: boolean; email?: string } | null
+  >(null);
+  const [inviteLinkCopied, setInviteLinkCopied] = useState(false);
   
   const [newStream, setNewStream] = useState({
     studioId: "",
@@ -259,6 +268,14 @@ export default function AdminPanel() {
     return set;
   })();
 
+  const inviteInheritedStreamIds = (() => {
+    const set = new Set<string>();
+    for (const g of groups) {
+      if (inviteGroupIds.has(g.id)) (g.streamIds || []).forEach((id) => set.add(id));
+    }
+    return set;
+  })();
+
   // Group mutations
   const createGroupMutation = useMutation({
     mutationFn: async (payload: { name: string; description: string; streamIds: string[] }) => {
@@ -314,33 +331,73 @@ export default function AdminPanel() {
   });
 
   // Create user mutation
-  const createUserMutation = useMutation({
-    mutationFn: async (userData: typeof newUser) => {
-      const response = await apiRequest("POST", "/api/admin/users", userData, {
+  const inviteUserMutation = useMutation({
+    mutationFn: async () => {
+      const payload = {
+        ...newUser,
+        groupIds: newUser.role === "admin" ? [] : Array.from(inviteGroupIds),
+        streamIds: newUser.role === "admin" ? [] : Array.from(inviteStreamIds),
+      };
+      const response = await apiRequest("POST", "/api/admin/users/invite", payload, {
         headers: getAuthHeaders(),
       });
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (data: { inviteUrl: string; emailSent: boolean }) => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+      const invitedEmail = newUser.email;
       setNewUser({
         username: "",
         email: "",
-        password: "",
         firstName: "",
         lastName: "",
         role: "viewer",
       });
+      setInviteGroupIds(new Set());
+      setInviteStreamIds(new Set());
       setIsCreateUserOpen(false);
+      setInviteLinkCopied(false);
+      setInviteResult({ inviteUrl: data.inviteUrl, emailSent: data.emailSent, email: invitedEmail });
       toast({
-        title: "User Created",
-        description: "New user has been successfully created",
+        title: data.emailSent ? "Invitation Sent" : "Invitation Created",
+        description: data.emailSent
+          ? "An invite email has been sent."
+          : "Email isn't configured — copy the invite link to share it.",
       });
     },
     onError: (error: Error) => {
       toast({
-        title: "Failed to Create User",
-        description: error.message,
+        title: "Failed to Invite User",
+        description: error.message.replace(/^\d+:\s*/, ""),
+        variant: "destructive",
+      });
+    },
+  });
+
+  const resendInviteMutation = useMutation({
+    mutationFn: async (user: UserWithPermissions) => {
+      const response = await apiRequest(
+        "POST",
+        `/api/admin/users/${user.id}/resend-invite`,
+        undefined,
+        { headers: getAuthHeaders() }
+      );
+      return { ...(await response.json()), email: user.email };
+    },
+    onSuccess: (data: { inviteUrl: string; emailSent: boolean; email?: string }) => {
+      setInviteLinkCopied(false);
+      setInviteResult({ inviteUrl: data.inviteUrl, emailSent: data.emailSent, email: data.email || undefined });
+      toast({
+        title: data.emailSent ? "Invitation Resent" : "New Invite Link Created",
+        description: data.emailSent
+          ? "A new invite email has been sent."
+          : "Email isn't configured — copy the invite link to share it.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Failed to Resend Invite",
+        description: error.message.replace(/^\d+:\s*/, ""),
         variant: "destructive",
       });
     },
@@ -601,17 +658,32 @@ export default function AdminPanel() {
     reader.readAsDataURL(file);
   };
 
-  const handleCreateUser = () => {
-    if (!newUser.username.trim() || !newUser.password.trim()) {
+  const handleInviteUser = () => {
+    if (!newUser.username.trim() || !newUser.email.trim()) {
       toast({
         title: "Missing Information",
-        description: "Username and password are required",
+        description: "Username and email are required to send an invite",
         variant: "destructive",
       });
       return;
     }
-    
-    createUserMutation.mutate(newUser);
+
+    inviteUserMutation.mutate();
+  };
+
+  const copyInviteLink = async () => {
+    if (!inviteResult) return;
+    try {
+      await navigator.clipboard.writeText(inviteResult.inviteUrl);
+      setInviteLinkCopied(true);
+      setTimeout(() => setInviteLinkCopied(false), 2000);
+    } catch {
+      toast({
+        title: "Copy failed",
+        description: "Select and copy the link manually",
+        variant: "destructive",
+      });
+    }
   };
 
   // Quick single-add stream mutation (no dialog)
@@ -1103,12 +1175,16 @@ export default function AdminPanel() {
                     <DialogTrigger asChild>
                       <Button className="touch-area" data-testid="button-add-user">
                         <UserPlus className="mr-2" size={16} />
-                        Add User
+                        Invite User
                       </Button>
                     </DialogTrigger>
                     <DialogContent className="sm:max-w-md">
                       <DialogHeader>
-                        <DialogTitle>Create New User</DialogTitle>
+                        <DialogTitle>Invite New User</DialogTitle>
+                        <DialogDescription>
+                          The user will receive an email with a link to set their
+                          own password and activate their account.
+                        </DialogDescription>
                       </DialogHeader>
                       
                       <div className="space-y-4">
@@ -1156,18 +1232,9 @@ export default function AdminPanel() {
                             placeholder="john@example.com"
                             data-testid="input-email"
                           />
-                        </div>
-
-                        <div>
-                          <Label htmlFor="password">Password</Label>
-                          <Input
-                            id="password"
-                            type="password"
-                            value={newUser.password}
-                            onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
-                            placeholder="••••••••"
-                            data-testid="input-password"
-                          />
+                          <p className="text-xs text-muted-foreground mt-1">
+                            The invite link will be sent here.
+                          </p>
                         </div>
 
                         <div>
@@ -1185,16 +1252,96 @@ export default function AdminPanel() {
                             </SelectContent>
                           </Select>
                         </div>
+
+                        {newUser.role === "admin" ? (
+                          <p className="text-sm text-muted-foreground rounded-md border p-3">
+                            Admins have access to all streams. Group and per-stream
+                            settings don't apply.
+                          </p>
+                        ) : (
+                          <>
+                            <div>
+                              <Label>Groups</Label>
+                              <p className="text-xs text-muted-foreground mb-2">
+                                Members inherit all of a group's stream access.
+                              </p>
+                              {groups.length === 0 ? (
+                                <p className="text-sm text-muted-foreground">
+                                  No groups yet. Create one in the Groups tab.
+                                </p>
+                              ) : (
+                                <div className="space-y-2 rounded-md border p-2">
+                                  {groups.map((group) => (
+                                    <label
+                                      key={group.id}
+                                      className="flex items-center gap-2 text-sm"
+                                    >
+                                      <input
+                                        type="checkbox"
+                                        className="rounded"
+                                        checked={inviteGroupIds.has(group.id)}
+                                        onChange={(e) =>
+                                          setInviteGroupIds((prev) => {
+                                            const next = new Set(prev);
+                                            e.target.checked
+                                              ? next.add(group.id)
+                                              : next.delete(group.id);
+                                            return next;
+                                          })
+                                        }
+                                        data-testid={`checkbox-invite-group-${group.id}`}
+                                      />
+                                      <span className="flex-1">{group.name}</span>
+                                      <Badge variant="outline" className="text-xs">
+                                        {(group.streamIds || []).length} streams
+                                      </Badge>
+                                    </label>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+
+                            <div>
+                              <Label>Additional stream access</Label>
+                              <p className="text-xs text-muted-foreground mb-2">
+                                Grant extra streams on top of the selected groups.
+                                Streams already covered by a group are checked and
+                                locked.
+                              </p>
+                              <StreamPicker
+                                studios={studiosWithStreams}
+                                selected={inviteStreamIds}
+                                inherited={inviteInheritedStreamIds}
+                                onToggle={(streamId, checked) =>
+                                  setInviteStreamIds((prev) => {
+                                    const next = new Set(prev);
+                                    checked ? next.add(streamId) : next.delete(streamId);
+                                    return next;
+                                  })
+                                }
+                                onToggleStudio={(streamIds, checked) =>
+                                  setInviteStreamIds((prev) => {
+                                    const next = new Set(prev);
+                                    streamIds.forEach((id) =>
+                                      checked ? next.add(id) : next.delete(id)
+                                    );
+                                    return next;
+                                  })
+                                }
+                              />
+                            </div>
+                          </>
+                        )}
                       </div>
                       
                       <div className="flex gap-2 mt-6">
                         <Button 
-                          onClick={handleCreateUser}
-                          disabled={createUserMutation.isPending}
+                          onClick={handleInviteUser}
+                          disabled={inviteUserMutation.isPending}
                           className="flex-1"
-                          data-testid="button-create-user"
+                          data-testid="button-invite-user"
                         >
-                          {createUserMutation.isPending ? "Creating..." : "Create User"}
+                          {inviteUserMutation.isPending ? "Sending..." : "Send Invite"}
                         </Button>
                         <Button 
                           variant="outline" 
@@ -1398,7 +1545,44 @@ export default function AdminPanel() {
                   </div>
                 </DialogContent>
               </Dialog>
-              
+
+              {/* Invite link result dialog (lets admin copy the link, esp. when email is off) */}
+              <Dialog open={!!inviteResult} onOpenChange={(open) => !open && setInviteResult(null)}>
+                <DialogContent className="sm:max-w-md">
+                  <DialogHeader>
+                    <DialogTitle>
+                      {inviteResult?.emailSent ? "Invite sent" : "Invite link ready"}
+                    </DialogTitle>
+                    <DialogDescription>
+                      {inviteResult?.emailSent
+                        ? `An invite email was sent${inviteResult?.email ? ` to ${inviteResult.email}` : ""}. You can also copy the link below to share it directly.`
+                        : "Email isn't configured, so no email was sent. Copy this link and send it to the user — it lets them set their password and activate their account."}
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      readOnly
+                      value={inviteResult?.inviteUrl || ""}
+                      onFocus={(e) => e.currentTarget.select()}
+                      className="text-xs"
+                      data-testid="input-invite-link"
+                    />
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={copyInviteLink}
+                      data-testid="button-copy-invite-link"
+                    >
+                      {inviteLinkCopied ? <Check size={16} /> : <Copy size={16} />}
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    This link expires in 7 days. Resending generates a new link and
+                    invalidates the old one.
+                  </p>
+                </DialogContent>
+              </Dialog>
+
               <CardContent>
                 <div className="space-y-4">
                   {users.map((user) => (
@@ -1415,6 +1599,16 @@ export default function AdminPanel() {
                           >
                             {user.role}
                           </Badge>
+                          {!user.isActive && (
+                            <Badge
+                              variant="outline"
+                              className="text-xs gap-1 border-amber-500/50 text-amber-600 dark:text-amber-400"
+                              data-testid={`badge-pending-${user.username}`}
+                            >
+                              <Clock size={11} />
+                              Pending invite
+                            </Badge>
+                          )}
                         </div>
                         <p className="text-sm text-muted-foreground mb-1">@{user.username}</p>
                         <p className="text-sm text-muted-foreground">{user.email}</p>
@@ -1443,6 +1637,19 @@ export default function AdminPanel() {
                       </div>
                       
                       <div className="flex items-center space-x-2">
+                        {!user.isActive && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="touch-area"
+                            title="Resend invite"
+                            onClick={() => resendInviteMutation.mutate(user)}
+                            disabled={resendInviteMutation.isPending}
+                            data-testid={`button-resend-invite-${user.username}`}
+                          >
+                            <Mail size={16} />
+                          </Button>
+                        )}
                         <Button
                           variant="ghost"
                           size="sm"

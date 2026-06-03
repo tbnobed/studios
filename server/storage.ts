@@ -6,6 +6,7 @@ import {
   userGroups,
   groupStreamPermissions,
   userStreamPermissions,
+  invites,
   favorites,
   multiviewerLayouts,
   type User, 
@@ -22,10 +23,11 @@ import {
   type Favorite,
   type FavoriteWithStream,
   type MultiviewerLayout,
-  type InsertMultiviewerLayout
+  type InsertMultiviewerLayout,
+  type Invite
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, asc, desc, inArray } from "drizzle-orm";
+import { eq, and, asc, desc, inArray, isNull } from "drizzle-orm";
 import bcrypt from "bcrypt";
 
 // Favorites limits: up to 8 streams per page across up to 5 pages.
@@ -75,6 +77,12 @@ export interface IStorage {
   // Membership + individual stream permission operations (replace-set semantics)
   setUserGroups(userId: string, groupIds: string[]): Promise<void>;
   setUserStreamPermissions(userId: string, streamIds: string[]): Promise<void>;
+
+  // Invite operations. One invite row per user (resending replaces it). Tokens
+  // are stored only as SHA-256 hashes; the raw token lives in the emailed link.
+  createInvite(userId: string, tokenHash: string, expiresAt: Date): Promise<Invite>;
+  getInviteByTokenHash(tokenHash: string): Promise<Invite | undefined>;
+  markInviteAccepted(id: string): Promise<boolean>;
 
   // Favorites operations
   getUserFavorites(userId: string): Promise<FavoriteWithStream[]>;
@@ -416,6 +424,38 @@ export class DatabaseStorage implements IStorage {
           .values(unique.map((streamId) => ({ userId, streamId })));
       }
     });
+  }
+
+  // Invite operations
+  async createInvite(userId: string, tokenHash: string, expiresAt: Date): Promise<Invite> {
+    const [invite] = await db
+      .insert(invites)
+      .values({ userId, tokenHash, expiresAt, acceptedAt: null })
+      .onConflictDoUpdate({
+        target: invites.userId,
+        set: { tokenHash, expiresAt, acceptedAt: null, createdAt: new Date() },
+      })
+      .returning();
+    return invite;
+  }
+
+  async getInviteByTokenHash(tokenHash: string): Promise<Invite | undefined> {
+    const [invite] = await db
+      .select()
+      .from(invites)
+      .where(eq(invites.tokenHash, tokenHash));
+    return invite;
+  }
+
+  // Atomically claim an invite: only succeeds if it hasn't already been accepted.
+  // Returns true if this call is the one that marked it accepted (single-use).
+  async markInviteAccepted(id: string): Promise<boolean> {
+    const rows = await db
+      .update(invites)
+      .set({ acceptedAt: new Date() })
+      .where(and(eq(invites.id, id), isNull(invites.acceptedAt)))
+      .returning({ id: invites.id });
+    return rows.length > 0;
   }
 
   // Favorites operations

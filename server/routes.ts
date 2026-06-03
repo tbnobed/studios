@@ -7,7 +7,9 @@ import { z } from "zod";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
+import crypto from "crypto";
 import express from "express";
+import { isEmailConfigured, sendInviteEmail } from "./email";
 
 const JWT_SECRET = process.env.JWT_SECRET || "obtv-studio-secret-key";
 
@@ -51,6 +53,33 @@ function getSsoRedirectUri(req: { headers: Record<string, any>; protocol: string
   const forwardedProto = req.headers["x-forwarded-proto"] as string | undefined;
   const protocol = forwardedProto ? forwardedProto.split(",")[0].trim() : req.protocol;
   return `${protocol}://${host}/api/auth/sso/callback`;
+}
+
+// Base URL for building user-facing links (e.g. invite links). Honors an
+// explicit APP_BASE_URL override (useful behind proxies / in Docker), otherwise
+// derives it from the request, respecting x-forwarded-proto.
+function getAppBaseUrl(req: { headers: Record<string, any>; protocol: string }): string {
+  if (process.env.APP_BASE_URL) {
+    return process.env.APP_BASE_URL.replace(/\/+$/, "");
+  }
+  const host = req.headers.host || process.env.REPLIT_DEV_DOMAIN || "localhost:5000";
+  const forwardedProto = req.headers["x-forwarded-proto"] as string | undefined;
+  const protocol = forwardedProto ? forwardedProto.split(",")[0].trim() : req.protocol;
+  return `${protocol}://${host}`;
+}
+
+const INVITE_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+
+// Generates a single-use invite token. The raw token goes in the emailed link;
+// only its SHA-256 hash is persisted.
+function generateInviteToken(): { token: string; tokenHash: string } {
+  const token = crypto.randomBytes(32).toString("hex");
+  const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
+  return { token, tokenHash };
+}
+
+function hashInviteToken(token: string): string {
+  return crypto.createHash("sha256").update(token).digest("hex");
 }
 
 // Configure multer for file uploads
@@ -632,6 +661,170 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error deleting user:", error);
       res.status(500).json({ message: "Failed to delete user" });
+    }
+  });
+
+  // Invite a new user by email. Creates an inactive account with a random
+  // (unusable) password plus any pre-assigned groups/streams, then emails a
+  // single-use link the user exchanges for setting their own password. The
+  // invite link is always returned to the admin so it works even when email
+  // isn't configured (e.g. local dev) — no silent failures.
+  const inviteUserSchema = z.object({
+    username: z.string().min(1, "Username is required"),
+    email: z.string().email("A valid email is required"),
+    firstName: z.string().optional(),
+    lastName: z.string().optional(),
+    role: z.enum(["admin", "viewer"]).default("viewer"),
+    groupIds: z.array(z.string()).optional(),
+    streamIds: z.array(z.string()).optional(),
+  });
+
+  app.post("/api/admin/users/invite", requireAuth, requireAdmin, async (req: any, res) => {
+    try {
+      const data = inviteUserSchema.parse(req.body);
+
+      const randomPassword = crypto.randomBytes(24).toString("hex");
+      const user = await storage.createUser({
+        username: data.username,
+        email: data.email,
+        firstName: data.firstName,
+        lastName: data.lastName,
+        role: data.role,
+        password: randomPassword,
+        isActive: false,
+      });
+
+      if (data.role !== "admin") {
+        if (data.groupIds) await storage.setUserGroups(user.id, data.groupIds);
+        if (data.streamIds) await storage.setUserStreamPermissions(user.id, data.streamIds);
+      }
+
+      const { token, tokenHash } = generateInviteToken();
+      await storage.createInvite(user.id, tokenHash, new Date(Date.now() + INVITE_TTL_MS));
+      const inviteUrl = `${getAppBaseUrl(req)}/invite/${token}`;
+
+      let emailSent = false;
+      let emailError: string | undefined;
+      if (isEmailConfigured()) {
+        try {
+          await sendInviteEmail({
+            to: data.email,
+            username: data.username,
+            inviteUrl,
+            inviterName: req.user?.username,
+          });
+          emailSent = true;
+        } catch (e: any) {
+          emailError = e?.message || "Failed to send email";
+          console.error("Failed to send invite email:", e);
+        }
+      }
+
+      const { password, ...userResponse } = user;
+      res.status(201).json({ user: userResponse, inviteUrl, emailSent, emailError });
+    } catch (error: any) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: error.errors[0]?.message || "Invalid request" });
+      }
+      console.error("Error inviting user:", error);
+      if (error.code === "23505") {
+        return res.status(400).json({ message: "Username or email already exists" });
+      }
+      res.status(500).json({ message: "Failed to invite user" });
+    }
+  });
+
+  // Regenerate and (re)send an invite for an existing (typically pending) user.
+  app.post("/api/admin/users/:id/resend-invite", requireAuth, requireAdmin, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const user = await storage.getUser(id);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      if (!user.email) {
+        return res.status(400).json({ message: "User has no email address" });
+      }
+      if (user.isActive) {
+        return res.status(400).json({ message: "This user has already activated their account." });
+      }
+
+      const { token, tokenHash } = generateInviteToken();
+      await storage.createInvite(user.id, tokenHash, new Date(Date.now() + INVITE_TTL_MS));
+      const inviteUrl = `${getAppBaseUrl(req)}/invite/${token}`;
+
+      let emailSent = false;
+      let emailError: string | undefined;
+      if (isEmailConfigured()) {
+        try {
+          await sendInviteEmail({
+            to: user.email,
+            username: user.username,
+            inviteUrl,
+            inviterName: req.user?.username,
+          });
+          emailSent = true;
+        } catch (e: any) {
+          emailError = e?.message || "Failed to send email";
+          console.error("Failed to resend invite email:", e);
+        }
+      }
+
+      res.json({ inviteUrl, emailSent, emailError });
+    } catch (error) {
+      console.error("Error resending invite:", error);
+      res.status(500).json({ message: "Failed to resend invite" });
+    }
+  });
+
+  // Public: validate an invite token and return basic info for the set-password
+  // page. Does not reveal anything beyond username/email for a valid token.
+  app.get("/api/invite/:token", async (req, res) => {
+    try {
+      const invite = await storage.getInviteByTokenHash(hashInviteToken(req.params.token));
+      if (!invite || invite.acceptedAt || invite.expiresAt.getTime() < Date.now()) {
+        return res.status(404).json({ valid: false, message: "This invite link is invalid or has expired." });
+      }
+      const user = await storage.getUser(invite.userId);
+      if (!user) {
+        return res.status(404).json({ valid: false, message: "This invite link is invalid or has expired." });
+      }
+      res.json({ valid: true, username: user.username, email: user.email });
+    } catch (error) {
+      console.error("Error validating invite:", error);
+      res.status(500).json({ valid: false, message: "Failed to validate invite" });
+    }
+  });
+
+  // Public: accept an invite by setting a password. Activates the account, marks
+  // the invite used, and returns a JWT so the user is logged in immediately.
+  app.post("/api/invite/:token/accept", async (req, res) => {
+    try {
+      const { password } = req.body || {};
+      if (!password || typeof password !== "string" || password.length < 6) {
+        return res.status(400).json({ message: "Password must be at least 6 characters long" });
+      }
+
+      const invite = await storage.getInviteByTokenHash(hashInviteToken(req.params.token));
+      if (!invite || invite.acceptedAt || invite.expiresAt.getTime() < Date.now()) {
+        return res.status(400).json({ message: "This invite link is invalid or has expired." });
+      }
+
+      // Claim the invite atomically first so concurrent requests can't both
+      // consume the same single-use token.
+      const claimed = await storage.markInviteAccepted(invite.id);
+      if (!claimed) {
+        return res.status(400).json({ message: "This invite link is invalid or has expired." });
+      }
+
+      await storage.updateUserPassword(invite.userId, password);
+      await storage.updateUser(invite.userId, { isActive: true });
+
+      const token = jwt.sign({ userId: invite.userId }, JWT_SECRET, { expiresIn: "24h" });
+      res.json({ token });
+    } catch (error) {
+      console.error("Error accepting invite:", error);
+      res.status(500).json({ message: "Failed to accept invite" });
     }
   });
 

@@ -5,3 +5,4 @@
 - [StreamPlayer status detection](stream-status-detection.md) — WebRTC "stuck on LOADING" trap: don't let init teardown set the `cancelled` flag, or status callbacks never fire.
 - [Multiviewer layout system](multiviewer-layouts.md) — layouts live in one registry; adding one needs the Zod enum AND LAYOUT_DEFS in lockstep (no DB migration).
 - [Audio meters need activation in pop-outs](audio-meter-popout-activation.md) — fresh window.open'd wall has no user gesture, so the AudioContext stays suspended and meters read 0 until a click.
+- [Request logger leaks secrets in URL/response](invite-token-log-leak.md) — server/index.ts logs req.path + full JSON body for /api/*; redact any endpoint carrying tokens (e.g. /api/invite, inviteUrl).

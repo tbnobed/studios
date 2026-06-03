@@ -188,6 +188,19 @@ CREATE TABLE IF NOT EXISTS user_stream_permissions (
 
 -- Admin role users see every stream automatically, so no grants are seeded here.
 
+-- Invitations: an admin invites a user by email; the user receives a link with a
+-- single-use token (only its sha256 hash is stored) and sets their own password
+-- to activate the account. One invite per user; resending replaces the row.
+CREATE TABLE IF NOT EXISTS invites (
+    id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id VARCHAR NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+    token_hash VARCHAR(64) NOT NULL,
+    expires_at TIMESTAMP NOT NULL,
+    accepted_at TIMESTAMP,
+    created_at TIMESTAMP DEFAULT NOW()
+);
+CREATE UNIQUE INDEX IF NOT EXISTS invites_token_hash_idx ON invites(token_hash);
+
 -- Create indexes for performance
 CREATE INDEX IF NOT EXISTS idx_streams_studio_id ON streams(studio_id);
 CREATE INDEX IF NOT EXISTS idx_user_studio_permissions_user_id ON user_studio_permissions(user_id);

@@ -115,6 +115,22 @@ export const userStreamPermissions = pgTable("user_stream_permissions", {
   uniqueUserStream: unique("user_stream_perms_user_stream_unique").on(table.userId, table.streamId),
 }));
 
+// User invitations. When an admin invites a user, the user row is created
+// inactive with an unusable random password, and an invite row holds a hashed,
+// single-use token. The user exchanges the token (via an emailed link) for
+// setting their own password, which activates the account. One invite per user;
+// resending replaces the existing row.
+export const invites = pgTable("invites", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }).unique(),
+  tokenHash: varchar("token_hash", { length: 64 }).notNull(),
+  expiresAt: timestamp("expires_at").notNull(),
+  acceptedAt: timestamp("accepted_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  tokenHashIdx: uniqueIndex("invites_token_hash_idx").on(table.tokenHash),
+}));
+
 // Per-user favorite streams. Each user can favorite up to 8 streams per page,
 // across up to 5 pages (40 total). `page` is 1-5 and `position` is 0-7,
 // together describing where the stream sits on the user's favorites pages.
@@ -200,6 +216,13 @@ export const userStreamPermissionsRelations = relations(userStreamPermissions, (
 export const multiviewerLayoutsRelations = relations(multiviewerLayouts, ({ one }) => ({
   user: one(users, {
     fields: [multiviewerLayouts.userId],
+    references: [users.id],
+  }),
+}));
+
+export const invitesRelations = relations(invites, ({ one }) => ({
+  user: one(users, {
+    fields: [invites.userId],
     references: [users.id],
   }),
 }));
@@ -320,6 +343,8 @@ export type InsertGroup = z.infer<typeof insertGroupSchema>;
 export type UserGroup = typeof userGroups.$inferSelect;
 export type GroupStreamPermission = typeof groupStreamPermissions.$inferSelect;
 export type UserStreamPermission = typeof userStreamPermissions.$inferSelect;
+
+export type Invite = typeof invites.$inferSelect;
 
 export type MultiviewerLayout = typeof multiviewerLayouts.$inferSelect;
 export type InsertMultiviewerLayout = z.infer<typeof insertMultiviewerLayoutSchema>;
