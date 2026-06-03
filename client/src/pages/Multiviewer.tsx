@@ -41,7 +41,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import StudioSidebar from "@/components/StudioSidebar";
+import StudioSidebar, { sourceDndId } from "@/components/StudioSidebar";
 import { MultiviewerTile, slotDndId } from "@/components/MultiviewerTile";
 import { StreamSingleView } from "@/components/StreamSingleView";
 import { useToast } from "@/hooks/use-toast";
@@ -310,6 +310,8 @@ export default function Multiviewer() {
   };
 
   const [activeSlot, setActiveSlot] = useState<number | null>(null);
+  // Stream id of a source being dragged in from the sidebar (vs. a tile move).
+  const [activeSourceId, setActiveSourceId] = useState<string | null>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -325,14 +327,35 @@ export default function Multiviewer() {
   };
 
   const handleDragStart = (event: DragStartEvent) => {
-    setActiveSlot(slotIndexFromId(event.active.id));
+    const id = String(event.active.id);
+    if (id.startsWith("source-")) {
+      setActiveSourceId(id.replace("source-", ""));
+      setActiveSlot(null);
+    } else {
+      setActiveSlot(slotIndexFromId(id));
+      setActiveSourceId(null);
+    }
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
     setActiveSlot(null);
+    setActiveSourceId(null);
     const { active, over } = event;
     if (!over) return;
-    swapSlots(slotIndexFromId(active.id), slotIndexFromId(over.id));
+    const toIndex = slotIndexFromId(over.id);
+    if (toIndex < 0) return;
+    const activeId = String(active.id);
+    if (activeId.startsWith("source-")) {
+      // A brand-new source dragged in from the sidebar fills/replaces the tile.
+      assignSlot(toIndex, activeId.replace("source-", ""));
+    } else {
+      swapSlots(slotIndexFromId(activeId), toIndex);
+    }
+  };
+
+  const handleDragCancel = () => {
+    setActiveSlot(null);
+    setActiveSourceId(null);
   };
 
   const usedStreamIds = useMemo(
@@ -483,8 +506,9 @@ export default function Multiviewer() {
     );
   };
 
-  const activeStream =
-    activeSlot !== null && slots[activeSlot]
+  const activeStream = activeSourceId
+    ? streamMap.get(activeSourceId) ?? null
+    : activeSlot !== null && slots[activeSlot]
       ? streamMap.get(slots[activeSlot] as string) ?? null
       : null;
 
@@ -497,10 +521,17 @@ export default function Multiviewer() {
 
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-gray-900 via-slate-800 to-black">
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+        onDragCancel={handleDragCancel}
+      >
       <div className="flex-1 flex relative z-10 overflow-hidden">
         {/* Desktop Sidebar */}
         <div className="hidden lg:block">
-          <StudioSidebar activeMultiviewer />
+          <StudioSidebar activeMultiviewer sourceDragEnabled={editMode} />
         </div>
 
         <main className="flex-1 relative flex flex-col min-w-0">
@@ -525,6 +556,7 @@ export default function Multiviewer() {
                   <SheetContent side="left" className="p-0 w-64">
                     <StudioSidebar
                       activeMultiviewer
+                      sourceDragEnabled={editMode}
                       onNavigate={() => setSidebarOpen(false)}
                     />
                   </SheetContent>
@@ -711,42 +743,32 @@ export default function Multiviewer() {
                 }
                 onExit={() => setSoloStreamId(null)}
               />
+            ) : layoutType === "featured" ? (
+              <div className="h-full flex flex-col gap-2">
+                <div className="flex-[3] min-h-0">{renderTile(0, true)}</div>
+                <div className="flex-1 min-h-0 grid grid-cols-3 sm:grid-cols-6 gap-2">
+                  {Array.from({ length: 6 }, (_, i) => renderTile(i + 1))}
+                </div>
+              </div>
             ) : (
-              <DndContext
-                sensors={sensors}
-                collisionDetection={closestCenter}
-                onDragStart={handleDragStart}
-                onDragEnd={handleDragEnd}
-                onDragCancel={() => setActiveSlot(null)}
-              >
-                {layoutType === "featured" ? (
-                  <div className="h-full flex flex-col gap-2">
-                    <div className="flex-[3] min-h-0">{renderTile(0, true)}</div>
-                    <div className="flex-1 min-h-0 grid grid-cols-3 sm:grid-cols-6 gap-2">
-                      {Array.from({ length: 6 }, (_, i) => renderTile(i + 1))}
-                    </div>
-                  </div>
-                ) : (
-                  <div className={`h-full ${gridClass}`}>
-                    {Array.from({ length: slotCount(layoutType) }, (_, i) =>
-                      renderTile(i)
-                    )}
-                  </div>
+              <div className={`h-full ${gridClass}`}>
+                {Array.from({ length: slotCount(layoutType) }, (_, i) =>
+                  renderTile(i)
                 )}
-                <DragOverlay dropAnimation={null}>
-                  {activeStream ? (
-                    <div className="flex items-center gap-2 rounded-lg border-2 border-primary bg-black/90 px-3 py-2 text-sm font-semibold text-white shadow-2xl">
-                      <span className="truncate max-w-[160px]">
-                        {activeStream.name}
-                      </span>
-                    </div>
-                  ) : null}
-                </DragOverlay>
-              </DndContext>
+              </div>
             )}
           </div>
         </main>
       </div>
+
+        <DragOverlay dropAnimation={null}>
+          {activeStream ? (
+            <div className="flex items-center gap-2 rounded-lg border-2 border-primary bg-black/90 px-3 py-2 text-sm font-semibold text-white shadow-2xl">
+              <span className="truncate max-w-[160px]">{activeStream.name}</span>
+            </div>
+          ) : null}
+        </DragOverlay>
+      </DndContext>
 
       {/* Save dialog */}
       <Dialog open={saveDialogOpen} onOpenChange={setSaveDialogOpen}>

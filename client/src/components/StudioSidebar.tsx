@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
+import { useDraggable } from "@dnd-kit/core";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -14,11 +15,13 @@ import {
   LogOut,
   PanelLeftClose,
   PanelLeftOpen,
+  ChevronRight,
+  GripVertical,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { getAuthHeaders, removeAuthToken } from "@/lib/authUtils";
 import { useToast } from "@/hooks/use-toast";
-import { StudioWithStreams } from "@shared/schema";
+import { StudioWithStreams, Stream } from "@shared/schema";
 import tbnLogo from "@/assets/tbnlogo-white_1756354700943.png";
 import obLogo from "@assets/image_1756407804157.png";
 
@@ -45,6 +48,8 @@ interface StudioSidebarProps {
   onSelectStudio?: (studio: StudioWithStreams) => void;
   activeFavorites?: boolean;
   activeMultiviewer?: boolean;
+  /** When true, studio cards expand to reveal sources that can be dragged onto tiles. */
+  sourceDragEnabled?: boolean;
   onNavigate?: () => void;
 }
 
@@ -53,12 +58,14 @@ export default function StudioSidebar({
   onSelectStudio,
   activeFavorites,
   activeMultiviewer,
+  sourceDragEnabled,
   onNavigate,
 }: StudioSidebarProps) {
   const { user } = useAuth();
   const { toast } = useToast();
   const [, setLocation] = useLocation();
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [expandedStudioId, setExpandedStudioId] = useState<string | null>(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(() => {
     try {
       return localStorage.getItem("sidebarCollapsed") === "true";
@@ -149,9 +156,14 @@ export default function StudioSidebar({
         </div>
 
         <div className="space-y-2">
-          {studios.map((studio) => (
+          {studios.map((studio) => {
+            // In multiviewer mode the cards expand to show draggable sources
+            // instead of navigating to the dashboard.
+            const expandable = Boolean(activeMultiviewer) && !sidebarCollapsed;
+            const expanded = expandable && expandedStudioId === studio.id;
+            return (
+            <div key={studio.id}>
             <button
-              key={studio.id}
               className={`w-full ${sidebarCollapsed ? "p-3 h-12 justify-center" : "p-4 h-16 justify-between"} 
                 group relative overflow-hidden rounded-xl border transition-all duration-200 
                 text-left flex items-center touch-area transform hover:scale-[1.02] backdrop-blur ${
@@ -169,7 +181,13 @@ export default function StudioSidebar({
                       borderColor: hexToRgba(studio.colorCode, 0.18),
                     }
               }
-              onClick={() => handleStudioClick(studio)}
+              onClick={() =>
+                expandable
+                  ? setExpandedStudioId((prev) =>
+                      prev === studio.id ? null : studio.id
+                    )
+                  : handleStudioClick(studio)
+              }
               data-testid={`studio-card-${studio.name.toLowerCase()}`}
               title={
                 sidebarCollapsed
@@ -201,23 +219,54 @@ export default function StudioSidebar({
                     </p>
                   </div>
                   <div className="flex items-center space-x-2 shrink-0">
-                    <div
-                      className={`w-1.5 h-1.5 rounded-full transition-colors duration-200 ${
-                        selectedStudioId === studio.id ? "bg-primary" : "bg-green-400"
-                      }`}
-                    ></div>
-                    <span
-                      className={`text-[10px] font-bold uppercase tracking-wider transition-colors duration-200 ${
-                        selectedStudioId === studio.id ? "text-orange-300" : "opacity-60"
-                      }`}
-                    >
-                      {selectedStudioId === studio.id ? "Selected" : "Live"}
-                    </span>
+                    {expandable ? (
+                      <ChevronRight
+                        size={16}
+                        className={`opacity-60 transition-transform duration-200 ${
+                          expanded ? "rotate-90" : ""
+                        }`}
+                      />
+                    ) : (
+                      <>
+                        <div
+                          className={`w-1.5 h-1.5 rounded-full transition-colors duration-200 ${
+                            selectedStudioId === studio.id ? "bg-primary" : "bg-green-400"
+                          }`}
+                        ></div>
+                        <span
+                          className={`text-[10px] font-bold uppercase tracking-wider transition-colors duration-200 ${
+                            selectedStudioId === studio.id ? "text-orange-300" : "opacity-60"
+                          }`}
+                        >
+                          {selectedStudioId === studio.id ? "Selected" : "Live"}
+                        </span>
+                      </>
+                    )}
                   </div>
                 </>
               )}
             </button>
-          ))}
+            {expanded && (
+              <div className="mt-1 space-y-1 pl-2" data-testid={`studio-sources-${studio.id}`}>
+                {studio.streams.length === 0 ? (
+                  <p className="px-2 py-1 text-xs text-muted-foreground opacity-60">
+                    No sources
+                  </p>
+                ) : (
+                  studio.streams.map((stream) => (
+                    <DraggableSource
+                      key={stream.id}
+                      stream={stream}
+                      colorCode={studio.colorCode}
+                      enabled={Boolean(sourceDragEnabled)}
+                    />
+                  ))
+                )}
+              </div>
+            )}
+            </div>
+            );
+          })}
         </div>
 
         {/* Favorites + Multiviewer Links */}
@@ -404,6 +453,43 @@ export default function StudioSidebar({
           <User size={18} className="shrink-0" />
         </button>
       </div>
+    </div>
+  );
+}
+
+/** Shared id namespace so a dragged sidebar source is distinguishable from a tile. */
+export const sourceDndId = (streamId: string) => `source-${streamId}`;
+
+function DraggableSource({
+  stream,
+  colorCode,
+  enabled,
+}: {
+  stream: Stream;
+  colorCode: string | null | undefined;
+  enabled: boolean;
+}) {
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+    id: sourceDndId(stream.id),
+    disabled: !enabled,
+  });
+
+  return (
+    <div
+      ref={setNodeRef}
+      className={`flex items-center gap-2 rounded-md border px-2 py-1.5 text-xs transition-colors ${
+        enabled ? "cursor-grab touch-none active:cursor-grabbing" : ""
+      } ${isDragging ? "opacity-40" : ""}`}
+      style={{
+        backgroundColor: hexToRgba(colorCode, 0.08),
+        borderColor: hexToRgba(colorCode, 0.2),
+      }}
+      data-testid={`sidebar-source-${stream.id}`}
+      {...(enabled ? attributes : {})}
+      {...(enabled ? listeners : {})}
+    >
+      {enabled && <GripVertical size={12} className="shrink-0 opacity-50" />}
+      <span className="truncate">{stream.name}</span>
     </div>
   );
 }
