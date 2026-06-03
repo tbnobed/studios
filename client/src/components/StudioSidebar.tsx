@@ -50,6 +50,8 @@ interface StudioSidebarProps {
   activeMultiviewer?: boolean;
   /** When true, studio cards expand to reveal sources that can be dragged onto tiles. */
   sourceDragEnabled?: boolean;
+  /** Multiviewer only: clicking a studio loads all of its feeds into the grid. */
+  onLoadStudio?: (studio: StudioWithStreams) => void;
   onNavigate?: () => void;
 }
 
@@ -59,6 +61,7 @@ export default function StudioSidebar({
   activeFavorites,
   activeMultiviewer,
   sourceDragEnabled,
+  onLoadStudio,
   onNavigate,
 }: StudioSidebarProps) {
   const { user } = useAuth();
@@ -157,10 +160,31 @@ export default function StudioSidebar({
 
         <div className="space-y-2">
           {studios.map((studio) => {
-            // In multiviewer mode the cards expand to show draggable sources
-            // instead of navigating to the dashboard.
-            const expandable = Boolean(activeMultiviewer) && !sidebarCollapsed;
+            // In multiviewer edit mode the cards expand to show draggable
+            // sources. Outside edit mode a click loads the studio's feeds.
+            const expandable =
+              Boolean(activeMultiviewer) &&
+              !sidebarCollapsed &&
+              Boolean(sourceDragEnabled);
             const expanded = expandable && expandedStudioId === studio.id;
+            const handleCardClick = () => {
+              // Multiviewer edit mode: cards manage drag sources, never load.
+              if (activeMultiviewer && sourceDragEnabled) {
+                if (!sidebarCollapsed) {
+                  setExpandedStudioId((prev) =>
+                    prev === studio.id ? null : studio.id
+                  );
+                }
+                return;
+              }
+              // Multiviewer view mode: clicking loads the studio's feeds.
+              if (activeMultiviewer && onLoadStudio) {
+                onLoadStudio(studio);
+                onNavigate?.();
+                return;
+              }
+              handleStudioClick(studio);
+            };
             return (
             <div key={studio.id}>
             <button
@@ -181,13 +205,7 @@ export default function StudioSidebar({
                       borderColor: hexToRgba(studio.colorCode, 0.18),
                     }
               }
-              onClick={() =>
-                expandable
-                  ? setExpandedStudioId((prev) =>
-                      prev === studio.id ? null : studio.id
-                    )
-                  : handleStudioClick(studio)
-              }
+              onClick={handleCardClick}
               data-testid={`studio-card-${studio.name.toLowerCase()}`}
               title={
                 sidebarCollapsed
