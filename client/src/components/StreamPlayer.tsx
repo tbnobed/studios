@@ -36,6 +36,20 @@ function toWhepUrl(streamUrl: string): string {
   return streamUrl;
 }
 
+// HLS playlists and segments are plain HTTP and blocked as mixed content on an
+// HTTPS page. Route them through our same-origin proxy, which rewrites the
+// playlist so its segment URLs come back through the proxy too.
+function toHlsUrl(streamUrl: string): string {
+  if (
+    typeof window !== "undefined" &&
+    window.location.protocol === "https:" &&
+    streamUrl.startsWith("http://")
+  ) {
+    return `/api/hls?target=${encodeURIComponent(streamUrl)}`;
+  }
+  return streamUrl;
+}
+
 export function StreamPlayer({ 
   stream, 
   className = "", 
@@ -103,7 +117,7 @@ export function StreamPlayer({
       if (Hls.isSupported()) {
         const hls = new Hls({ enableWorker: true, lowLatencyMode: true });
         hlsRef.current = hls;
-        hls.loadSource(stream.streamUrl);
+        hls.loadSource(toHlsUrl(stream.streamUrl));
         hls.attachMedia(video);
         hls.on(Hls.Events.MANIFEST_PARSED, () => {
           if (autoPlay) video.play().catch(console.error);
@@ -118,7 +132,7 @@ export function StreamPlayer({
         });
       } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
         // Native HLS (Safari / iOS)
-        video.src = stream.streamUrl;
+        video.src = toHlsUrl(stream.streamUrl);
         video.addEventListener('loadeddata', onReady, { once: true });
         video.addEventListener('error', () => {
           setCurrentStatus('error');

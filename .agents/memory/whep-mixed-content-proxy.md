@@ -1,6 +1,6 @@
 ---
-name: WHEP mixed-content proxy
-description: Why/how WebRTC WHEP signaling is relayed through the app origin, and SRS SDK constraints
+name: Streaming mixed-content proxies (WHEP + HLS)
+description: Why/how WebRTC WHEP signaling AND HLS are relayed through the app origin, SRS SDK constraints, shared allowlist
 ---
 
 # Streaming over HTTPS: the mixed-content problem
@@ -33,19 +33,38 @@ never passes through the server.
 - Single POST offer→answer, **non-trickle**; SDK ignores the WHEP `Location`
   header, so the relay only needs to return upstream status + answer SDP body.
 
-## Relay security boundary (since it can't use auth)
+## HLS mixed-content proxy (`GET /api/hls?target=`) — different from WHEP
+- HLS has **NO peer-to-peer path**: the playlist AND every segment are plain HTTP
+  fetches from the browser, so on HTTPS *all* of them are blocked as mixed content
+  and *all* bytes must be relayed through the app server. Load scales with
+  viewers × bitrate (unlike WHEP, where only a few KB of signaling is relayed).
+- Playlist (`.m3u8`) handling: fetch it, then rewrite every URI back through the
+  proxy, resolving relative URLs against the playlist URL (`new URL(uri, base)`):
+  - bare non-`#` lines = segment / sub-playlist URIs → rewrite.
+  - `URI="..."` attrs in `#EXT-X-KEY` / `#EXT-X-MAP` / `#EXT-X-MEDIA` → rewrite.
+  - Return `Content-Type: application/vnd.apple.mpegurl`, `Cache-Control: no-store`.
+- Segments / keys / init: stream through with `Readable.fromWeb(upstream.body)`;
+  pass upstream content-type/length. (CDN serves `.ts` as `application/octet-stream`
+  — fine; hls.js & native HLS parse the container, not the MIME type.)
+- Client `toHlsUrl()` mirrors `toWhepUrl()` (https + `http://` guard) and wraps
+  both `hls.loadSource(...)` and the native-Safari `video.src` path.
+
+## Shared security boundary (neither proxy can use auth)
 - **Domain allowlist** is the boundary (CDN endpoints are already public over
-  HTTP). Allow hostname === domain or endsWith(`.${domain}`), domain defaults to
-  `obedtv.live` (override via `WHEP_ALLOWED_DOMAIN`). Use a suffix check, NOT a
-  hardcoded host Set — new CDN nodes appear over time (cdn1/cdn2/cdn3.obedtv.live).
-  The suffix check still blocks lookalikes like `cdn3.obedtv.live.evil.com`.
-- Validate: `protocol === 'http:'`, host on allowed domain, path contains `/whep/`.
-- **`fetch(..., { redirect: "error" })`** — without it an allowlisted host could
-  redirect the server off-allowlist (SSRF). Forward the normalized URL.
+  HTTP). One shared helper `isAllowedStreamHost`: hostname === domain or
+  endsWith(`.${domain}`); domain defaults to `obedtv.live`, override via
+  **`STREAM_ALLOWED_DOMAIN`** (renamed from WHEP_ALLOWED_DOMAIN to cover both).
+  Suffix check, NOT a hardcoded host Set — new CDN nodes appear over time
+  (cdn1..cdn4.obedtv.live). Still blocks lookalikes (`cdn3.obedtv.live.evil.com`).
+- Validate: `protocol === 'http:'`, host on allowed domain (+ path contains
+  `/whep/` for the WHEP relay specifically).
+- **`fetch(..., { redirect: "error" })`** on BOTH — without it an allowlisted host
+  could redirect the server off-allowlist (SSRF). Forward the normalized URL.
 - Only proxy when `window.location.protocol === 'https:'` so HTTP dev is untouched.
 
-## Testing limitation
-The Replit environment **cannot reach cdn*.obedtv.live** (egress blocked — curl
-times out). The relay can't be end-to-end tested from Replit; a valid target
-returns 502 because the server-side fetch fails. It works in the user's
-self-hosted Docker network where the app server can reach the CDN.
+## Testing note (corrected)
+HLS over HTTPS was verified **end-to-end from Replit**: `cdn4.obedtv.live:2022`
+HLS was reachable (playlist rewritten correctly, a `.ts` segment streamed through
+as valid MPEG-TS). So CDN egress from Replit is at least partially open — earlier
+WHEP attempts returning 502 may have been a transient/port-specific block, not a
+hard egress wall. Don't assume the CDN is unreachable from Replit by default.

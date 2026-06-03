@@ -1,5 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
+import { Readable } from "node:stream";
+import { pipeline } from "node:stream/promises";
 import { storage } from "./storage";
 import jwt from "jsonwebtoken";
 import { insertUserSchema, insertStudioSchema, insertStreamSchema, insertMultiviewerLayoutSchema, insertGroupSchema } from "@shared/schema";
@@ -447,19 +449,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // substring before sending. `express.text` captures the raw application/sdp
   // body. Targets are restricted to known streaming hosts to prevent SSRF.
   //
-  // This route is deliberately NOT behind requireAuth: the SRS SDK issues the
-  // request via a bare XHR that cannot attach our Bearer token, and the upstream
-  // WHEP endpoints are already publicly reachable over HTTP. The allowlist
-  // (not auth) is the security boundary here, and only a WHEP SDP handshake can
-  // be relayed — no arbitrary URLs.
+  // Neither this relay nor the HLS proxy below is behind requireAuth: the SRS
+  // SDK / hls.js issue requests that can't attach our Bearer token, and the
+  // upstream endpoints are already publicly reachable over HTTP. The allowlist
+  // (not auth) is the security boundary, and only WHEP/HLS traffic to the
+  // streaming domain can be relayed — no arbitrary URLs.
   //
-  // Allow any host on the streaming domain (cdn1/cdn2/cdn3.obedtv.live, etc.) so
-  // new CDN nodes work without a code change, while still blocking arbitrary
-  // hosts. Override the suffix with WHEP_ALLOWED_DOMAIN if the domain changes.
-  const WHEP_ALLOWED_DOMAIN = process.env.WHEP_ALLOWED_DOMAIN || "obedtv.live";
-  const isAllowedWhepHost = (hostname: string) =>
-    hostname === WHEP_ALLOWED_DOMAIN ||
-    hostname.endsWith(`.${WHEP_ALLOWED_DOMAIN}`);
+  // Allow any host on the streaming domain (cdn1/cdn2/cdn3/cdn4.obedtv.live, etc.)
+  // so new CDN nodes work without a code change, while still blocking arbitrary
+  // hosts. Override the suffix with STREAM_ALLOWED_DOMAIN if the domain changes.
+  const STREAM_ALLOWED_DOMAIN =
+    process.env.STREAM_ALLOWED_DOMAIN || "obedtv.live";
+  const isAllowedStreamHost = (hostname: string) =>
+    hostname === STREAM_ALLOWED_DOMAIN ||
+    hostname.endsWith(`.${STREAM_ALLOWED_DOMAIN}`);
   app.post(
     "/api/whep/relay",
     express.text({ type: () => true, limit: "1mb" }),
@@ -476,7 +479,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (parsed.protocol !== "http:") {
           return res.status(400).json({ message: "Unsupported protocol" });
         }
-        if (!isAllowedWhepHost(parsed.hostname)) {
+        if (!isAllowedStreamHost(parsed.hostname)) {
           return res.status(403).json({ message: "Target host not allowed" });
         }
         if (
@@ -507,6 +510,114 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     },
   );
+
+  // HLS proxy.
+  //
+  // HLS playlists (.m3u8) and their video segments are fetched over plain HTTP
+  // from the CDN, so on an HTTPS page every one of those requests is blocked as
+  // mixed content. Unlike WebRTC there is no peer-to-peer path, so ALL bytes are
+  // relayed: this endpoint fetches the playlist, rewrites every segment / sub-
+  // playlist / key URL to point back at itself (resolving relative URLs against
+  // the playlist), and streams binary segments straight through. Load therefore
+  // scales with viewers × bitrate — all video flows through the app server.
+  const proxifyHlsUri = (uri: string, baseUrl: string): string => {
+    let abs: URL;
+    try {
+      abs = new URL(uri, baseUrl);
+    } catch {
+      return uri;
+    }
+    // Only relay plain-HTTP URIs — those are the mixed-content ones. Absolute
+    // https/data/etc. URIs load directly in the browser, and the proxy only
+    // accepts http: targets anyway, so leave them untouched.
+    if (abs.protocol !== "http:") return uri;
+    return `/api/hls?target=${encodeURIComponent(abs.toString())}`;
+  };
+  const rewriteHlsPlaylist = (text: string, baseUrl: string): string =>
+    text
+      .split(/\r?\n/)
+      .map((line) => {
+        const trimmed = line.trim();
+        if (trimmed === "") return line;
+        if (trimmed.startsWith("#")) {
+          // Rewrite URI="..." attributes (EXT-X-KEY, EXT-X-MAP, EXT-X-MEDIA, …).
+          return line.replace(
+            /URI="([^"]+)"/g,
+            (_m, uri) => `URI="${proxifyHlsUri(uri, baseUrl)}"`,
+          );
+        }
+        // A bare, non-tag line is a segment or sub-playlist URI.
+        return proxifyHlsUri(trimmed, baseUrl);
+      })
+      .join("\n");
+  app.get("/api/hls", async (req, res) => {
+    try {
+      const target = String(req.query.target || "");
+      let parsed: URL;
+      try {
+        parsed = new URL(target);
+      } catch {
+        return res.status(400).json({ message: "Invalid target URL" });
+      }
+      if (parsed.protocol !== "http:") {
+        return res.status(400).json({ message: "Unsupported protocol" });
+      }
+      if (!isAllowedStreamHost(parsed.hostname)) {
+        return res.status(403).json({ message: "Target host not allowed" });
+      }
+
+      // redirect:"error" keeps an allowlisted host from bouncing us off-allowlist.
+      // Forward Range so byte-range segments / fMP4 seeking keep working.
+      const rangeHeader = req.headers.range;
+      const upstream = await fetch(parsed.toString(), {
+        redirect: "error",
+        headers: rangeHeader ? { Range: rangeHeader } : undefined,
+      });
+      const contentType = upstream.headers.get("content-type") || "";
+      const isPlaylist =
+        parsed.pathname.toLowerCase().endsWith(".m3u8") ||
+        contentType.includes("mpegurl");
+
+      res.set("Cache-Control", "no-store");
+
+      if (isPlaylist) {
+        const text = await upstream.text();
+        res
+          .status(upstream.status)
+          .set("Content-Type", "application/vnd.apple.mpegurl")
+          .send(rewriteHlsPlaylist(text, parsed.toString()));
+        return;
+      }
+
+      // Binary segment / key / init: stream it straight through, preserving
+      // range-related headers and the upstream status (e.g. 206 Partial Content).
+      if (contentType) res.set("Content-Type", contentType);
+      const contentLength = upstream.headers.get("content-length");
+      if (contentLength) res.set("Content-Length", contentLength);
+      const acceptRanges = upstream.headers.get("accept-ranges");
+      if (acceptRanges) res.set("Accept-Ranges", acceptRanges);
+      const contentRange = upstream.headers.get("content-range");
+      if (contentRange) res.set("Content-Range", contentRange);
+      res.status(upstream.status);
+      if (!upstream.body) {
+        res.end();
+        return;
+      }
+      try {
+        await pipeline(Readable.fromWeb(upstream.body as any), res);
+      } catch (streamErr) {
+        console.error("HLS segment stream error:", streamErr);
+        if (!res.headersSent) {
+          res.status(502).json({ message: "Failed to stream segment" });
+        } else {
+          res.destroy();
+        }
+      }
+    } catch (error) {
+      console.error("HLS proxy error:", error);
+      res.status(502).json({ message: "Failed to reach streaming server" });
+    }
+  });
 
   // Favorites routes (per-user, scoped to the authenticated user)
   app.get("/api/favorites", requireAuth, async (req: any, res) => {
