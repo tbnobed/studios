@@ -23,7 +23,7 @@ import { getAuthHeaders, removeAuthToken } from "@/lib/authUtils";
 import { useToast } from "@/hooks/use-toast";
 import { StudioWithStreams, Stream } from "@shared/schema";
 import tbnLogo from "@/assets/tbnlogo-white_1756354700943.png";
-import obLogo from "@assets/image_1756407804157.png";
+import obLogo from "@/assets/ob-logo.png";
 
 function hexToRgba(hex: string | null | undefined, alpha: number): string {
   const fallback = "#64748b"; // slate-500

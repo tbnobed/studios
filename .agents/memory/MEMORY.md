@@ -1,1 +1,1 @@
-- [Multiview & stream sharing](multiview-sharing.md) — multiview (external token + internal grant) and single-stream public links both gate on the CREATOR's current access (never unrestricted) so revoked permissions can't leak streams via old links.
+- [attached_assets is temporary](attached-assets-temporary.md) — never import images from attached_assets/ (@assets); put durable assets in client/src/assets and import via @/assets.
