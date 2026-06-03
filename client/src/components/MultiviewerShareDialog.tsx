@@ -216,9 +216,17 @@ export function MultiviewerShareDialog({
                 <Input
                   id="share-expiry"
                   type="datetime-local"
-                  className="w-full"
+                  className="w-full [color-scheme:dark]"
                   value={expiresAt}
                   onChange={(e) => setExpiresAt(e.target.value)}
+                  onClick={(e) => {
+                    const el = e.currentTarget as HTMLInputElement & {
+                      showPicker?: () => void;
+                    };
+                    try {
+                      el.showPicker?.();
+                    } catch {}
+                  }}
                   data-testid="input-share-expiry"
                 />
               </div>
