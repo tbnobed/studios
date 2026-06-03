@@ -47,6 +47,27 @@ function getSharedCtx(): AudioContext | null {
   }
 }
 
+// Reports whether the shared AudioContext is producing data. Returns
+// "unavailable" when Web Audio isn't supported at all, "suspended" before the
+// context has been created or while it's blocked by the autoplay policy, and
+// "running" once it's active. Used by the pop-out wall to decide whether to show
+// a one-tap "enable audio meters" prompt (a fresh window has no user gesture, so
+// the context starts suspended and the meters read zero until the user clicks).
+export function getSharedAudioContextState(): "running" | "suspended" | "unavailable" {
+  const Ctx = window.AudioContext || (window as any).webkitAudioContext;
+  if (!Ctx) return "unavailable";
+  if (!sharedCtx) return "suspended";
+  return sharedCtx.state === "running" ? "running" : "suspended";
+}
+
+// Creates (if needed) and resumes the shared AudioContext. Safe to call from a
+// user gesture handler; resolves once the resume attempt settles.
+export function resumeSharedAudioContext(): Promise<void> {
+  const ctx = getSharedCtx();
+  if (!ctx) return Promise.resolve();
+  return ctx.resume().catch(() => {});
+}
+
 const UPDATE_INTERVAL_MS = 50; // ~20fps
 
 export function useAudioLevel(

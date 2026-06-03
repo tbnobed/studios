@@ -1,11 +1,15 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRoute } from "wouter";
 import { useQuery } from "@tanstack/react-query";
-import { Monitor } from "lucide-react";
+import { Monitor, Volume2 } from "lucide-react";
 import { MultiviewerTile } from "@/components/MultiviewerTile";
 import { StreamSingleView } from "@/components/StreamSingleView";
 import { MultiviewerGrid } from "@/components/MultiviewerGrid";
 import { slotCount, fitSlots } from "@/lib/multiviewerLayouts";
+import {
+  getSharedAudioContextState,
+  resumeSharedAudioContext,
+} from "@/hooks/useAudioLevel";
 import { getAuthHeaders } from "@/lib/authUtils";
 import type {
   MultiviewerLayout,
@@ -83,6 +87,28 @@ export default function MultiviewerWall() {
     if (soloStreamId && soloIndex === -1) setSoloStreamId(null);
   }, [soloStreamId, soloIndex]);
 
+  // The audio meters tap a Web Audio AnalyserNode whose AudioContext is held
+  // suspended by the browser's autoplay policy until a user gesture happens in
+  // THIS document. A freshly popped-out window has no such gesture, so the
+  // meters read zero. Poll the shared context's state so we can surface a
+  // one-tap prompt, and hide it again the moment the context is running.
+  const hasAssignedStreams = assignedStreams.length > 0;
+  const [audioState, setAudioState] = useState(getSharedAudioContextState());
+  useEffect(() => {
+    if (!hasAssignedStreams) return;
+    const tick = () => setAudioState(getSharedAudioContextState());
+    tick();
+    const id = window.setInterval(tick, 700);
+    return () => window.clearInterval(id);
+  }, [hasAssignedStreams]);
+  const needsAudioUnlock = hasAssignedStreams && audioState === "suspended";
+
+  const enableAudioMeters = () => {
+    resumeSharedAudioContext().finally(() =>
+      setAudioState(getSharedAudioContextState())
+    );
+  };
+
   const renderTile = (index: number, featured = false) => {
     const id = slots[index] ?? null;
     const stream = id ? streamMap.get(id) ?? null : null;
@@ -141,6 +167,21 @@ export default function MultiviewerWall() {
   }
 
   return (
-    <div className="h-screen w-screen overflow-hidden bg-black p-2">{body}</div>
+    <div className="relative h-screen w-screen overflow-hidden bg-black p-2">
+      {body}
+
+      {needsAudioUnlock && (
+        <button
+          type="button"
+          onClick={enableAudioMeters}
+          className="absolute bottom-4 right-4 z-50 flex items-center gap-2 rounded-full bg-primary/90 px-4 py-2 text-sm font-semibold text-primary-foreground shadow-lg backdrop-blur transition-colors hover:bg-primary"
+          data-testid="button-enable-audio-meters"
+          title="Browsers block audio metering in a new window until you interact with it"
+        >
+          <Volume2 size={16} />
+          Enable audio meters
+        </button>
+      )}
+    </div>
   );
 }
