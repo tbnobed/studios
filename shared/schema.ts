@@ -5,6 +5,7 @@ import {
   text, 
   timestamp, 
   integer, 
+  serial,
   boolean, 
   pgEnum,
   jsonb,
@@ -50,6 +51,9 @@ export const studios = pgTable("studios", {
 // Streams table
 export const streams = pgTable("streams", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  // Human-readable, auto-incrementing identifier assigned at creation.
+  // Stable across renames; displayed zero-padded (e.g. "001") in the UI.
+  streamNumber: serial("stream_number").notNull().unique(),
   studioId: varchar("studio_id").notNull().references(() => studios.id),
   name: varchar("name", { length: 100 }).notNull(),
   description: text("description"),
@@ -352,6 +356,7 @@ export const insertStudioSchema = createInsertSchema(studios).omit({
 
 export const insertStreamSchema = createInsertSchema(streams).omit({
   id: true,
+  streamNumber: true,
   createdAt: true,
   updatedAt: true,
 });

@@ -24,6 +24,12 @@ description: Non-obvious conventions for streams, isActive semantics, and admin 
   quick-add, edit dialog) must block submit when type is HLS and the URL is blank. Bulk-add is WebRTC-only
   by design (no m3u8 pattern to generate). **Why:** there is no deterministic way to synthesize an HLS
   playlist URL, so silently auto-generating one produces dead streams.
+- Streams carry a human-readable ID separate from the UUID PK: `streamNumber` is a Postgres `serial`
+  (auto-incrementing), `.notNull().unique()`, omitted from `insertStreamSchema` so it's DB-assigned at
+  creation and stable across renames. UI shows it zero-padded to 3 digits (`String(n).padStart(3,"0")`,
+  e.g. `001`); the UUID `id` is no longer surfaced in the admin UI. **Why:** users reference streams by a
+  short stable code, not the UUID. Adding a `unique` constraint via `db:push` prompts to truncate — apply
+  the migration SQL directly instead (existing rows backfill from the sequence) to avoid data loss.
 - StreamPlayer branches on `streamType`: HLS uses hls.js (or native Safari `application/vnd.apple.mpegurl`),
   WebRTC uses the SRS WHEP SDK. The shared `cleanup()` must tear down BOTH (sdk.close + hls.destroy) and
   cancel the WebRTC `checkVideoData` polling timer (cancellation flag + cleared timeout) or stale timers

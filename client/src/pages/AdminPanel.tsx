@@ -19,6 +19,12 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import StudioSidebar from "@/components/StudioSidebar";
 import { Users as UsersIcon } from "lucide-react";
 
+// Format the auto-incrementing stream number as a friendly, zero-padded ID (e.g. 7 -> "001"... "007").
+function formatStreamId(streamNumber: number | null | undefined): string {
+  if (streamNumber == null) return "—";
+  return String(streamNumber).padStart(3, "0");
+}
+
 // Studio-grouped, collapsible checkbox list for picking individual streams.
 // Used both when assigning streams to a group and when granting a single user
 // extra (add-only) stream access. `inherited` streams are shown checked and
@@ -2311,18 +2317,17 @@ export default function AdminPanel() {
                         <Label>Stream ID</Label>
                         <div className="mt-1 flex items-center gap-2 rounded-md border bg-muted/40 px-3 py-2">
                           <span
-                            className="min-w-0 flex-1 truncate font-mono text-xs text-muted-foreground"
-                            title={editingStream.id}
+                            className="min-w-0 flex-1 font-mono text-sm font-semibold"
                             data-testid="text-edit-stream-id"
                           >
-                            {editingStream.id}
+                            {formatStreamId(editingStream.streamNumber)}
                           </span>
                           <Button
                             type="button"
                             variant="ghost"
                             size="icon"
                             className="h-7 w-7 shrink-0"
-                            onClick={() => handleCopy(editingStream.id, `${editingStream.id}-editid`)}
+                            onClick={() => handleCopy(formatStreamId(editingStream.streamNumber), `${editingStream.id}-editid`)}
                             data-testid="button-copy-edit-stream-id"
                             title="Copy Stream ID"
                             aria-label="Copy Stream ID"
@@ -2590,17 +2595,16 @@ export default function AdminPanel() {
                                             <div className="mt-0.5 flex items-center gap-1">
                                               <span className="text-[10px] uppercase tracking-wide text-muted-foreground">ID</span>
                                               <span
-                                                className="max-w-[220px] truncate font-mono text-[11px] text-muted-foreground"
-                                                title={stream.id}
+                                                className="font-mono text-[11px] font-semibold text-foreground"
                                                 data-testid={`text-stream-id-${stream.id}`}
                                               >
-                                                {stream.id}
+                                                {formatStreamId(stream.streamNumber)}
                                               </span>
                                               <Button
                                                 variant="ghost"
                                                 size="icon"
                                                 className="h-5 w-5 shrink-0"
-                                                onClick={() => handleCopy(stream.id, `${stream.id}-id`)}
+                                                onClick={() => handleCopy(formatStreamId(stream.streamNumber), `${stream.id}-id`)}
                                                 data-testid={`button-copy-stream-id-${stream.id}`}
                                                 title="Copy Stream ID"
                                                 aria-label="Copy Stream ID"
