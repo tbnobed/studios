@@ -1,5 +1,6 @@
 import { db } from "./db";
-import { users, studios, streams, userStudioPermissions } from "@shared/schema";
+import { users, studios, streams, userStreamPermissions } from "@shared/schema";
+import { eq } from "drizzle-orm";
 import bcrypt from "bcrypt";
 
 async function seed() {
@@ -108,17 +109,7 @@ async function seed() {
     const createdStreams = await db.insert(streams).values(streamData).onConflictDoNothing().returning();
     console.log(`✅ Created ${createdStreams.length} streams`);
 
-    // Give admin user access to all studios
-    if (adminUser) {
-      const permissions = createdStudios.map(studio => ({
-        userId: adminUser.id,
-        studioId: studio.id,
-        canView: true,
-      }));
-
-      await db.insert(userStudioPermissions).values(permissions).onConflictDoNothing();
-      console.log("✅ Granted admin user access to all studios");
-    }
+    // Admin role users see every stream automatically — no grants needed.
 
     // Create a sample viewer user
     const viewerPassword = await bcrypt.hash("viewer123", 10);
@@ -133,12 +124,17 @@ async function seed() {
     }).onConflictDoNothing().returning();
 
     if (viewerUser && createdStudios.length > 0) {
-      // Give viewer access to one studio (view only)
-      await db.insert(userStudioPermissions).values({
-        userId: viewerUser.id,
-        studioId: createdStudios[0].id,
-        canView: true,
-      }).onConflictDoNothing();
+      // Give viewer per-stream access to every stream in the first studio.
+      const firstStudioStreams = await db
+        .select({ id: streams.id })
+        .from(streams)
+        .where(eq(streams.studioId, createdStudios[0].id));
+      if (firstStudioStreams.length > 0) {
+        await db
+          .insert(userStreamPermissions)
+          .values(firstStudioStreams.map((s) => ({ userId: viewerUser.id, streamId: s.id })))
+          .onConflictDoNothing();
+      }
       console.log("✅ Created viewer user - Username: viewer, Password: viewer123");
     }
 

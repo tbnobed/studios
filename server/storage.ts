@@ -2,7 +2,10 @@ import {
   users, 
   studios, 
   streams, 
-  userStudioPermissions,
+  groups,
+  userGroups,
+  groupStreamPermissions,
+  userStreamPermissions,
   favorites,
   multiviewerLayouts,
   type User, 
@@ -11,8 +14,9 @@ import {
   type InsertStudio,
   type Stream,
   type InsertStream,
-  type UserStudioPermission,
-  type InsertUserStudioPermission,
+  type Group,
+  type InsertGroup,
+  type GroupWithStreams,
   type StudioWithStreams,
   type UserWithPermissions,
   type Favorite,
@@ -21,7 +25,7 @@ import {
   type InsertMultiviewerLayout
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, asc, desc } from "drizzle-orm";
+import { eq, and, asc, desc, inArray } from "drizzle-orm";
 import bcrypt from "bcrypt";
 
 // Favorites limits: up to 8 streams per page across up to 5 pages.
@@ -57,10 +61,20 @@ export interface IStorage {
   updateStream(id: string, data: Partial<InsertStream>): Promise<Stream>;
   deleteStream(id: string): Promise<void>;
 
-  // Permission operations
-  getUserStudioPermission(userId: string, studioId: string): Promise<UserStudioPermission | undefined>;
-  setUserStudioPermission(permission: InsertUserStudioPermission): Promise<UserStudioPermission>;
-  removeUserStudioPermission(userId: string, studioId: string): Promise<void>;
+  // Access checks (per-stream): admin sees all; otherwise a stream is viewable
+  // if the user has an individual grant OR any of their groups grants it.
+  getUserAccessibleStreamIds(userId: string): Promise<Set<string>>;
+  canUserViewStream(userId: string, streamId: string): Promise<boolean>;
+
+  // Group operations
+  getAllGroups(): Promise<GroupWithStreams[]>;
+  createGroup(data: InsertGroup, streamIds: string[]): Promise<Group>;
+  updateGroup(id: string, data: Partial<InsertGroup>, streamIds?: string[]): Promise<Group>;
+  deleteGroup(id: string): Promise<void>;
+
+  // Membership + individual stream permission operations (replace-set semantics)
+  setUserGroups(userId: string, groupIds: string[]): Promise<void>;
+  setUserStreamPermissions(userId: string, streamIds: string[]): Promise<void>;
 
   // Favorites operations
   getUserFavorites(userId: string): Promise<FavoriteWithStream[]>;
@@ -98,14 +112,25 @@ export class DatabaseStorage implements IStorage {
     const user = await db.query.users.findFirst({
       where: eq(users.id, id),
       with: {
-        studioPermissions: {
-          with: {
-            studio: true,
-          },
-        },
+        groupMemberships: { with: { group: true } },
+        streamPermissions: true,
       },
     });
-    return user as UserWithPermissions;
+    if (!user) return undefined;
+    return this.enrichUser(user);
+  }
+
+  // Map a user row (loaded with groupMemberships + streamPermissions relations)
+  // into the API-facing UserWithPermissions shape.
+  private enrichUser(user: any): UserWithPermissions {
+    const groups: Group[] = (user.groupMemberships || []).map((m: any) => m.group);
+    const { groupMemberships, streamPermissions, ...rest } = user;
+    return {
+      ...(rest as User),
+      groups,
+      groupIds: groups.map((g) => g.id),
+      streamIds: (streamPermissions || []).map((p: any) => p.streamId),
+    };
   }
 
   async createUser(userData: InsertUser): Promise<User> {
@@ -152,14 +177,11 @@ export class DatabaseStorage implements IStorage {
   async getAllUsers(): Promise<UserWithPermissions[]> {
     const allUsers = await db.query.users.findMany({
       with: {
-        studioPermissions: {
-          with: {
-            studio: true,
-          },
-        },
+        groupMemberships: { with: { group: true } },
+        streamPermissions: true,
       },
     });
-    return allUsers as UserWithPermissions[];
+    return allUsers.map((u) => this.enrichUser(u));
   }
 
   async verifyUserPassword(username: string, password: string): Promise<User | null> {
@@ -189,23 +211,33 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getUserStudios(userId: string): Promise<StudioWithStreams[]> {
-    const userPermissions = await db.query.userStudioPermissions.findMany({
-      where: eq(userStudioPermissions.userId, userId),
+    // Admins see every active studio and all of its active streams.
+    const user = await this.getUser(userId);
+    const isAdmin = user?.role === "admin";
+
+    const accessible = isAdmin ? null : await this.getUserAccessibleStreamIds(userId);
+
+    const allStudios = await db.query.studios.findMany({
+      where: eq(studios.isActive, true),
       with: {
-        studio: {
-          with: {
-            streams: {
-              where: eq(streams.isActive, true),
-              orderBy: (streams, { asc }) => [asc(streams.name)],
-            },
-          },
+        streams: {
+          where: eq(streams.isActive, true),
+          orderBy: (streams, { asc }) => [asc(streams.name)],
         },
       },
     });
 
-    // Sort studios by name and return
-    const studiosWithStreams = userPermissions.map(p => p.studio as StudioWithStreams);
-    return studiosWithStreams.sort((a, b) => a.name.localeCompare(b.name));
+    const result = (allStudios as StudioWithStreams[])
+      .map((studio) => ({
+        ...studio,
+        streams: accessible
+          ? studio.streams.filter((s) => accessible.has(s.id))
+          : studio.streams,
+      }))
+      // Only surface studios that have at least one viewable stream.
+      .filter((studio) => studio.streams.length > 0);
+
+    return result.sort((a, b) => a.name.localeCompare(b.name));
   }
 
   async createStudio(studioData: InsertStudio): Promise<Studio> {
@@ -263,51 +295,126 @@ export class DatabaseStorage implements IStorage {
     await db.delete(streams).where(eq(streams.id, id));
   }
 
-  // Permission operations
-  async getUserStudioPermission(userId: string, studioId: string): Promise<UserStudioPermission | undefined> {
-    const [permission] = await db
-      .select()
-      .from(userStudioPermissions)
-      .where(
-        and(
-          eq(userStudioPermissions.userId, userId),
-          eq(userStudioPermissions.studioId, studioId)
-        )
-      );
-    return permission;
-  }
+  // Access checks --------------------------------------------------------
 
-  async setUserStudioPermission(permissionData: InsertUserStudioPermission): Promise<UserStudioPermission> {
-    const existing = await this.getUserStudioPermission(
-      permissionData.userId,
-      permissionData.studioId
-    );
+  async getUserAccessibleStreamIds(userId: string): Promise<Set<string>> {
+    const ids = new Set<string>();
 
-    if (existing) {
-      const [permission] = await db
-        .update(userStudioPermissions)
-        .set(permissionData)
-        .where(eq(userStudioPermissions.id, existing.id))
-        .returning();
-      return permission;
-    } else {
-      const [permission] = await db
-        .insert(userStudioPermissions)
-        .values(permissionData)
-        .returning();
-      return permission;
+    // Individual grants.
+    const individual = await db
+      .select({ streamId: userStreamPermissions.streamId })
+      .from(userStreamPermissions)
+      .where(eq(userStreamPermissions.userId, userId));
+    for (const row of individual) ids.add(row.streamId);
+
+    // Grants inherited from every group the user belongs to.
+    const memberships = await db
+      .select({ groupId: userGroups.groupId })
+      .from(userGroups)
+      .where(eq(userGroups.userId, userId));
+    const groupIds = memberships.map((m) => m.groupId);
+    if (groupIds.length > 0) {
+      const groupGrants = await db
+        .select({ streamId: groupStreamPermissions.streamId })
+        .from(groupStreamPermissions)
+        .where(inArray(groupStreamPermissions.groupId, groupIds));
+      for (const row of groupGrants) ids.add(row.streamId);
     }
+
+    return ids;
   }
 
-  async removeUserStudioPermission(userId: string, studioId: string): Promise<void> {
-    await db
-      .delete(userStudioPermissions)
-      .where(
-        and(
-          eq(userStudioPermissions.userId, userId),
-          eq(userStudioPermissions.studioId, studioId)
-        )
-      );
+  async canUserViewStream(userId: string, streamId: string): Promise<boolean> {
+    const user = await this.getUser(userId);
+    if (user?.role === "admin") return true;
+    const accessible = await this.getUserAccessibleStreamIds(userId);
+    return accessible.has(streamId);
+  }
+
+  // Group operations -----------------------------------------------------
+
+  async getAllGroups(): Promise<GroupWithStreams[]> {
+    const allGroups = await db.query.groups.findMany({
+      with: {
+        streamPermissions: true,
+        members: true,
+      },
+      orderBy: (groups, { asc }) => [asc(groups.name)],
+    });
+    return allGroups.map((g: any) => {
+      const { streamPermissions, members, ...rest } = g;
+      return {
+        ...(rest as Group),
+        streamIds: (streamPermissions || []).map((p: any) => p.streamId),
+        memberCount: (members || []).length,
+      };
+    });
+  }
+
+  async createGroup(data: InsertGroup, streamIds: string[]): Promise<Group> {
+    return db.transaction(async (tx) => {
+      const [group] = await tx.insert(groups).values(data).returning();
+      const unique = Array.from(new Set(streamIds));
+      if (unique.length > 0) {
+        await tx
+          .insert(groupStreamPermissions)
+          .values(unique.map((streamId) => ({ groupId: group.id, streamId })));
+      }
+      return group;
+    });
+  }
+
+  async updateGroup(id: string, data: Partial<InsertGroup>, streamIds?: string[]): Promise<Group> {
+    return db.transaction(async (tx) => {
+      let group: Group;
+      if (Object.keys(data).length > 0) {
+        [group] = await tx.update(groups).set(data).where(eq(groups.id, id)).returning();
+      } else {
+        [group] = await tx.select().from(groups).where(eq(groups.id, id));
+      }
+      // Replace the group's stream grants when an explicit list is provided.
+      if (streamIds) {
+        await tx.delete(groupStreamPermissions).where(eq(groupStreamPermissions.groupId, id));
+        const unique = Array.from(new Set(streamIds));
+        if (unique.length > 0) {
+          await tx
+            .insert(groupStreamPermissions)
+            .values(unique.map((streamId) => ({ groupId: id, streamId })));
+        }
+      }
+      return group;
+    });
+  }
+
+  async deleteGroup(id: string): Promise<void> {
+    // Memberships and grants are removed via ON DELETE CASCADE.
+    await db.delete(groups).where(eq(groups.id, id));
+  }
+
+  // Membership + individual stream permission operations -----------------
+
+  async setUserGroups(userId: string, groupIds: string[]): Promise<void> {
+    await db.transaction(async (tx) => {
+      await tx.delete(userGroups).where(eq(userGroups.userId, userId));
+      const unique = Array.from(new Set(groupIds));
+      if (unique.length > 0) {
+        await tx
+          .insert(userGroups)
+          .values(unique.map((groupId) => ({ userId, groupId })));
+      }
+    });
+  }
+
+  async setUserStreamPermissions(userId: string, streamIds: string[]): Promise<void> {
+    await db.transaction(async (tx) => {
+      await tx.delete(userStreamPermissions).where(eq(userStreamPermissions.userId, userId));
+      const unique = Array.from(new Set(streamIds));
+      if (unique.length > 0) {
+        await tx
+          .insert(userStreamPermissions)
+          .values(unique.map((streamId) => ({ userId, streamId })));
+      }
+    });
   }
 
   // Favorites operations
@@ -324,17 +431,14 @@ export class DatabaseStorage implements IStorage {
       orderBy: [asc(favorites.page), asc(favorites.position)],
     });
 
-    // Only return favorites the user can currently view. If studio access is
-    // revoked, those favorites are hidden (matching the POST permission check).
-    const perms = await db
-      .select()
-      .from(userStudioPermissions)
-      .where(eq(userStudioPermissions.userId, userId));
-    const allowedStudioIds = new Set(
-      perms.filter((p) => p.canView).map((p) => p.studioId)
-    );
-
-    return favs.filter((f) => allowedStudioIds.has(f.stream.studioId));
+    // Only return favorites the user can currently view. If access to a stream
+    // is revoked, that favorite is hidden (matching the POST permission check).
+    const user = await this.getUser(userId);
+    if (user?.role === "admin") {
+      return favs;
+    }
+    const accessible = await this.getUserAccessibleStreamIds(userId);
+    return favs.filter((f) => accessible.has(f.streamId));
   }
 
   async addFavorite(userId: string, streamId: string): Promise<Favorite> {

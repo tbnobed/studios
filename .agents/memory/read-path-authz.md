@@ -1,22 +1,27 @@
 ---
 name: Read-path authorization for stream-derived data
-description: When to re-check user_studio_permissions on read endpoints that expose stream data
+description: Re-check per-stream access on read endpoints that expose stream data
 ---
 
 # Read-path authorization for stream-derived data
 
 Any endpoint that returns stream data (URLs, metadata) — directly or nested
-inside another resource — must filter by the caller's current
-`user_studio_permissions.can_view` for the stream's studio, not just at
-write/add time.
+inside another resource — must filter by the caller's *current* stream access,
+not just at write/add time.
 
-**Why:** Permissions can be revoked after a row referencing a stream is
-created. A read path that trusts the stored row (e.g. a user's saved/favorited
-streams) will leak stream URLs/metadata the user is no longer allowed to see.
-This was flagged on the Favorites feature: POST checked permission but the
-list GET originally did not.
+Access model (since the per-stream/groups rework): a non-admin can view a
+stream if they have an individual `user_stream_permissions` row OR any group
+they belong to grants it via `group_stream_permissions` (union, add-only, no
+deny). Admin role sees everything. Use `storage.getUserAccessibleStreamIds` /
+`storage.canUserViewStream` — do not re-implement the union inline.
 
-**How to apply:** In the storage/read layer, load the user's permitted studio
-ids once and filter the result set (or join against `user_studio_permissions`).
-Mirror the same `can_view` check used by the corresponding write endpoint so
-add and read stay consistent.
+**Why:** Grants can be revoked after a row referencing a stream is created. A
+read path that trusts the stored row (e.g. a user's saved/favorited streams)
+leaks stream URLs/metadata the user is no longer allowed to see. Originally
+flagged on Favorites (POST checked, list GET did not).
+
+**How to apply:** In the storage/read layer, load the user's accessible stream
+ids once and filter the result set. `getUserStudios` returns only studios that
+still have at least one viewable stream (studios are just UI grouping now —
+there is no whole-studio permission anymore; `user_studio_permissions` is kept
+defined-but-unused so db:push won't drop it).

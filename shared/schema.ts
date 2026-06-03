@@ -63,7 +63,9 @@ export const streams = pgTable("streams", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-// User permissions for studios
+// Legacy: whole-studio permissions. Superseded by per-stream permissions and
+// groups below. Kept defined so db:push doesn't try to drop the table, but no
+// longer used for access decisions.
 export const userStudioPermissions = pgTable("user_studio_permissions", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull().references(() => users.id),
@@ -71,6 +73,47 @@ export const userStudioPermissions = pgTable("user_studio_permissions", {
   canView: boolean("can_view").notNull().default(true),
   createdAt: timestamp("created_at").defaultNow(),
 });
+
+// Permission groups. A group bundles a set of stream grants; every member of
+// the group can view those streams. Users may belong to multiple groups and
+// receive the union of all their groups' grants.
+export const groups = pgTable("groups", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name", { length: 100 }).notNull().unique(),
+  description: text("description"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Group membership (many-to-many between users and groups).
+export const userGroups = pgTable("user_groups", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  groupId: varchar("group_id").notNull().references(() => groups.id, { onDelete: "cascade" }),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  uniqueUserGroup: unique("user_groups_user_group_unique").on(table.userId, table.groupId),
+}));
+
+// Streams a group grants access to. Presence of a row = granted (add-only).
+export const groupStreamPermissions = pgTable("group_stream_permissions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  groupId: varchar("group_id").notNull().references(() => groups.id, { onDelete: "cascade" }),
+  streamId: varchar("stream_id").notNull().references(() => streams.id, { onDelete: "cascade" }),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  uniqueGroupStream: unique("group_stream_perms_group_stream_unique").on(table.groupId, table.streamId),
+}));
+
+// Individual per-stream grants for a single user. Add-only: these stack on top
+// of whatever the user's groups already grant; there is no deny.
+export const userStreamPermissions = pgTable("user_stream_permissions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  streamId: varchar("stream_id").notNull().references(() => streams.id, { onDelete: "cascade" }),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  uniqueUserStream: unique("user_stream_perms_user_stream_unique").on(table.userId, table.streamId),
+}));
 
 // Per-user favorite streams. Each user can favorite up to 8 streams per page,
 // across up to 5 pages (40 total). `page` is 1-5 and `position` is 0-7,
@@ -110,8 +153,48 @@ export const multiviewerLayouts = pgTable("multiviewer_layouts", {
 // Relations
 export const usersRelations = relations(users, ({ many }) => ({
   studioPermissions: many(userStudioPermissions),
+  streamPermissions: many(userStreamPermissions),
+  groupMemberships: many(userGroups),
   favorites: many(favorites),
   multiviewerLayouts: many(multiviewerLayouts),
+}));
+
+export const groupsRelations = relations(groups, ({ many }) => ({
+  members: many(userGroups),
+  streamPermissions: many(groupStreamPermissions),
+}));
+
+export const userGroupsRelations = relations(userGroups, ({ one }) => ({
+  user: one(users, {
+    fields: [userGroups.userId],
+    references: [users.id],
+  }),
+  group: one(groups, {
+    fields: [userGroups.groupId],
+    references: [groups.id],
+  }),
+}));
+
+export const groupStreamPermissionsRelations = relations(groupStreamPermissions, ({ one }) => ({
+  group: one(groups, {
+    fields: [groupStreamPermissions.groupId],
+    references: [groups.id],
+  }),
+  stream: one(streams, {
+    fields: [groupStreamPermissions.streamId],
+    references: [streams.id],
+  }),
+}));
+
+export const userStreamPermissionsRelations = relations(userStreamPermissions, ({ one }) => ({
+  user: one(users, {
+    fields: [userStreamPermissions.userId],
+    references: [users.id],
+  }),
+  stream: one(streams, {
+    fields: [userStreamPermissions.streamId],
+    references: [streams.id],
+  }),
 }));
 
 export const multiviewerLayoutsRelations = relations(multiviewerLayouts, ({ one }) => ({
@@ -185,6 +268,11 @@ export const insertFavoriteSchema = createInsertSchema(favorites).omit({
   createdAt: true,
 });
 
+export const insertGroupSchema = createInsertSchema(groups).omit({
+  id: true,
+  createdAt: true,
+});
+
 export const MULTIVIEWER_LAYOUT_TYPES = [
   // Basic equal grids
   "1x1", "2x2", "3x3", "4x4",
@@ -226,6 +314,13 @@ export type InsertUserStudioPermission = z.infer<typeof insertUserStudioPermissi
 export type Favorite = typeof favorites.$inferSelect;
 export type InsertFavorite = z.infer<typeof insertFavoriteSchema>;
 
+export type Group = typeof groups.$inferSelect;
+export type InsertGroup = z.infer<typeof insertGroupSchema>;
+
+export type UserGroup = typeof userGroups.$inferSelect;
+export type GroupStreamPermission = typeof groupStreamPermissions.$inferSelect;
+export type UserStreamPermission = typeof userStreamPermissions.$inferSelect;
+
 export type MultiviewerLayout = typeof multiviewerLayouts.$inferSelect;
 export type InsertMultiviewerLayout = z.infer<typeof insertMultiviewerLayoutSchema>;
 export type MultiviewerLayoutType = (typeof MULTIVIEWER_LAYOUT_TYPES)[number];
@@ -237,13 +332,19 @@ export type StudioWithStreams = Studio & {
   primaryColor?: string; // Alias for colorCode for backward compatibility
 };
 
+// A group plus the ids of streams it grants and how many members it has.
+export type GroupWithStreams = Group & {
+  streamIds: string[];
+  memberCount: number;
+};
+
 export type UserWithPermissions = User & {
-  permissions?: (UserStudioPermission & {
-    studio: Studio;
-  })[];
-  studioPermissions?: (UserStudioPermission & {
-    studio: Studio;
-  })[];
+  // Groups this user belongs to.
+  groups?: Group[];
+  // Convenience: ids of the user's groups.
+  groupIds?: string[];
+  // Individual add-only stream grants (ids only).
+  streamIds?: string[];
 };
 
 // A favorite enriched with its stream and that stream's studio, for rendering

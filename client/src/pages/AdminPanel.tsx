@@ -11,12 +11,123 @@ import { Badge } from "@/components/ui/badge";
 import { Trash2, Edit, Plus, UserPlus, Video, Monitor, Settings2, ChevronDown, Copy, Check, Search, Layers, Menu } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { UserWithPermissions, Studio, StudioWithStreams, Stream, InsertStream } from "@shared/schema";
+import { UserWithPermissions, Studio, StudioWithStreams, Stream, InsertStream, GroupWithStreams } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { getAuthHeaders } from "@/lib/authUtils";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import StudioSidebar from "@/components/StudioSidebar";
+import { Users as UsersIcon } from "lucide-react";
+
+// Studio-grouped, collapsible checkbox list for picking individual streams.
+// Used both when assigning streams to a group and when granting a single user
+// extra (add-only) stream access. `inherited` streams are shown checked and
+// disabled (e.g. access already granted by a user's group membership).
+function StreamPicker({
+  studios,
+  selected,
+  onToggle,
+  onToggleStudio,
+  inherited,
+  emptyText = "No streams available.",
+}: {
+  studios: StudioWithStreams[];
+  selected: Set<string>;
+  onToggle: (streamId: string, checked: boolean) => void;
+  onToggleStudio: (streamIds: string[], checked: boolean) => void;
+  inherited?: Set<string>;
+  emptyText?: string;
+}) {
+  const [open, setOpen] = useState<Set<string>>(new Set());
+  const toggleOpen = (id: string) =>
+    setOpen((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+
+  const studiosWithStreams = studios.filter((s) => (s.streams || []).length > 0);
+  if (studiosWithStreams.length === 0) {
+    return <p className="text-sm text-muted-foreground">{emptyText}</p>;
+  }
+
+  const isChecked = (streamId: string) =>
+    selected.has(streamId) || Boolean(inherited?.has(streamId));
+
+  return (
+    <div className="space-y-2 max-h-72 overflow-y-auto rounded-md border p-2">
+      {studiosWithStreams.map((studio) => {
+        const streamList = studio.streams || [];
+        // "Select all" only governs the togglable (non-inherited) streams.
+        const togglable = streamList.filter((s) => !inherited?.has(s.id));
+        const allSelected =
+          togglable.length > 0 && togglable.every((s) => selected.has(s.id));
+        const someSelected = togglable.some((s) => selected.has(s.id));
+        const isOpen = open.has(studio.id);
+        return (
+          <div key={studio.id} className="rounded-md bg-muted/30">
+            <div className="flex items-center gap-2 px-2 py-1.5">
+              <button
+                type="button"
+                onClick={() => toggleOpen(studio.id)}
+                className="touch-area"
+                data-testid={`button-toggle-picker-${studio.id}`}
+              >
+                <ChevronDown
+                  size={16}
+                  className={`transition-transform ${isOpen ? "" : "-rotate-90"}`}
+                />
+              </button>
+              <input
+                type="checkbox"
+                className="rounded"
+                checked={allSelected}
+                ref={(el) => {
+                  if (el) el.indeterminate = !allSelected && someSelected;
+                }}
+                disabled={togglable.length === 0}
+                onChange={(e) => onToggleStudio(togglable.map((s) => s.id), e.target.checked)}
+                data-testid={`checkbox-picker-studio-${studio.id}`}
+              />
+              <span className="flex-1 text-sm font-medium">{studio.name}</span>
+              <Badge variant="outline" className="text-xs">
+                {streamList.filter((s) => isChecked(s.id)).length}/{streamList.length}
+              </Badge>
+            </div>
+            {isOpen && (
+              <div className="space-y-1 px-2 pb-2 pl-8">
+                {streamList.map((stream) => {
+                  const inh = Boolean(inherited?.has(stream.id));
+                  return (
+                    <label
+                      key={stream.id}
+                      className="flex items-center gap-2 text-sm"
+                    >
+                      <input
+                        type="checkbox"
+                        className="rounded"
+                        checked={isChecked(stream.id)}
+                        disabled={inh}
+                        onChange={(e) => onToggle(stream.id, e.target.checked)}
+                        data-testid={`checkbox-picker-stream-${stream.id}`}
+                      />
+                      <span className={inh ? "text-muted-foreground" : ""}>
+                        {stream.name}
+                        {inh && (
+                          <span className="ml-2 text-xs italic">(from group)</span>
+                        )}
+                      </span>
+                    </label>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
 
 export default function AdminPanel() {
   const { toast } = useToast();
@@ -73,7 +184,7 @@ export default function AdminPanel() {
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const tab = urlParams.get('tab');
-    if (tab && ['users', 'studios', 'streams'].includes(tab)) {
+    if (tab && ['users', 'studios', 'streams', 'groups'].includes(tab)) {
       setActiveTab(tab);
     }
   }, []);
@@ -86,6 +197,20 @@ export default function AdminPanel() {
   const [newStudio, setNewStudio] = useState({ name: "", location: "", description: "", colorCode: "#4A5568" });
   const [newStudioImageFile, setNewStudioImageFile] = useState<File | null>(null);
   const [newStudioImagePreview, setNewStudioImagePreview] = useState<string | null>(null);
+
+  // Per-user permission selections (edit user dialog)
+  const [editUserGroupIds, setEditUserGroupIds] = useState<Set<string>>(new Set());
+  const [editUserStreamIds, setEditUserStreamIds] = useState<Set<string>>(new Set());
+
+  // Group management
+  const [isCreateGroupOpen, setIsCreateGroupOpen] = useState(false);
+  const [isEditGroupOpen, setIsEditGroupOpen] = useState(false);
+  const [newGroup, setNewGroup] = useState({ name: "", description: "" });
+  const [newGroupStreamIds, setNewGroupStreamIds] = useState<Set<string>>(new Set());
+  const [editingGroup, setEditingGroup] = useState<GroupWithStreams | null>(null);
+  const [editGroupName, setEditGroupName] = useState("");
+  const [editGroupDescription, setEditGroupDescription] = useState("");
+  const [editGroupStreamIds, setEditGroupStreamIds] = useState<Set<string>>(new Set());
 
   // Fetch all users (admin only)
   const { data: users = [], isLoading: usersLoading } = useQuery<UserWithPermissions[]>({
@@ -112,6 +237,80 @@ export default function AdminPanel() {
       });
       return response.json();
     },
+  });
+
+  // Fetch groups (admin only)
+  const { data: groups = [], isLoading: groupsLoading } = useQuery<GroupWithStreams[]>({
+    queryKey: ["/api/admin/groups"],
+    queryFn: async () => {
+      const response = await apiRequest("GET", "/api/admin/groups", undefined, {
+        headers: getAuthHeaders(),
+      });
+      return response.json();
+    },
+  });
+
+  // Streams a user inherits from their currently-selected groups (read-only).
+  const userInheritedStreamIds = (() => {
+    const set = new Set<string>();
+    for (const g of groups) {
+      if (editUserGroupIds.has(g.id)) (g.streamIds || []).forEach((id) => set.add(id));
+    }
+    return set;
+  })();
+
+  // Group mutations
+  const createGroupMutation = useMutation({
+    mutationFn: async (payload: { name: string; description: string; streamIds: string[] }) => {
+      const response = await apiRequest("POST", "/api/admin/groups", payload, {
+        headers: getAuthHeaders(),
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/groups"] });
+      setIsCreateGroupOpen(false);
+      setNewGroup({ name: "", description: "" });
+      setNewGroupStreamIds(new Set());
+      toast({ title: "Group Created", description: "New group has been created" });
+    },
+    onError: (e: Error) =>
+      toast({ title: "Failed to Create Group", description: e.message, variant: "destructive" }),
+  });
+
+  const updateGroupMutation = useMutation({
+    mutationFn: async ({ id, payload }: { id: string; payload: any }) => {
+      const response = await apiRequest("PUT", `/api/admin/groups/${id}`, payload, {
+        headers: getAuthHeaders(),
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/groups"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/studios"] });
+      setIsEditGroupOpen(false);
+      setEditingGroup(null);
+      toast({ title: "Group Updated", description: "Group has been updated" });
+    },
+    onError: (e: Error) =>
+      toast({ title: "Failed to Update Group", description: e.message, variant: "destructive" }),
+  });
+
+  const deleteGroupMutation = useMutation({
+    mutationFn: async (id: string) => {
+      await apiRequest("DELETE", `/api/admin/groups/${id}`, undefined, {
+        headers: getAuthHeaders(),
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/groups"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/studios"] });
+      toast({ title: "Group Deleted", description: "Group has been deleted" });
+    },
+    onError: (e: Error) =>
+      toast({ title: "Failed to Delete Group", description: e.message, variant: "destructive" }),
   });
 
   // Create user mutation
@@ -627,6 +826,8 @@ export default function AdminPanel() {
 
   const handleEditUser = (user: UserWithPermissions) => {
     setEditingUser({ ...user, newPassword: '' });
+    setEditUserGroupIds(new Set(user.groupIds || []));
+    setEditUserStreamIds(new Set(user.streamIds || []));
     setIsEditUserOpen(true);
   };
 
@@ -661,38 +862,17 @@ export default function AdminPanel() {
         updateData
       });
 
-      // Then handle studio permissions
-      const originalUser = users.find(u => u.id === editingUser.id);
-      const originalPermissions = originalUser?.studioPermissions || [];
-      const newPermissions = editingUser.studioPermissions || [];
+      // Save group membership and individual (add-only) stream grants.
+      await apiRequest("PUT", `/api/admin/users/${editingUser.id}/groups`, {
+        groupIds: Array.from(editUserGroupIds),
+      }, { headers: getAuthHeaders() });
 
-      // Find permissions to remove
-      const permissionsToRemove = originalPermissions.filter(
-        orig => !newPermissions.some(newPerm => newPerm.studioId === orig.studioId)
-      );
+      await apiRequest("PUT", `/api/admin/users/${editingUser.id}/stream-permissions`, {
+        streamIds: Array.from(editUserStreamIds),
+      }, { headers: getAuthHeaders() });
 
-      // Find permissions to add
-      const permissionsToAdd = newPermissions.filter(
-        newPerm => !originalPermissions.some(orig => orig.studioId === newPerm.studioId)
-      );
-
-      // Remove old permissions
-      for (const permission of permissionsToRemove) {
-        await apiRequest("DELETE", `/api/admin/permissions/${editingUser.id}/${permission.studioId}`, undefined, {
-          headers: getAuthHeaders(),
-        });
-      }
-
-      // Add new permissions
-      for (const permission of permissionsToAdd) {
-        await apiRequest("POST", "/api/admin/permissions", {
-          userId: editingUser.id,
-          studioId: permission.studioId,
-          canView: true,
-        }, {
-          headers: getAuthHeaders(),
-        });
-      }
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/studios"] });
 
     } catch (error) {
       console.error("Error updating user:", error);
@@ -701,6 +881,48 @@ export default function AdminPanel() {
         description: "There was an error updating the user and permissions",
         variant: "destructive",
       });
+    }
+  };
+
+  const handleCreateGroup = () => {
+    if (!newGroup.name.trim()) {
+      toast({ title: "Name required", description: "Please enter a group name", variant: "destructive" });
+      return;
+    }
+    createGroupMutation.mutate({
+      name: newGroup.name.trim(),
+      description: newGroup.description.trim(),
+      streamIds: Array.from(newGroupStreamIds),
+    });
+  };
+
+  const handleEditGroup = (group: GroupWithStreams) => {
+    setEditingGroup(group);
+    setEditGroupName(group.name);
+    setEditGroupDescription(group.description || "");
+    setEditGroupStreamIds(new Set(group.streamIds || []));
+    setIsEditGroupOpen(true);
+  };
+
+  const handleUpdateGroup = () => {
+    if (!editingGroup) return;
+    if (!editGroupName.trim()) {
+      toast({ title: "Name required", description: "Please enter a group name", variant: "destructive" });
+      return;
+    }
+    updateGroupMutation.mutate({
+      id: editingGroup.id,
+      payload: {
+        name: editGroupName.trim(),
+        description: editGroupDescription.trim(),
+        streamIds: Array.from(editGroupStreamIds),
+      },
+    });
+  };
+
+  const handleDeleteGroup = (id: string) => {
+    if (window.confirm("Delete this group? Members will lose any access granted only by this group.")) {
+      deleteGroupMutation.mutate(id);
     }
   };
 
@@ -848,7 +1070,7 @@ export default function AdminPanel() {
           <div className="max-w-7xl mx-auto p-4 mt-6">
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="users" className="flex items-center gap-2" data-testid="tab-users">
               <UserPlus size={16} />
               Users
@@ -860,6 +1082,10 @@ export default function AdminPanel() {
             <TabsTrigger value="streams" className="flex items-center gap-2" data-testid="tab-streams">
               <Video size={16} />
               Streams
+            </TabsTrigger>
+            <TabsTrigger value="groups" className="flex items-center gap-2" data-testid="tab-groups">
+              <UsersIcon size={16} />
+              Groups
             </TabsTrigger>
           </TabsList>
 
@@ -1069,55 +1295,87 @@ export default function AdminPanel() {
                         </Select>
                       </div>
 
-                      {/* Studio Permissions */}
-                      <div>
-                        <Label>Studio Permissions</Label>
-                        <div className="space-y-2 mt-2">
-                          {studios.map((studio) => {
-                            const hasPermission = editingUser.studioPermissions?.some(p => p.studioId === studio.id) || false;
-                            return (
-                              <div key={studio.id} className="flex items-center space-x-2">
-                                <input
-                                  type="checkbox"
-                                  id={`studio-${studio.id}`}
-                                  checked={hasPermission}
-                                  onChange={(e) => {
-                                    const currentPermissions = editingUser.studioPermissions || [];
-                                    if (e.target.checked) {
-                                      // Add permission
-                                      setEditingUser({
-                                        ...editingUser,
-                                        studioPermissions: [
-                                          ...currentPermissions,
-                                          {
-                                            id: '',
-                                            userId: editingUser.id,
-                                            studioId: studio.id,
-                                            canView: true,
-                                            createdAt: new Date(),
-                                            studio: studio
-                                          }
-                                        ]
-                                      });
-                                    } else {
-                                      // Remove permission
-                                      setEditingUser({
-                                        ...editingUser,
-                                        studioPermissions: currentPermissions.filter(p => p.studioId !== studio.id)
-                                      });
-                                    }
-                                  }}
-                                  className="rounded"
-                                  data-testid={`checkbox-studio-${studio.name.toLowerCase().replace(/\s+/g, '-')}`}
-                                />
-                                <Label htmlFor={`studio-${studio.id}`} className="text-sm font-normal">
-                                  {studio.name}
-                                </Label>
+                      {editingUser.role === "admin" ? (
+                        <p className="text-sm text-muted-foreground rounded-md border p-3">
+                          Admins have access to all streams. Group and per-stream
+                          settings don't apply.
+                        </p>
+                      ) : (
+                        <>
+                          {/* Group membership */}
+                          <div>
+                            <Label>Groups</Label>
+                            <p className="text-xs text-muted-foreground mb-2">
+                              Members inherit all of a group's stream access.
+                            </p>
+                            {groups.length === 0 ? (
+                              <p className="text-sm text-muted-foreground">
+                                No groups yet. Create one in the Groups tab.
+                              </p>
+                            ) : (
+                              <div className="space-y-2 rounded-md border p-2">
+                                {groups.map((group) => (
+                                  <label
+                                    key={group.id}
+                                    className="flex items-center gap-2 text-sm"
+                                  >
+                                    <input
+                                      type="checkbox"
+                                      className="rounded"
+                                      checked={editUserGroupIds.has(group.id)}
+                                      onChange={(e) =>
+                                        setEditUserGroupIds((prev) => {
+                                          const next = new Set(prev);
+                                          e.target.checked
+                                            ? next.add(group.id)
+                                            : next.delete(group.id);
+                                          return next;
+                                        })
+                                      }
+                                      data-testid={`checkbox-group-${group.id}`}
+                                    />
+                                    <span className="flex-1">{group.name}</span>
+                                    <Badge variant="outline" className="text-xs">
+                                      {(group.streamIds || []).length} streams
+                                    </Badge>
+                                  </label>
+                                ))}
                               </div>
-                            );
-                          })}
-                        </div>
-                      </div>
+                            )}
+                          </div>
+
+                          {/* Additional individual stream access (add-only) */}
+                          <div>
+                            <Label>Additional stream access</Label>
+                            <p className="text-xs text-muted-foreground mb-2">
+                              Grant extra streams on top of this user's groups.
+                              Streams already covered by a group are checked and
+                              locked.
+                            </p>
+                            <StreamPicker
+                              studios={studiosWithStreams}
+                              selected={editUserStreamIds}
+                              inherited={userInheritedStreamIds}
+                              onToggle={(streamId, checked) =>
+                                setEditUserStreamIds((prev) => {
+                                  const next = new Set(prev);
+                                  checked ? next.add(streamId) : next.delete(streamId);
+                                  return next;
+                                })
+                              }
+                              onToggleStudio={(streamIds, checked) =>
+                                setEditUserStreamIds((prev) => {
+                                  const next = new Set(prev);
+                                  streamIds.forEach((id) =>
+                                    checked ? next.add(id) : next.delete(id)
+                                  );
+                                  return next;
+                                })
+                              }
+                            />
+                          </div>
+                        </>
+                      )}
                     </div>
                   )}
                   
@@ -1162,11 +1420,25 @@ export default function AdminPanel() {
                         <p className="text-sm text-muted-foreground">{user.email}</p>
                         
                         <div className="flex flex-wrap gap-1 mt-2">
-                          {user.permissions && user.permissions.map((permission) => (
-                            <Badge key={`${user.id}-${permission.studioId}`} variant="outline" className="text-xs">
-                              {permission.studio?.name}
-                            </Badge>
-                          ))}
+                          {user.role === "admin" ? (
+                            <Badge variant="outline" className="text-xs">All streams (admin)</Badge>
+                          ) : (
+                            <>
+                              {(user.groups || []).map((g) => (
+                                <Badge key={`${user.id}-${g.id}`} variant="outline" className="text-xs">
+                                  {g.name}
+                                </Badge>
+                              ))}
+                              {(user.streamIds?.length || 0) > 0 && (
+                                <Badge variant="secondary" className="text-xs">
+                                  +{user.streamIds!.length} extra stream{user.streamIds!.length === 1 ? "" : "s"}
+                                </Badge>
+                              )}
+                              {(user.groups?.length || 0) === 0 && (user.streamIds?.length || 0) === 0 && (
+                                <span className="text-xs text-muted-foreground">No access</span>
+                              )}
+                            </>
+                          )}
                         </div>
                       </div>
                       
@@ -2054,8 +2326,214 @@ export default function AdminPanel() {
             </Card>
           </TabsContent>
 
+          {/* Groups Tab */}
+          <TabsContent value="groups" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle>Group Management</CardTitle>
+                    <CardDescription>
+                      Groups grant stream access to all their members. A user can belong to multiple groups.
+                    </CardDescription>
+                  </div>
+                  <Dialog open={isCreateGroupOpen} onOpenChange={setIsCreateGroupOpen}>
+                    <DialogTrigger asChild>
+                      <Button className="touch-area" data-testid="button-add-group">
+                        <Plus className="mr-2" size={16} />
+                        Add Group
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="sm:max-w-lg">
+                      <DialogHeader>
+                        <DialogTitle>Create New Group</DialogTitle>
+                      </DialogHeader>
+                      <div className="space-y-4">
+                        <div>
+                          <Label htmlFor="new-group-name">Name</Label>
+                          <Input
+                            id="new-group-name"
+                            value={newGroup.name}
+                            onChange={(e) => setNewGroup({ ...newGroup, name: e.target.value })}
+                            data-testid="input-group-name"
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="new-group-description">Description</Label>
+                          <Input
+                            id="new-group-description"
+                            value={newGroup.description}
+                            onChange={(e) => setNewGroup({ ...newGroup, description: e.target.value })}
+                            data-testid="input-group-description"
+                          />
+                        </div>
+                        <div>
+                          <Label>Streams</Label>
+                          <p className="text-xs text-muted-foreground mb-2">
+                            Members of this group can view the selected streams.
+                          </p>
+                          <StreamPicker
+                            studios={studiosWithStreams}
+                            selected={newGroupStreamIds}
+                            onToggle={(streamId, checked) =>
+                              setNewGroupStreamIds((prev) => {
+                                const next = new Set(prev);
+                                checked ? next.add(streamId) : next.delete(streamId);
+                                return next;
+                              })
+                            }
+                            onToggleStudio={(streamIds, checked) =>
+                              setNewGroupStreamIds((prev) => {
+                                const next = new Set(prev);
+                                streamIds.forEach((id) => (checked ? next.add(id) : next.delete(id)));
+                                return next;
+                              })
+                            }
+                          />
+                        </div>
+                        <div className="flex justify-end gap-2">
+                          <Button variant="outline" onClick={() => setIsCreateGroupOpen(false)}>
+                            Cancel
+                          </Button>
+                          <Button
+                            onClick={handleCreateGroup}
+                            disabled={createGroupMutation.isPending}
+                            data-testid="button-save-group"
+                          >
+                            {createGroupMutation.isPending ? "Creating..." : "Create Group"}
+                          </Button>
+                        </div>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {groupsLoading ? (
+                  <p className="text-sm text-muted-foreground">Loading groups...</p>
+                ) : groups.length === 0 ? (
+                  <div className="text-center py-12 text-muted-foreground">
+                    <UsersIcon className="mx-auto mb-4 opacity-50" size={64} />
+                    <h3 className="text-lg font-semibold mb-2">No Groups Yet</h3>
+                    <p>Create a group to grant stream access to multiple users at once.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {groups.map((group) => (
+                      <div
+                        key={group.id}
+                        className="flex items-center justify-between rounded-md border p-4"
+                        data-testid={`group-row-${group.id}`}
+                      >
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-medium">{group.name}</span>
+                            <Badge variant="outline" className="text-xs">
+                              {(group.streamIds || []).length} streams
+                            </Badge>
+                            <Badge variant="secondary" className="text-xs">
+                              {group.memberCount} member{group.memberCount === 1 ? "" : "s"}
+                            </Badge>
+                          </div>
+                          {group.description && (
+                            <p className="text-sm text-muted-foreground mt-1">{group.description}</p>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-1 shrink-0">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => handleEditGroup(group)}
+                            data-testid={`button-edit-group-${group.id}`}
+                          >
+                            <Edit size={15} />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-destructive hover:text-destructive"
+                            onClick={() => handleDeleteGroup(group.id)}
+                            disabled={deleteGroupMutation.isPending}
+                            data-testid={`button-delete-group-${group.id}`}
+                          >
+                            <Trash2 size={15} />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
           {/* Settings Tab */}
         </Tabs>
+
+        {/* Edit Group Dialog */}
+        <Dialog open={isEditGroupOpen} onOpenChange={setIsEditGroupOpen}>
+          <DialogContent className="sm:max-w-lg">
+            <DialogHeader>
+              <DialogTitle>Edit Group</DialogTitle>
+            </DialogHeader>
+            {editingGroup && (
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="edit-group-name">Name</Label>
+                  <Input
+                    id="edit-group-name"
+                    value={editGroupName}
+                    onChange={(e) => setEditGroupName(e.target.value)}
+                    data-testid="input-edit-group-name"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="edit-group-description">Description</Label>
+                  <Input
+                    id="edit-group-description"
+                    value={editGroupDescription}
+                    onChange={(e) => setEditGroupDescription(e.target.value)}
+                    data-testid="input-edit-group-description"
+                  />
+                </div>
+                <div>
+                  <Label>Streams</Label>
+                  <StreamPicker
+                    studios={studiosWithStreams}
+                    selected={editGroupStreamIds}
+                    onToggle={(streamId, checked) =>
+                      setEditGroupStreamIds((prev) => {
+                        const next = new Set(prev);
+                        checked ? next.add(streamId) : next.delete(streamId);
+                        return next;
+                      })
+                    }
+                    onToggleStudio={(streamIds, checked) =>
+                      setEditGroupStreamIds((prev) => {
+                        const next = new Set(prev);
+                        streamIds.forEach((id) => (checked ? next.add(id) : next.delete(id)));
+                        return next;
+                      })
+                    }
+                  />
+                </div>
+                <div className="flex justify-end gap-2">
+                  <Button variant="outline" onClick={() => setIsEditGroupOpen(false)}>
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={handleUpdateGroup}
+                    disabled={updateGroupMutation.isPending}
+                    data-testid="button-update-group"
+                  >
+                    {updateGroupMutation.isPending ? "Saving..." : "Save Changes"}
+                  </Button>
+                </div>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
         </div>
         </main>
       </div>

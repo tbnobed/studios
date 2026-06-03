@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import jwt from "jsonwebtoken";
-import { insertUserSchema, insertStudioSchema, insertStreamSchema, insertMultiviewerLayoutSchema } from "@shared/schema";
+import { insertUserSchema, insertStudioSchema, insertStreamSchema, insertMultiviewerLayoutSchema, insertGroupSchema } from "@shared/schema";
 import { z } from "zod";
 import multer from "multer";
 import path from "path";
@@ -358,19 +358,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/studios/:id", requireAuth, async (req: any, res) => {
     try {
       const { id } = req.params;
-      
-      // Check user permission for this studio
-      const permission = await storage.getUserStudioPermission(req.user.id, id);
-      if (!permission?.canView) {
-        return res.status(403).json({ message: "No access to this studio" });
-      }
 
       const studio = await storage.getStudioWithStreams(id);
       if (!studio) {
         return res.status(404).json({ message: "Studio not found" });
       }
 
-      res.json(studio);
+      // Per-stream access: admins see all; everyone else only sees the streams
+      // they have access to. A studio with no viewable streams is forbidden.
+      if (req.user.role === "admin") {
+        return res.json(studio);
+      }
+      const accessible = await storage.getUserAccessibleStreamIds(req.user.id);
+      const visibleStreams = studio.streams.filter((s) => accessible.has(s.id));
+      if (visibleStreams.length === 0) {
+        return res.status(403).json({ message: "No access to this studio" });
+      }
+      res.json({ ...studio, streams: visibleStreams });
     } catch (error) {
       console.error("Error fetching studio:", error);
       res.status(500).json({ message: "Failed to fetch studio" });
@@ -387,9 +391,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Stream not found" });
       }
 
-      // Check user permission for the studio this stream belongs to
-      const permission = await storage.getUserStudioPermission(req.user.id, stream.studioId);
-      if (!permission?.canView) {
+      // Per-stream access check.
+      const canView = await storage.canUserViewStream(req.user.id, stream.id);
+      if (!canView) {
         return res.status(403).json({ message: "No access to this stream" });
       }
 
@@ -423,8 +427,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!stream) {
         return res.status(404).json({ message: "Stream not found" });
       }
-      const permission = await storage.getUserStudioPermission(req.user.id, stream.studioId);
-      if (!permission?.canView) {
+      const canView = await storage.canUserViewStream(req.user.id, stream.id);
+      if (!canView) {
         return res.status(403).json({ message: "No access to this stream" });
       }
 
@@ -727,31 +731,98 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/admin/permissions", requireAuth, requireAdmin, async (req, res) => {
+  // Group management ------------------------------------------------------
+
+  app.get("/api/admin/groups", requireAuth, requireAdmin, async (req, res) => {
     try {
-      const { userId, studioId, canView = true } = req.body;
-      
-      const permission = await storage.setUserStudioPermission({
-        userId,
-        studioId,
-        canView,
-      });
-      
-      res.status(201).json(permission);
+      const groups = await storage.getAllGroups();
+      res.json(groups);
     } catch (error) {
-      console.error("Error setting permission:", error);
-      res.status(500).json({ message: "Failed to set permission" });
+      console.error("Error fetching groups:", error);
+      res.status(500).json({ message: "Failed to fetch groups" });
     }
   });
 
-  app.delete("/api/admin/permissions/:userId/:studioId", requireAuth, requireAdmin, async (req, res) => {
+  app.post("/api/admin/groups", requireAuth, requireAdmin, async (req, res) => {
     try {
-      const { userId, studioId } = req.params;
-      await storage.removeUserStudioPermission(userId, studioId);
-      res.json({ message: "Permission removed successfully" });
+      const { streamIds = [], ...groupData } = req.body;
+      const parsed = insertGroupSchema.parse(groupData);
+      if (!Array.isArray(streamIds)) {
+        return res.status(400).json({ message: "streamIds must be an array" });
+      }
+      const group = await storage.createGroup(parsed, streamIds);
+      res.status(201).json(group);
+    } catch (error: any) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid group data", errors: error.errors });
+      }
+      if (error?.code === "23505") {
+        return res.status(400).json({ message: "A group with that name already exists" });
+      }
+      console.error("Error creating group:", error);
+      res.status(500).json({ message: "Failed to create group" });
+    }
+  });
+
+  app.put("/api/admin/groups/:id", requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { streamIds, ...groupData } = req.body;
+      const parsed = insertGroupSchema.partial().parse(groupData);
+      if (streamIds !== undefined && !Array.isArray(streamIds)) {
+        return res.status(400).json({ message: "streamIds must be an array" });
+      }
+      const group = await storage.updateGroup(id, parsed, streamIds);
+      res.json(group);
+    } catch (error: any) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid group data", errors: error.errors });
+      }
+      if (error?.code === "23505") {
+        return res.status(400).json({ message: "A group with that name already exists" });
+      }
+      console.error("Error updating group:", error);
+      res.status(500).json({ message: "Failed to update group" });
+    }
+  });
+
+  app.delete("/api/admin/groups/:id", requireAuth, requireAdmin, async (req, res) => {
+    try {
+      await storage.deleteGroup(req.params.id);
+      res.json({ message: "Group deleted successfully" });
     } catch (error) {
-      console.error("Error removing permission:", error);
-      res.status(500).json({ message: "Failed to remove permission" });
+      console.error("Error deleting group:", error);
+      res.status(500).json({ message: "Failed to delete group" });
+    }
+  });
+
+  // Per-user group membership + individual stream grants -------------------
+
+  app.put("/api/admin/users/:id/groups", requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const { groupIds } = req.body;
+      if (!Array.isArray(groupIds)) {
+        return res.status(400).json({ message: "groupIds must be an array" });
+      }
+      await storage.setUserGroups(req.params.id, groupIds);
+      res.json({ message: "Group membership updated" });
+    } catch (error) {
+      console.error("Error setting user groups:", error);
+      res.status(500).json({ message: "Failed to update group membership" });
+    }
+  });
+
+  app.put("/api/admin/users/:id/stream-permissions", requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const { streamIds } = req.body;
+      if (!Array.isArray(streamIds)) {
+        return res.status(400).json({ message: "streamIds must be an array" });
+      }
+      await storage.setUserStreamPermissions(req.params.id, streamIds);
+      res.json({ message: "Stream permissions updated" });
+    } catch (error) {
+      console.error("Error setting user stream permissions:", error);
+      res.status(500).json({ message: "Failed to update stream permissions" });
     }
   });
 

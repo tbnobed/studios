@@ -151,18 +151,53 @@ INSERT INTO streams (studio_id, name, description, stream_url, resolution, fps) 
     ('c5d8f1a3-2b7e-4c9a-8d5f-3e1f6a2b9c8d', 'Nashville Camera 4', 'Fourth studio camera feed', 'http://cdn1.obedtv.live:2022/rtc/v1/whep/?app=live&stream=Nashville4', '1080p', 30)
 ON CONFLICT DO NOTHING;
 
--- Grant admin user access to all studios
-INSERT INTO user_studio_permissions (user_id, studio_id, can_view) VALUES 
-    ('admin-user-id-12345', '4813376b-ea45-47ca-b7d5-0090b1f2aab7', true),  -- SoCal
-    ('admin-user-id-12345', 'f2c8a3b1-4d6e-4a2b-8c9d-1e5f7a9b3c2d', true),  -- Plex  
-    ('admin-user-id-12345', 'a7b2c9d4-3f8e-4b1a-9c6d-2e8f1a4b7c5d', true),  -- Irving
-    ('admin-user-id-12345', 'c5d8f1a3-2b7e-4c9a-8d5f-3e1f6a2b9c8d', true)   -- Nashville
-ON CONFLICT (user_id, studio_id) DO NOTHING;
+-- Permission groups: a reusable bundle of stream grants shared by all members.
+CREATE TABLE IF NOT EXISTS groups (
+    id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
+    name VARCHAR(100) NOT NULL UNIQUE,
+    description TEXT,
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Group membership (many-to-many between users and groups).
+CREATE TABLE IF NOT EXISTS user_groups (
+    id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id VARCHAR NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    group_id VARCHAR NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
+    created_at TIMESTAMP DEFAULT NOW(),
+    CONSTRAINT user_groups_user_group_unique UNIQUE (user_id, group_id)
+);
+
+-- Streams a group grants access to (presence of a row = granted).
+CREATE TABLE IF NOT EXISTS group_stream_permissions (
+    id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
+    group_id VARCHAR NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
+    stream_id VARCHAR NOT NULL REFERENCES streams(id) ON DELETE CASCADE,
+    created_at TIMESTAMP DEFAULT NOW(),
+    CONSTRAINT group_stream_perms_group_stream_unique UNIQUE (group_id, stream_id)
+);
+
+-- Individual per-stream grants for a single user (add-only, no deny).
+CREATE TABLE IF NOT EXISTS user_stream_permissions (
+    id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id VARCHAR NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    stream_id VARCHAR NOT NULL REFERENCES streams(id) ON DELETE CASCADE,
+    created_at TIMESTAMP DEFAULT NOW(),
+    CONSTRAINT user_stream_perms_user_stream_unique UNIQUE (user_id, stream_id)
+);
+
+-- Admin role users see every stream automatically, so no grants are seeded here.
 
 -- Create indexes for performance
 CREATE INDEX IF NOT EXISTS idx_streams_studio_id ON streams(studio_id);
 CREATE INDEX IF NOT EXISTS idx_user_studio_permissions_user_id ON user_studio_permissions(user_id);
 CREATE INDEX IF NOT EXISTS idx_user_studio_permissions_studio_id ON user_studio_permissions(studio_id);
+CREATE INDEX IF NOT EXISTS idx_user_groups_user_id ON user_groups(user_id);
+CREATE INDEX IF NOT EXISTS idx_user_groups_group_id ON user_groups(group_id);
+CREATE INDEX IF NOT EXISTS idx_group_stream_permissions_group_id ON group_stream_permissions(group_id);
+CREATE INDEX IF NOT EXISTS idx_group_stream_permissions_stream_id ON group_stream_permissions(stream_id);
+CREATE INDEX IF NOT EXISTS idx_user_stream_permissions_user_id ON user_stream_permissions(user_id);
+CREATE INDEX IF NOT EXISTS idx_user_stream_permissions_stream_id ON user_stream_permissions(stream_id);
 CREATE INDEX IF NOT EXISTS idx_favorites_user_id ON favorites(user_id);
 CREATE INDEX IF NOT EXISTS idx_favorites_stream_id ON favorites(stream_id);
 CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
