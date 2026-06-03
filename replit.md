@@ -8,6 +8,8 @@ OBTV Studio Manager is a modern web application designed for managing multiple t
 
 Preferred communication style: Simple, everyday language.
 
+Never use or recommend Planning mode. Do not propose or create project tasks for the user to delegate. Work directly in Build mode. (Note: the agent cannot switch modes itself — the user controls the Plan/Build toggle — but the agent should never push the user toward Planning mode.)
+
 ## System Architecture
 
 ### Frontend Architecture
