@@ -2308,6 +2308,38 @@ export default function AdminPanel() {
                   {editingStream && (
                     <div className="space-y-4">
                       <div>
+                        <Label>Stream ID</Label>
+                        <div className="mt-1 flex items-center gap-2 rounded-md border bg-muted/40 px-3 py-2">
+                          <span
+                            className="min-w-0 flex-1 truncate font-mono text-xs text-muted-foreground"
+                            title={editingStream.id}
+                            data-testid="text-edit-stream-id"
+                          >
+                            {editingStream.id}
+                          </span>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 shrink-0"
+                            onClick={() => handleCopy(editingStream.id, `${editingStream.id}-editid`)}
+                            data-testid="button-copy-edit-stream-id"
+                            title="Copy Stream ID"
+                            aria-label="Copy Stream ID"
+                          >
+                            {copiedId === `${editingStream.id}-editid` ? (
+                              <Check size={14} className="text-green-500" />
+                            ) : (
+                              <Copy size={14} />
+                            )}
+                          </Button>
+                        </div>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          Permanent identifier — stays the same no matter how you rename the stream.
+                        </p>
+                      </div>
+
+                      <div>
                         <Label htmlFor="editStreamName">Stream Name</Label>
                         <Input
                           id="editStreamName"
@@ -2555,6 +2587,27 @@ export default function AdminPanel() {
                                             {stream.description && (
                                               <div className="text-xs text-muted-foreground">{stream.description}</div>
                                             )}
+                                            <div className="mt-0.5 flex items-center gap-1">
+                                              <span className="text-[10px] uppercase tracking-wide text-muted-foreground">ID</span>
+                                              <span
+                                                className="max-w-[220px] truncate font-mono text-[11px] text-muted-foreground"
+                                                title={stream.id}
+                                                data-testid={`text-stream-id-${stream.id}`}
+                                              >
+                                                {stream.id}
+                                              </span>
+                                              <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                className="h-5 w-5 shrink-0"
+                                                onClick={() => handleCopy(stream.id, `${stream.id}-id`)}
+                                                data-testid={`button-copy-stream-id-${stream.id}`}
+                                                title="Copy Stream ID"
+                                                aria-label="Copy Stream ID"
+                                              >
+                                                {copiedId === `${stream.id}-id` ? <Check size={12} className="text-green-500" /> : <Copy size={12} />}
+                                              </Button>
+                                            </div>
                                           </TableCell>
                                           <TableCell>
                                             <Badge variant={stream.isActive ? "default" : "secondary"} className="text-xs">
