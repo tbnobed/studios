@@ -28,12 +28,25 @@ import { useEffect } from "react";
 // Shared AudioContext + resume wiring, created lazily on first use.
 let sharedCtx: AudioContext | null = null;
 let resumeBound = false;
+// Bumped every time the context (re)enters the "running" state. A
+// MediaStreamAudioSourceNode created while the context is suspended can stay
+// silent even after the context resumes; tiles compare against this counter and
+// rebuild their source node when it changes so the meters actually start moving
+// (this is why soloing/un-soloing a tile previously "fixed" a dead meter — the
+// remount rebuilt the node on an already-running context).
+let resumeGeneration = 0;
 
 function getSharedCtx(): AudioContext | null {
   try {
     const Ctx = window.AudioContext || (window as any).webkitAudioContext;
     if (!Ctx) return null;
-    if (!sharedCtx) sharedCtx = new Ctx();
+    if (!sharedCtx) {
+      sharedCtx = new Ctx();
+      sharedCtx.addEventListener("statechange", () => {
+        if (sharedCtx?.state === "running") resumeGeneration++;
+      });
+      if (sharedCtx.state === "running") resumeGeneration++;
+    }
     if (!resumeBound) {
       const resume = () => sharedCtx?.resume().catch(() => {});
       window.addEventListener("click", resume);
@@ -88,6 +101,9 @@ export function useAudioLevel(
     // streams. For WebRTC this is the MediaStream object; for HLS we key off the
     // media element itself (createMediaElementSource can only run once per el).
     let connectedSrcObject: MediaStream | null = null;
+    // The resumeGeneration the current source node was built under. When the
+    // context resumes after we connected, this goes stale and we rebuild.
+    let connectedGeneration = -1;
     let level = 0;
     const data = new Uint8Array(128);
 
@@ -114,9 +130,24 @@ export function useAudioLevel(
       }
 
       const srcObj = video.srcObject as MediaStream | null;
+      const sameSource = connectedEl === video && connectedSrcObject === srcObj;
 
-      // Already connected to this exact source — nothing to do.
-      if (connectedEl === video && connectedSrcObject === srcObj) return;
+      // Already connected to this exact source on a context that's been running
+      // since we connected — nothing to do.
+      if (sameSource && connectedGeneration === resumeGeneration) return;
+
+      // The context resumed after we built the source node. A MediaStreamSource
+      // made while suspended can stay silent, so rebuild it (WebRTC path). The
+      // HLS media-element path can't be recreated and is muted anyway, so just
+      // mark it current and move on.
+      if (sameSource && connectedGeneration !== resumeGeneration) {
+        if (srcObj) {
+          disconnect();
+        } else {
+          connectedGeneration = resumeGeneration;
+          return;
+        }
+      }
 
       // Source identity changed (stream swap). Tear down before rebuilding.
       // Note: a MediaElementSource can't be recreated for the same element, so
@@ -145,6 +176,7 @@ export function useAudioLevel(
         analyser.fftSize = 256;
         source.connect(analyser);
         connectedEl = video;
+        connectedGeneration = resumeGeneration;
       } catch {
         // Ignore; will retry on the next frame.
         analyser = null;
