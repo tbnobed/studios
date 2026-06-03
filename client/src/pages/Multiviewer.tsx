@@ -593,13 +593,17 @@ export default function Multiviewer() {
                     variant="ghost"
                     size="sm"
                     className="touch-area"
-                    onClick={() =>
+                    onClick={() => {
+                      const w = Math.min(window.screen.availWidth, 1600);
+                      const h = Math.min(window.screen.availHeight, 900);
+                      const left = window.screen.availWidth / 2 - w / 2;
+                      const top = window.screen.availHeight / 2 - h / 2;
                       window.open(
                         `/multiviewer/view/${currentLayoutId}`,
                         `obtv-wall-${currentLayoutId}`,
-                        "noopener,noreferrer"
-                      )
-                    }
+                        `popup=yes,noopener,noreferrer,width=${w},height=${h},left=${left},top=${top}`
+                      );
+                    }}
                     disabled={isDirty}
                     title={
                       isDirty
