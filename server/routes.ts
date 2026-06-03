@@ -433,6 +433,81 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // WHEP signaling proxy.
+  //
+  // The streaming origins (cdn*.obedtv.live) serve WebRTC WHEP over plain HTTP.
+  // When the app itself is served over HTTPS, the browser blocks that HTTP
+  // signaling request as mixed content. This endpoint relays the one-time SDP
+  // offer/answer handshake through the app's own (HTTPS) origin so the browser
+  // only ever talks HTTPS. The actual video media still flows peer-to-peer over
+  // UDP directly from the CDN to the viewer — it does NOT pass through here — so
+  // the added server load is just a few KB per stream-open.
+  //
+  // The path intentionally contains "/whep/" because the SRS SDK validates that
+  // substring before sending. `express.text` captures the raw application/sdp
+  // body. Targets are restricted to known streaming hosts to prevent SSRF.
+  //
+  // This route is deliberately NOT behind requireAuth: the SRS SDK issues the
+  // request via a bare XHR that cannot attach our Bearer token, and the upstream
+  // WHEP endpoints are already publicly reachable over HTTP. The allowlist
+  // (not auth) is the security boundary here, and only a WHEP SDP handshake can
+  // be relayed — no arbitrary URLs.
+  //
+  // Allow any host on the streaming domain (cdn1/cdn2/cdn3.obedtv.live, etc.) so
+  // new CDN nodes work without a code change, while still blocking arbitrary
+  // hosts. Override the suffix with WHEP_ALLOWED_DOMAIN if the domain changes.
+  const WHEP_ALLOWED_DOMAIN = process.env.WHEP_ALLOWED_DOMAIN || "obedtv.live";
+  const isAllowedWhepHost = (hostname: string) =>
+    hostname === WHEP_ALLOWED_DOMAIN ||
+    hostname.endsWith(`.${WHEP_ALLOWED_DOMAIN}`);
+  app.post(
+    "/api/whep/relay",
+    express.text({ type: () => true, limit: "1mb" }),
+    async (req: any, res) => {
+      try {
+        const target = String(req.query.target || "");
+        let parsed: URL;
+        try {
+          parsed = new URL(target);
+        } catch {
+          return res.status(400).json({ message: "Invalid target URL" });
+        }
+        // The CDN serves WHEP over plain HTTP; reject anything else.
+        if (parsed.protocol !== "http:") {
+          return res.status(400).json({ message: "Unsupported protocol" });
+        }
+        if (!isAllowedWhepHost(parsed.hostname)) {
+          return res.status(403).json({ message: "Target host not allowed" });
+        }
+        if (
+          parsed.pathname.indexOf("/whep/") === -1 &&
+          parsed.pathname.indexOf("/whip-play/") === -1
+        ) {
+          return res.status(400).json({ message: "Not a WHEP endpoint" });
+        }
+
+        const offerSdp = typeof req.body === "string" ? req.body : "";
+        // redirect: "error" prevents an allowlisted host from bouncing the
+        // server to an off-allowlist destination (SSRF). Forward the normalized
+        // URL rather than the raw query string.
+        const upstream = await fetch(parsed.toString(), {
+          method: "POST",
+          headers: { "Content-Type": "application/sdp" },
+          body: offerSdp,
+          redirect: "error",
+        });
+        const answer = await upstream.text();
+        res
+          .status(upstream.status)
+          .set("Content-Type", "application/sdp")
+          .send(answer);
+      } catch (error) {
+        console.error("WHEP proxy error:", error);
+        res.status(502).json({ message: "Failed to reach streaming server" });
+      }
+    },
+  );
+
   // Favorites routes (per-user, scoped to the authenticated user)
   app.get("/api/favorites", requireAuth, async (req: any, res) => {
     try {

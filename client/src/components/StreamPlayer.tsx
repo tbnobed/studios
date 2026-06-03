@@ -20,6 +20,22 @@ declare global {
   }
 }
 
+// The CDN serves WHEP signaling over plain HTTP. On an HTTPS page the browser
+// blocks that as mixed content, so we relay the handshake through our own
+// same-origin HTTPS endpoint. Only the tiny SDP exchange is proxied — the video
+// media still streams peer-to-peer directly from the CDN. The "/whep/" segment
+// is required by the SRS SDK, which validates that substring before sending.
+function toWhepUrl(streamUrl: string): string {
+  if (
+    typeof window !== "undefined" &&
+    window.location.protocol === "https:" &&
+    streamUrl.startsWith("http://")
+  ) {
+    return `/api/whep/relay?target=${encodeURIComponent(streamUrl)}`;
+  }
+  return streamUrl;
+}
+
 export function StreamPlayer({ 
   stream, 
   className = "", 
@@ -188,7 +204,7 @@ export function StreamPlayer({
 
           // Start playing the stream. A rejection here means the WHEP endpoint
           // refused (source offline / not found).
-          await sdk.play(stream.streamUrl);
+          await sdk.play(toWhepUrl(stream.streamUrl));
           if (cancelled) return;
 
           // Fallback poll for browsers/sources that don't fire timeupdate
