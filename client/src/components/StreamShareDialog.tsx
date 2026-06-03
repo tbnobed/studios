@@ -167,7 +167,7 @@ export function StreamShareDialog({
                   return (
                     <li
                       key={s.id}
-                      className="flex items-center gap-2 rounded-md border border-border p-2"
+                      className="flex min-w-0 items-center gap-2 rounded-md border border-border p-2"
                     >
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-sm font-medium">
@@ -178,7 +178,7 @@ export function StreamShareDialog({
                             </span>
                           )}
                         </p>
-                        <p className="truncate text-xs text-muted-foreground font-mono">
+                        <p className="break-all text-xs text-muted-foreground font-mono">
                           {s.shareUrl}
                         </p>
                         <p className="truncate text-xs text-muted-foreground">
