@@ -30,9 +30,9 @@ import { useToast } from "@/hooks/use-toast";
 import { StudioWithStreams, Stream, FavoriteWithStream } from "@shared/schema";
 import { removeAuthToken, getAuthHeaders, isUnauthorizedError } from "@/lib/authUtils";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import obedtvLogo from "@assets/image_1756407804157.png";
+import obedtvLogo from "@assets/obedtv-300x244_1756343612842.png";
 import tbnLogo from "../assets/tbnlogo-white_1756354700943.png";
-import obLogo from "@assets/image_1756407804157.png";
+import obLogo from "@assets/obedtv-300x244_1756343612842.png";
 
 type ViewMode = 'grid' | 'single';
 
