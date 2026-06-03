@@ -241,17 +241,6 @@ export function fitSlots(
   return next;
 }
 
-// Pick the layout that best holds `count` sources: the smallest layout whose
-// slot count is >= count (so every source is shown), falling back to the
-// largest available layout when nothing is big enough.
-export function pickLayoutForCount(count: number): MultiviewerLayoutType {
-  const bySize = [...LAYOUT_DEFS].sort(
-    (a, b) => a.cells.length - b.cells.length
-  );
-  const fit = bySize.find((d) => d.cells.length >= count);
-  return (fit ?? bySize[bySize.length - 1]).type;
-}
-
 export const LAYOUT_GROUP_ORDER: LayoutGroup[] = [
   "Basic",
   "Spotlight",

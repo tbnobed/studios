@@ -43,7 +43,7 @@ import { MultiviewerTile, slotDndId } from "@/components/MultiviewerTile";
 import { StreamSingleView } from "@/components/StreamSingleView";
 import { MultiviewerGrid } from "@/components/MultiviewerGrid";
 import { LayoutPicker } from "@/components/LayoutPicker";
-import { slotCount, fitSlots, pickLayoutForCount } from "@/lib/multiviewerLayouts";
+import { slotCount, fitSlots } from "@/lib/multiviewerLayouts";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { getAuthHeaders } from "@/lib/authUtils";
@@ -242,16 +242,6 @@ export default function Multiviewer() {
       next[index] = streamId;
       return next;
     });
-  };
-
-  // Clicking a studio (outside edit mode) loads all of its feeds into the
-  // grid, picking a layout large enough to show every source.
-  const loadStudioStreams = (studio: StudioWithStreams) => {
-    const ids = studio.streams.map((s) => s.id);
-    const type = pickLayoutForCount(ids.length || 1);
-    setLayoutType(type);
-    setSlots(fitSlots(ids, slotCount(type)));
-    setCurrentLayoutId(null);
   };
 
   // Move/swap the contents of two slots (drag-and-drop in edit mode).
@@ -511,11 +501,7 @@ export default function Multiviewer() {
       <div className="flex-1 flex relative z-10 overflow-hidden">
         {/* Desktop Sidebar */}
         <div className="hidden lg:block">
-          <StudioSidebar
-            activeMultiviewer
-            sourceDragEnabled={editMode}
-            onLoadStudio={loadStudioStreams}
-          />
+          <StudioSidebar activeMultiviewer sourceDragEnabled={editMode} />
         </div>
 
         <main className="flex-1 relative flex flex-col min-w-0">
@@ -541,7 +527,6 @@ export default function Multiviewer() {
                     <StudioSidebar
                       activeMultiviewer
                       sourceDragEnabled={editMode}
-                      onLoadStudio={loadStudioStreams}
                       onNavigate={() => setSidebarOpen(false)}
                     />
                   </SheetContent>
