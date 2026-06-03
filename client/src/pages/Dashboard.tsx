@@ -16,11 +16,13 @@ import {
   PanelLeftOpen,
   Monitor,
   Video,
-  Heart
+  Heart,
+  Share2
 } from "lucide-react";
 import { StreamPlayer } from "@/components/StreamPlayer";
 import { GestureHandler } from "@/components/GestureHandler";
 import { StreamSingleView } from "@/components/StreamSingleView";
+import { StreamShareDialog } from "@/components/StreamShareDialog";
 import { StudioCarousel } from "@/components/StudioCarousel";
 import StudioSidebar from "@/components/StudioSidebar";
 import { useAuth } from "@/hooks/useAuth";
@@ -59,6 +61,7 @@ export default function Dashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [streamStatuses, setStreamStatuses] = useState<Record<string, 'online' | 'offline' | 'error'>>({});
   const [currentStudioIndex, setCurrentStudioIndex] = useState(0);
+  const [shareStream, setShareStream] = useState<Stream | null>(null);
 
   // Fetch user's accessible studios
   const { data: studios = [], isLoading: studiosLoading, error: studiosError } = useQuery<StudioWithStreams[]>({
@@ -506,6 +509,16 @@ export default function Dashboard() {
                           variant="secondary"
                           size="sm"
                           className="bg-black/60 hover:bg-black/80 text-white touch-area"
+                          onClick={() => setShareStream(stream)}
+                          data-testid={`button-share-${stream.id}`}
+                          aria-label="Share this stream"
+                        >
+                          <Share2 size={12} />
+                        </Button>
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          className="bg-black/60 hover:bg-black/80 text-white touch-area"
                           onClick={() => {
                             setCurrentStreamIndex(selectedStudio.streams.indexOf(stream));
                             setViewMode('single');
@@ -565,6 +578,15 @@ export default function Dashboard() {
           className="w-12 h-12 opacity-75"
         />
       </div>
+
+      {shareStream && (
+        <StreamShareDialog
+          streamId={shareStream.id}
+          streamName={shareStream.name}
+          open={!!shareStream}
+          onOpenChange={(open) => !open && setShareStream(null)}
+        />
+      )}
     </div>
   );
 }

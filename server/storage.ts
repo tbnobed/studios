@@ -30,6 +30,7 @@ import {
   type Invite,
   type StreamShare,
   type StreamShareWithStream,
+  type StreamShareWithStreamAndCreator,
   type MultiviewerLayoutWithMeta,
   type MultiviewerShare
 } from "@shared/schema";
@@ -91,7 +92,9 @@ export interface IStorage {
   getInviteByTokenHash(tokenHash: string): Promise<Invite | undefined>;
 
   // Public stream share links
-  getStreamShares(): Promise<StreamShareWithStream[]>;
+  getStreamShares(): Promise<StreamShareWithStreamAndCreator[]>;
+  getStreamSharesByUser(userId: string): Promise<StreamShareWithStream[]>;
+  getStreamShareById(id: string): Promise<StreamShare | undefined>;
   getStreamShareByToken(token: string): Promise<StreamShareWithStream | undefined>;
   createStreamShare(data: { streamId: string; token: string; label?: string | null; expiresAt?: Date | null; createdBy?: string | null }): Promise<StreamShare>;
   deleteStreamShare(id: string): Promise<void>;
@@ -490,12 +493,32 @@ export class DatabaseStorage implements IStorage {
 
   // Stream share links --------------------------------------------------
 
-  async getStreamShares(): Promise<StreamShareWithStream[]> {
+  async getStreamShares(): Promise<StreamShareWithStreamAndCreator[]> {
     const shares = await db.query.streamShares.findMany({
+      with: {
+        stream: true,
+        creator: { columns: { id: true, username: true } },
+      },
+      orderBy: (s, { desc }) => [desc(s.createdAt)],
+    });
+    return shares as StreamShareWithStreamAndCreator[];
+  }
+
+  async getStreamSharesByUser(userId: string): Promise<StreamShareWithStream[]> {
+    const shares = await db.query.streamShares.findMany({
+      where: eq(streamShares.createdBy, userId),
       with: { stream: true },
       orderBy: (s, { desc }) => [desc(s.createdAt)],
     });
     return shares as StreamShareWithStream[];
+  }
+
+  async getStreamShareById(id: string): Promise<StreamShare | undefined> {
+    const [share] = await db
+      .select()
+      .from(streamShares)
+      .where(eq(streamShares.id, id));
+    return share;
   }
 
   async getStreamShareByToken(token: string): Promise<StreamShareWithStream | undefined> {

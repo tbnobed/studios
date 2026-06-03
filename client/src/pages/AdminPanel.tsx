@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Trash2, Edit, Plus, UserPlus, Video, Monitor, Settings2, ChevronDown, Copy, Check, Search, Layers, Menu, Mail, Clock, Link2 } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { UserWithPermissions, Studio, StudioWithStreams, Stream, InsertStream, GroupWithStreams, StreamShareWithStream } from "@shared/schema";
+import { UserWithPermissions, Studio, StudioWithStreams, Stream, InsertStream, GroupWithStreams, StreamShareWithStreamAndCreator } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { getAuthHeaders } from "@/lib/authUtils";
@@ -337,7 +337,7 @@ export default function AdminPanel() {
 
   // Fetch share links (admin only)
   const { data: shares = [], isLoading: sharesLoading } = useQuery<
-    (StreamShareWithStream & { shareUrl: string })[]
+    (StreamShareWithStreamAndCreator & { shareUrl: string })[]
   >({
     queryKey: ["/api/admin/shares"],
     queryFn: async () => {
@@ -354,7 +354,7 @@ export default function AdminPanel() {
       label?: string;
       expiresAt?: string | null;
     }) => {
-      const response = await apiRequest("POST", "/api/admin/shares", payload);
+      const response = await apiRequest("POST", "/api/shares", payload);
       return response.json();
     },
     onSuccess: (data: { shareUrl: string }) => {
@@ -374,7 +374,7 @@ export default function AdminPanel() {
 
   const deleteShareMutation = useMutation({
     mutationFn: async (id: string) => {
-      await apiRequest("DELETE", `/api/admin/shares/${id}`);
+      await apiRequest("DELETE", `/api/shares/${id}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/shares"] });
@@ -2895,6 +2895,8 @@ export default function AdminPanel() {
                               {share.expiresAt
                                 ? `Expires ${new Date(share.expiresAt).toLocaleString()}`
                                 : "Never expires"}
+                              {" · "}
+                              {`Created by ${share.creator?.username ?? "unknown"}`}
                             </p>
                           </div>
                           <div className="flex items-center gap-1 shrink-0">

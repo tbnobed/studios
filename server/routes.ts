@@ -632,6 +632,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .status(404)
           .json({ message: "This share link is invalid or has expired." });
       }
+      // If a non-admin created this link and has since lost access to the
+      // stream, stop serving it (same 404 so it can't be distinguished from a
+      // revoked link). Admin-created or creator-deleted links keep working.
+      if (share.createdBy) {
+        const creator = await storage.getUser(share.createdBy);
+        if (creator && creator.role !== "admin") {
+          const accessible = await storage.getUserAccessibleStreamIds(
+            share.createdBy,
+          );
+          if (!accessible.has(share.streamId)) {
+            return res
+              .status(404)
+              .json({ message: "This share link is invalid or has expired." });
+          }
+        }
+      }
       res.json({
         stream: share.stream,
         label: share.label,
@@ -643,6 +659,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Admin-only: every stream share link created by any user, with the creator.
   app.get("/api/admin/shares", requireAuth, requireAdmin, async (req, res) => {
     try {
       const shares = await storage.getStreamShares();
@@ -656,12 +673,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/admin/shares", requireAuth, requireAdmin, async (req: any, res) => {
+  // Any logged-in user can create/list/delete their OWN stream share links,
+  // but only for streams they currently have access to.
+  app.get("/api/shares", requireAuth, async (req: any, res) => {
+    try {
+      const shares = await storage.getStreamSharesByUser(req.user.id);
+      const baseUrl = getAppBaseUrl(req);
+      res.json(
+        shares.map((s) => ({ ...s, shareUrl: `${baseUrl}/share/${s.token}` })),
+      );
+    } catch (error) {
+      console.error("Error listing user shares:", error);
+      res.status(500).json({ message: "Failed to list share links" });
+    }
+  });
+
+  app.post("/api/shares", requireAuth, async (req: any, res) => {
     try {
       const data = insertStreamShareSchema.parse(req.body);
       const stream = await storage.getStream(data.streamId);
       if (!stream) {
         return res.status(400).json({ message: "Stream not found" });
+      }
+      // Non-admins may only share streams they can currently access, so a share
+      // link can't be used to expose a stream the creator isn't allowed to see.
+      if (req.user.role !== "admin") {
+        const accessible = await storage.getUserAccessibleStreamIds(req.user.id);
+        if (!accessible.has(data.streamId)) {
+          return res
+            .status(403)
+            .json({ message: "You don't have access to this stream." });
+        }
       }
       const token = crypto.randomBytes(24).toString("hex");
       const share = await storage.createStreamShare({
@@ -669,7 +711,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         token,
         label: data.label ?? null,
         expiresAt: data.expiresAt ?? null,
-        createdBy: req.user?.id ?? null,
+        createdBy: req.user.id,
       });
       const shareUrl = `${getAppBaseUrl(req)}/share/${token}`;
       res.status(201).json({ ...share, shareUrl });
@@ -684,8 +726,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/admin/shares/:id", requireAuth, requireAdmin, async (req, res) => {
+  // Delete a stream share. Admins can delete anyone's; users only their own.
+  app.delete("/api/shares/:id", requireAuth, async (req: any, res) => {
     try {
+      const share = await storage.getStreamShareById(req.params.id);
+      if (!share) {
+        return res.status(404).json({ message: "Share link not found" });
+      }
+      if (req.user.role !== "admin" && share.createdBy !== req.user.id) {
+        return res
+          .status(403)
+          .json({ message: "You can only delete your own share links." });
+      }
       await storage.deleteStreamShare(req.params.id);
       res.status(204).end();
     } catch (error) {

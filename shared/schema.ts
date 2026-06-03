@@ -296,6 +296,10 @@ export const streamSharesRelations = relations(streamShares, ({ one }) => ({
     fields: [streamShares.streamId],
     references: [streams.id],
   }),
+  creator: one(users, {
+    fields: [streamShares.createdBy],
+    references: [users.id],
+  }),
 }));
 
 export const favoritesRelations = relations(favorites, ({ one }) => ({
@@ -438,6 +442,9 @@ export type Invite = typeof invites.$inferSelect;
 export type StreamShare = typeof streamShares.$inferSelect;
 export type InsertStreamShare = z.infer<typeof insertStreamShareSchema>;
 export type StreamShareWithStream = StreamShare & { stream: Stream };
+export type StreamShareWithStreamAndCreator = StreamShareWithStream & {
+  creator?: { id: string; username: string } | null;
+};
 
 export type MultiviewerLayout = typeof multiviewerLayouts.$inferSelect;
 export type InsertMultiviewerLayout = z.infer<typeof insertMultiviewerLayoutSchema>;

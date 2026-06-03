@@ -1,1 +1,1 @@
-- [Multiview sharing](multiview-sharing.md) — external token link + internal user/group grant; resolve shared streams via owner-scoped getAccessibleStreamsByIds, never unrestricted, to avoid leaking revoked streams.
+- [Multiview & stream sharing](multiview-sharing.md) — multiview (external token + internal grant) and single-stream public links both gate on the CREATOR's current access (never unrestricted) so revoked permissions can't leak streams via old links.
