@@ -1,9 +1,2 @@
-- [Schema is provisioned in three places](schema-three-places.md) — Drizzle `shared/schema.ts`, `init.sql`, and `migrations/` must be kept in lockstep for every DDL change.
-- [Read-path authz / per-stream access](read-path-authz.md) — access = admin OR individual user_stream_permissions OR any group grant (union, add-only); studios are UI-only now.
-- [Web Audio metering must share one AudioContext](audio-metering-scaling.md) — browsers cap concurrent AudioContexts (~6); per-tile contexts break large mosaics.
-- [Pre-existing Dashboard.tsx tsc errors](preexisting-tsc-errors.md) — `Property 'id' does not exist on type 'never'` in Dashboard.tsx predates current work; not a regression.
-- [StreamPlayer status detection](stream-status-detection.md) — WebRTC "stuck on LOADING" trap: don't let init teardown set the `cancelled` flag, or status callbacks never fire.
-- [Multiviewer layout system](multiviewer-layouts.md) — layouts live in one registry; adding one needs the Zod enum AND LAYOUT_DEFS in lockstep (no DB migration).
-- [Audio meters need activation in pop-outs](audio-meter-popout-activation.md) — fresh window.open'd wall has no user gesture, so the AudioContext stays suspended and meters read 0 until a click.
-- [Request logger leaks secrets in URL/response](invite-token-log-leak.md) — server/index.ts logs req.path + full JSON body for /api/*; redact any endpoint carrying tokens (e.g. /api/invite, inviteUrl).
-- [Streaming mixed-content proxies (WHEP + HLS)](whep-mixed-content-proxy.md) — HTTP CDN on HTTPS app is blocked; relay WHEP SDP (media stays P2P) and proxy+rewrite HLS playlists/segments via same-origin routes. Shared domain allowlist; no auth.
+- [Token-bearing endpoints must be log-redacted](log-token-redaction.md) — any new route that returns a link token (invite/share) must be added to the server/index.ts request-logger redaction or the token leaks into logs.
+- [Schema changes need three-way rollout](schema-rollout.md) — a new table in shared/schema.ts must also be added to init.sql AND a numbered migrations/NNN_*.sql, not just db:push.

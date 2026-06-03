@@ -8,10 +8,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Trash2, Edit, Plus, UserPlus, Video, Monitor, Settings2, ChevronDown, Copy, Check, Search, Layers, Menu, Mail, Clock } from "lucide-react";
+import { Trash2, Edit, Plus, UserPlus, Video, Monitor, Settings2, ChevronDown, Copy, Check, Search, Layers, Menu, Mail, Clock, Link2 } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { UserWithPermissions, Studio, StudioWithStreams, Stream, InsertStream, GroupWithStreams } from "@shared/schema";
+import { UserWithPermissions, Studio, StudioWithStreams, Stream, InsertStream, GroupWithStreams, StreamShareWithStream } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { getAuthHeaders } from "@/lib/authUtils";
@@ -189,11 +189,16 @@ export default function AdminPanel() {
   const [quickAddTypes, setQuickAddTypes] = useState<Record<string, "webrtc" | "hls">>({});
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
+  // Share link management
+  const [newShare, setNewShare] = useState({ streamId: "", label: "", expiresAt: "" });
+  const [createdShareUrl, setCreatedShareUrl] = useState<string | null>(null);
+  const [copiedShareId, setCopiedShareId] = useState<string | null>(null);
+
   // Handle URL parameters for tab selection
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const tab = urlParams.get('tab');
-    if (tab && ['users', 'studios', 'streams', 'groups'].includes(tab)) {
+    if (tab && ['users', 'studios', 'streams', 'groups', 'shares'].includes(tab)) {
       setActiveTab(tab);
     }
   }, []);
@@ -329,6 +334,85 @@ export default function AdminPanel() {
     onError: (e: Error) =>
       toast({ title: "Failed to Delete Group", description: e.message, variant: "destructive" }),
   });
+
+  // Fetch share links (admin only)
+  const { data: shares = [], isLoading: sharesLoading } = useQuery<
+    (StreamShareWithStream & { shareUrl: string })[]
+  >({
+    queryKey: ["/api/admin/shares"],
+    queryFn: async () => {
+      const response = await apiRequest("GET", "/api/admin/shares", undefined, {
+        headers: getAuthHeaders(),
+      });
+      return response.json();
+    },
+  });
+
+  const createShareMutation = useMutation({
+    mutationFn: async (payload: {
+      streamId: string;
+      label?: string;
+      expiresAt?: string | null;
+    }) => {
+      const response = await apiRequest("POST", "/api/admin/shares", payload);
+      return response.json();
+    },
+    onSuccess: (data: { shareUrl: string }) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/shares"] });
+      setCreatedShareUrl(data.shareUrl);
+      setNewShare({ streamId: "", label: "", expiresAt: "" });
+      toast({ title: "Share link created", description: "Copy it and send it to your viewer." });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Couldn't create link",
+        description: error.message.replace(/^\d+:\s*/, "") || "Please try again",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deleteShareMutation = useMutation({
+    mutationFn: async (id: string) => {
+      await apiRequest("DELETE", `/api/admin/shares/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/shares"] });
+      toast({
+        title: "Share link deleted",
+        description: "Anyone using that link can no longer watch.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Couldn't delete link",
+        description: error.message.replace(/^\d+:\s*/, "") || "Please try again",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleCreateShare = () => {
+    if (!newShare.streamId) {
+      toast({ title: "Pick a stream", description: "Choose which stream to share.", variant: "destructive" });
+      return;
+    }
+    createShareMutation.mutate({
+      streamId: newShare.streamId,
+      label: newShare.label.trim() || undefined,
+      expiresAt: newShare.expiresAt ? new Date(newShare.expiresAt).toISOString() : null,
+    });
+  };
+
+  const copyShareLink = async (id: string, url: string) => {
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopiedShareId(id);
+      setTimeout(() => setCopiedShareId((cur) => (cur === id ? null : cur)), 2000);
+    } catch {
+      toast({ title: "Copy failed", description: "Copy the link manually.", variant: "destructive" });
+    }
+  };
 
   // Create user mutation
   const inviteUserMutation = useMutation({
@@ -1142,7 +1226,7 @@ export default function AdminPanel() {
           <div className="max-w-7xl mx-auto p-4 mt-6">
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="users" className="flex items-center gap-2" data-testid="tab-users">
               <UserPlus size={16} />
               Users
@@ -1158,6 +1242,10 @@ export default function AdminPanel() {
             <TabsTrigger value="groups" className="flex items-center gap-2" data-testid="tab-groups">
               <UsersIcon size={16} />
               Groups
+            </TabsTrigger>
+            <TabsTrigger value="shares" className="flex items-center gap-2" data-testid="tab-shares">
+              <Link2 size={16} />
+              Share Links
             </TabsTrigger>
           </TabsList>
 
@@ -2669,6 +2757,174 @@ export default function AdminPanel() {
                         </div>
                       </div>
                     ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Share Links Tab */}
+          <TabsContent value="shares" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Share Links</CardTitle>
+                <CardDescription>
+                  Create a private link to one stream that outside people can watch
+                  without an account. Set an optional expiration, and delete a link any
+                  time to instantly revoke access. Note: the underlying video URL is
+                  public, so treat a share link as a controlled, expirable entry point
+                  rather than hard copy protection.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="rounded-md border p-4 space-y-4">
+                  <div className="grid gap-4 sm:grid-cols-3">
+                    <div>
+                      <Label htmlFor="share-stream">Stream</Label>
+                      <Select
+                        value={newShare.streamId}
+                        onValueChange={(v) => setNewShare({ ...newShare, streamId: v })}
+                      >
+                        <SelectTrigger id="share-stream" data-testid="select-share-stream">
+                          <SelectValue placeholder="Select a stream" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {studiosWithStreams.flatMap((studio) =>
+                            (studio.streams || []).map((s) => (
+                              <SelectItem key={s.id} value={s.id}>
+                                {studio.name} — {s.name}
+                              </SelectItem>
+                            )),
+                          )}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label htmlFor="share-label">Label (optional)</Label>
+                      <Input
+                        id="share-label"
+                        value={newShare.label}
+                        placeholder="e.g. Sunday Service"
+                        onChange={(e) => setNewShare({ ...newShare, label: e.target.value })}
+                        data-testid="input-share-label"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="share-expires">Expires (optional)</Label>
+                      <Input
+                        id="share-expires"
+                        type="datetime-local"
+                        value={newShare.expiresAt}
+                        onChange={(e) => setNewShare({ ...newShare, expiresAt: e.target.value })}
+                        data-testid="input-share-expires"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex justify-end">
+                    <Button
+                      onClick={handleCreateShare}
+                      disabled={createShareMutation.isPending}
+                      className="touch-area"
+                      data-testid="button-create-share"
+                    >
+                      <Plus className="mr-2" size={16} />
+                      {createShareMutation.isPending ? "Creating..." : "Create Link"}
+                    </Button>
+                  </div>
+                  {createdShareUrl && (
+                    <div className="rounded-md bg-muted p-3 flex items-center gap-2">
+                      <Input
+                        readOnly
+                        value={createdShareUrl}
+                        className="font-mono text-xs"
+                        data-testid="text-created-share-url"
+                      />
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => copyShareLink("new", createdShareUrl)}
+                        data-testid="button-copy-created-share"
+                      >
+                        {copiedShareId === "new" ? <Check size={14} /> : <Copy size={14} />}
+                      </Button>
+                    </div>
+                  )}
+                </div>
+
+                {sharesLoading ? (
+                  <p className="text-sm text-muted-foreground">Loading share links...</p>
+                ) : shares.length === 0 ? (
+                  <div className="text-center py-12 text-muted-foreground">
+                    <Link2 className="mx-auto mb-4 opacity-50" size={64} />
+                    <h3 className="text-lg font-semibold mb-2">No Share Links Yet</h3>
+                    <p>Create a link above to let outside viewers watch a stream.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {shares.map((share) => {
+                      const expired =
+                        !!share.expiresAt &&
+                        new Date(share.expiresAt).getTime() <= Date.now();
+                      return (
+                        <div
+                          key={share.id}
+                          className="flex items-center justify-between rounded-md border p-4"
+                          data-testid={`share-row-${share.id}`}
+                        >
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="font-medium">
+                                {share.label || share.stream?.name}
+                              </span>
+                              {share.label && (
+                                <Badge variant="outline" className="text-xs">
+                                  {share.stream?.name}
+                                </Badge>
+                              )}
+                              <Badge
+                                variant={expired ? "destructive" : "secondary"}
+                                className="text-xs"
+                              >
+                                {expired ? "Expired" : "Active"}
+                              </Badge>
+                            </div>
+                            <p className="text-sm text-muted-foreground mt-1 truncate font-mono">
+                              {share.shareUrl}
+                            </p>
+                            <p className="text-xs text-muted-foreground mt-0.5">
+                              {share.expiresAt
+                                ? `Expires ${new Date(share.expiresAt).toLocaleString()}`
+                                : "Never expires"}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-1 shrink-0">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={() => copyShareLink(share.id, share.shareUrl)}
+                              data-testid={`button-copy-share-${share.id}`}
+                            >
+                              {copiedShareId === share.id ? (
+                                <Check size={15} />
+                              ) : (
+                                <Copy size={15} />
+                              )}
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-destructive hover:text-destructive"
+                              onClick={() => deleteShareMutation.mutate(share.id)}
+                              disabled={deleteShareMutation.isPending}
+                              data-testid={`button-delete-share-${share.id}`}
+                            >
+                              <Trash2 size={15} />
+                            </Button>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
               </CardContent>

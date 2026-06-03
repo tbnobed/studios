@@ -131,6 +131,22 @@ export const invites = pgTable("invites", {
   tokenHashIdx: uniqueIndex("invites_token_hash_idx").on(table.tokenHash),
 }));
 
+// Public share links for a single stream. An admin generates an unguessable
+// token; anyone with the resulting link can watch that one stream without an
+// account until the link expires (expiresAt, null = never) or is deleted, which
+// revokes access immediately.
+export const streamShares = pgTable("stream_shares", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  streamId: varchar("stream_id").notNull().references(() => streams.id, { onDelete: "cascade" }),
+  token: varchar("token", { length: 64 }).notNull().unique(),
+  label: varchar("label", { length: 100 }),
+  expiresAt: timestamp("expires_at"),
+  createdBy: varchar("created_by").references(() => users.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  tokenIdx: uniqueIndex("stream_shares_token_idx").on(table.token),
+}));
+
 // Per-user favorite streams. Each user can favorite up to 8 streams per page,
 // across up to 5 pages (40 total). `page` is 1-5 and `position` is 0-7,
 // together describing where the stream sits on the user's favorites pages.
@@ -227,6 +243,13 @@ export const invitesRelations = relations(invites, ({ one }) => ({
   }),
 }));
 
+export const streamSharesRelations = relations(streamShares, ({ one }) => ({
+  stream: one(streams, {
+    fields: [streamShares.streamId],
+    references: [streams.id],
+  }),
+}));
+
 export const favoritesRelations = relations(favorites, ({ one }) => ({
   user: one(users, {
     fields: [favorites.userId],
@@ -296,6 +319,15 @@ export const insertGroupSchema = createInsertSchema(groups).omit({
   createdAt: true,
 });
 
+export const insertStreamShareSchema = createInsertSchema(streamShares, {
+  expiresAt: z.coerce.date().nullable().optional(),
+}).omit({
+  id: true,
+  token: true,
+  createdBy: true,
+  createdAt: true,
+});
+
 export const MULTIVIEWER_LAYOUT_TYPES = [
   // Basic equal grids
   "1x1", "2x2", "3x3", "4x4",
@@ -345,6 +377,10 @@ export type GroupStreamPermission = typeof groupStreamPermissions.$inferSelect;
 export type UserStreamPermission = typeof userStreamPermissions.$inferSelect;
 
 export type Invite = typeof invites.$inferSelect;
+
+export type StreamShare = typeof streamShares.$inferSelect;
+export type InsertStreamShare = z.infer<typeof insertStreamShareSchema>;
+export type StreamShareWithStream = StreamShare & { stream: Stream };
 
 export type MultiviewerLayout = typeof multiviewerLayouts.$inferSelect;
 export type InsertMultiviewerLayout = z.infer<typeof insertMultiviewerLayoutSchema>;

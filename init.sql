@@ -201,6 +201,20 @@ CREATE TABLE IF NOT EXISTS invites (
 );
 CREATE UNIQUE INDEX IF NOT EXISTS invites_token_hash_idx ON invites(token_hash);
 
+-- Public stream share links: an admin generates an unguessable token linking to
+-- one stream. Anyone with the link can watch that stream without an account until
+-- the link expires (expires_at, null = never) or is deleted (revokes access).
+CREATE TABLE IF NOT EXISTS stream_shares (
+    id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
+    stream_id VARCHAR NOT NULL REFERENCES streams(id) ON DELETE CASCADE,
+    token VARCHAR(64) NOT NULL UNIQUE,
+    label VARCHAR(100),
+    expires_at TIMESTAMP,
+    created_by VARCHAR REFERENCES users(id) ON DELETE SET NULL,
+    created_at TIMESTAMP DEFAULT NOW()
+);
+CREATE UNIQUE INDEX IF NOT EXISTS stream_shares_token_idx ON stream_shares(token);
+
 -- Create indexes for performance
 CREATE INDEX IF NOT EXISTS idx_streams_studio_id ON streams(studio_id);
 CREATE INDEX IF NOT EXISTS idx_user_studio_permissions_user_id ON user_studio_permissions(user_id);

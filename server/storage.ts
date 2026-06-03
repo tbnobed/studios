@@ -9,6 +9,7 @@ import {
   invites,
   favorites,
   multiviewerLayouts,
+  streamShares,
   type User, 
   type InsertUser,
   type Studio,
@@ -24,7 +25,9 @@ import {
   type FavoriteWithStream,
   type MultiviewerLayout,
   type InsertMultiviewerLayout,
-  type Invite
+  type Invite,
+  type StreamShare,
+  type StreamShareWithStream
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, asc, desc, inArray, isNull } from "drizzle-orm";
@@ -82,6 +85,12 @@ export interface IStorage {
   // are stored only as SHA-256 hashes; the raw token lives in the emailed link.
   createInvite(userId: string, tokenHash: string, expiresAt: Date): Promise<Invite>;
   getInviteByTokenHash(tokenHash: string): Promise<Invite | undefined>;
+
+  // Public stream share links
+  getStreamShares(): Promise<StreamShareWithStream[]>;
+  getStreamShareByToken(token: string): Promise<StreamShareWithStream | undefined>;
+  createStreamShare(data: { streamId: string; token: string; label?: string | null; expiresAt?: Date | null; createdBy?: string | null }): Promise<StreamShare>;
+  deleteStreamShare(id: string): Promise<void>;
   markInviteAccepted(id: string): Promise<boolean>;
 
   // Favorites operations
@@ -456,6 +465,48 @@ export class DatabaseStorage implements IStorage {
       .where(and(eq(invites.id, id), isNull(invites.acceptedAt)))
       .returning({ id: invites.id });
     return rows.length > 0;
+  }
+
+  // Stream share links --------------------------------------------------
+
+  async getStreamShares(): Promise<StreamShareWithStream[]> {
+    const shares = await db.query.streamShares.findMany({
+      with: { stream: true },
+      orderBy: (s, { desc }) => [desc(s.createdAt)],
+    });
+    return shares as StreamShareWithStream[];
+  }
+
+  async getStreamShareByToken(token: string): Promise<StreamShareWithStream | undefined> {
+    const share = await db.query.streamShares.findFirst({
+      where: eq(streamShares.token, token),
+      with: { stream: true },
+    });
+    return share as StreamShareWithStream | undefined;
+  }
+
+  async createStreamShare(data: {
+    streamId: string;
+    token: string;
+    label?: string | null;
+    expiresAt?: Date | null;
+    createdBy?: string | null;
+  }): Promise<StreamShare> {
+    const [share] = await db
+      .insert(streamShares)
+      .values({
+        streamId: data.streamId,
+        token: data.token,
+        label: data.label ?? null,
+        expiresAt: data.expiresAt ?? null,
+        createdBy: data.createdBy ?? null,
+      })
+      .returning();
+    return share;
+  }
+
+  async deleteStreamShare(id: string): Promise<void> {
+    await db.delete(streamShares).where(eq(streamShares.id, id));
   }
 
   // Favorites operations

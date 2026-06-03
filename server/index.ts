@@ -21,12 +21,23 @@ app.use((req, res, next) => {
   res.on("finish", () => {
     const duration = Date.now() - start;
     if (path.startsWith("/api")) {
-      // Invite links carry a single-use token in the URL/response. Never write
-      // those to logs, or anyone with log access could hijack the invite.
+      // Invite and share links carry tokens in the URL/response. Never write
+      // those to logs, or anyone with log access could hijack the link.
       const isInvitePath = path.startsWith("/api/invite");
-      const loggedPath = isInvitePath ? "/api/invite/[redacted]" : path;
+      const isSharePath =
+        path.startsWith("/api/share") || path.startsWith("/api/admin/shares");
+      const isSecretPath = isInvitePath || isSharePath;
+      const loggedPath = isInvitePath
+        ? "/api/invite/[redacted]"
+        : path.startsWith("/api/share")
+          ? "/api/share/[redacted]"
+          : path;
       let logLine = `${req.method} ${loggedPath} ${res.statusCode} in ${duration}ms`;
-      if (capturedJsonResponse && !isInvitePath && !("inviteUrl" in capturedJsonResponse)) {
+      if (
+        capturedJsonResponse &&
+        !isSecretPath &&
+        !("inviteUrl" in capturedJsonResponse)
+      ) {
         logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
       }
 

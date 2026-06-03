@@ -4,7 +4,7 @@ import { Readable } from "node:stream";
 import { pipeline } from "node:stream/promises";
 import { storage } from "./storage";
 import jwt from "jsonwebtoken";
-import { insertUserSchema, insertStudioSchema, insertStreamSchema, insertMultiviewerLayoutSchema, insertGroupSchema } from "@shared/schema";
+import { insertUserSchema, insertStudioSchema, insertStreamSchema, insertMultiviewerLayoutSchema, insertGroupSchema, insertStreamShareSchema } from "@shared/schema";
 import { z } from "zod";
 import multer from "multer";
 import path from "path";
@@ -616,6 +616,81 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("HLS proxy error:", error);
       res.status(502).json({ message: "Failed to reach streaming server" });
+    }
+  });
+
+  // ----- Stream share links -------------------------------------------------
+  // Public: anyone holding the link can watch the one shared stream, with no
+  // account, until the link expires or is deleted. Missing/expired both return
+  // 404 so the page can't distinguish "never existed" from "revoked".
+  app.get("/api/share/:token", async (req, res) => {
+    try {
+      const share = await storage.getStreamShareByToken(req.params.token);
+      const expired = !!share?.expiresAt && share.expiresAt.getTime() <= Date.now();
+      if (!share || expired) {
+        return res
+          .status(404)
+          .json({ message: "This share link is invalid or has expired." });
+      }
+      res.json({
+        stream: share.stream,
+        label: share.label,
+        expiresAt: share.expiresAt,
+      });
+    } catch (error) {
+      console.error("Error fetching shared stream:", error);
+      res.status(500).json({ message: "Failed to load shared stream" });
+    }
+  });
+
+  app.get("/api/admin/shares", requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const shares = await storage.getStreamShares();
+      const baseUrl = getAppBaseUrl(req as any);
+      res.json(
+        shares.map((s) => ({ ...s, shareUrl: `${baseUrl}/share/${s.token}` })),
+      );
+    } catch (error) {
+      console.error("Error listing shares:", error);
+      res.status(500).json({ message: "Failed to list share links" });
+    }
+  });
+
+  app.post("/api/admin/shares", requireAuth, requireAdmin, async (req: any, res) => {
+    try {
+      const data = insertStreamShareSchema.parse(req.body);
+      const stream = await storage.getStream(data.streamId);
+      if (!stream) {
+        return res.status(400).json({ message: "Stream not found" });
+      }
+      const token = crypto.randomBytes(24).toString("hex");
+      const share = await storage.createStreamShare({
+        streamId: data.streamId,
+        token,
+        label: data.label ?? null,
+        expiresAt: data.expiresAt ?? null,
+        createdBy: req.user?.id ?? null,
+      });
+      const shareUrl = `${getAppBaseUrl(req)}/share/${token}`;
+      res.status(201).json({ ...share, shareUrl });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res
+          .status(400)
+          .json({ message: "Invalid share data", errors: error.errors });
+      }
+      console.error("Error creating share:", error);
+      res.status(500).json({ message: "Failed to create share link" });
+    }
+  });
+
+  app.delete("/api/admin/shares/:id", requireAuth, requireAdmin, async (req, res) => {
+    try {
+      await storage.deleteStreamShare(req.params.id);
+      res.status(204).end();
+    } catch (error) {
+      console.error("Error deleting share:", error);
+      res.status(500).json({ message: "Failed to delete share link" });
     }
   });
 

@@ -12,6 +12,7 @@ import Favorites from "@/pages/Favorites";
 import Multiviewer from "@/pages/Multiviewer";
 import MultiviewerWall from "@/pages/MultiviewerWall";
 import SetPassword from "@/pages/SetPassword";
+import SharedStream from "@/pages/SharedStream";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -33,6 +34,9 @@ function Router() {
       {/* Public route: accepting an invite must work whether or not the
           visitor is already authenticated, so it lives before the auth gate. */}
       <Route path="/invite/:token" component={SetPassword} />
+      {/* Public route: a shared stream link must work for outside viewers with
+          no account, so it lives before the auth gate. */}
+      <Route path="/share/:token" component={SharedStream} />
       {!isAuthenticated ? (
         <Route path="/" component={Landing} />
       ) : (
