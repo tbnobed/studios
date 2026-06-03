@@ -180,6 +180,7 @@ export class DatabaseStorage implements IStorage {
         groupMemberships: { with: { group: true } },
         streamPermissions: true,
       },
+      orderBy: (users, { asc }) => [asc(users.username)],
     });
     return allUsers.map((u) => this.enrichUser(u));
   }
