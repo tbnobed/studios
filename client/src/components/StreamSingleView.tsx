@@ -51,7 +51,7 @@ export function StreamSingleView({
             <StreamPlayer
               stream={stream}
               className="w-full h-full"
-              controls={true}
+              controls={false}
               autoPlay={true}
               onStatusChange={(status) => onStatusChange?.(stream.id, status)}
             />
