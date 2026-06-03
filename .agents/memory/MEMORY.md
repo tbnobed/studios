@@ -1,3 +1,4 @@
 - [Schema is provisioned in three places](schema-three-places.md) — Drizzle `shared/schema.ts`, `init.sql`, and `migrations/` must be kept in lockstep for every DDL change.
 - [Web Audio metering must share one AudioContext](audio-metering-scaling.md) — browsers cap concurrent AudioContexts (~6); per-tile contexts break large mosaics.
 - [Pre-existing Dashboard.tsx tsc errors](preexisting-tsc-errors.md) — `Property 'id' does not exist on type 'never'` in Dashboard.tsx predates current work; not a regression.
+- [StreamPlayer status detection](stream-status-detection.md) — WebRTC "stuck on LOADING" trap: don't let init teardown set the `cancelled` flag, or status callbacks never fire.

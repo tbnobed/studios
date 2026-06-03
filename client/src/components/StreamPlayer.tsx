@@ -37,12 +37,19 @@ export function StreamPlayer({
 
     let cancelled = false;
     let videoCheckTimer: ReturnType<typeof setTimeout> | null = null;
+    let detachVideoListeners: (() => void) | null = null;
 
-    const cleanup = () => {
-      cancelled = true;
+    // Tear down any active connection/listeners WITHOUT marking the effect as
+    // cancelled. Used both for in-effect re-initialization and (with the
+    // cancelled flag) for unmount/dependency-change cleanup.
+    const teardownResources = () => {
       if (videoCheckTimer) {
         clearTimeout(videoCheckTimer);
         videoCheckTimer = null;
+      }
+      if (detachVideoListeners) {
+        detachVideoListeners();
+        detachVideoListeners = null;
       }
       if (sdkRef.current) {
         sdkRef.current.close();
@@ -56,6 +63,11 @@ export function StreamPlayer({
         videoRef.current.srcObject = null;
         videoRef.current.removeAttribute('src');
       }
+    };
+
+    const cleanup = () => {
+      cancelled = true;
+      teardownResources();
     };
 
     const initializeHls = () => {
@@ -102,8 +114,8 @@ export function StreamPlayer({
 
     const initializeStream = async () => {
       try {
-        // Clean up existing connection
-        cleanup();
+        // Tear down any prior connection without cancelling this effect run.
+        teardownResources();
 
         if (streamType === 'hls') {
           initializeHls();
@@ -112,56 +124,89 @@ export function StreamPlayer({
 
         // Initialize SRS SDK (WebRTC / WHEP)
         if (window.SrsRtcWhipWhepAsync) {
-          sdkRef.current = new window.SrsRtcWhipWhepAsync();
-          
-          if (videoRef.current) {
-            videoRef.current.srcObject = sdkRef.current.stream;
-            
-            if (autoPlay) {
-              videoRef.current.play().catch(console.error);
-            }
+          const sdk = new window.SrsRtcWhipWhepAsync();
+          sdkRef.current = sdk;
+
+          const video = videoRef.current;
+          if (video) {
+            video.srcObject = sdk.stream;
+            if (autoPlay) video.play().catch(() => {});
           }
 
-          // Start playing the stream
-          await sdkRef.current.play(stream.streamUrl);
-
-          // Check for actual video data flowing
-          let videoCheckCount = 0;
-          const maxChecks = 6; // Check for 3 seconds
-          
-          const checkVideoData = () => {
+          const markOnline = () => {
             if (cancelled) return;
-            videoCheckCount++;
-            
-            if (videoRef.current) {
-              const hasVideo = videoRef.current.videoWidth > 0 && videoRef.current.videoHeight > 0;
-              const hasData = videoRef.current.readyState >= 2; // At least HAVE_CURRENT_DATA
-              const isPlaying = !videoRef.current.paused && !videoRef.current.ended && videoRef.current.currentTime > 0;
-              
-              // Removed debug logging for cleaner console output
-              
-              if (hasVideo && hasData && (isPlaying || videoRef.current.readyState >= 3)) {
-                setCurrentStatus('online');
-                onStatusChange?.('online');
-                
-                // Try to play video after confirming stream
-                if (autoPlay) {
-                  videoRef.current.play().catch(console.error);
-                }
-                return;
-              }
+            setCurrentStatus('online');
+            onStatusChange?.('online');
+            if (autoPlay) videoRef.current?.play().catch(() => {});
+          };
+          const markError = () => {
+            if (cancelled) return;
+            setCurrentStatus('error');
+            onStatusChange?.('error');
+          };
+
+          // A stream is "live" once real frames are actually flowing. WebRTC
+          // negotiation can take a while — and noticeably longer when many tiles
+          // connect at once — so we detect via media events plus a resilient
+          // poll instead of giving up after a fixed window. This means a slow
+          // source eventually shows LIVE rather than being stuck on LOADING.
+          const hasFrames = () => {
+            const v = videoRef.current;
+            return !!v && v.videoWidth > 0 && v.videoHeight > 0 && v.readyState >= 2;
+          };
+          const onFrame = () => {
+            if (hasFrames()) markOnline();
+          };
+
+          if (video) {
+            video.addEventListener('loadeddata', onFrame);
+            video.addEventListener('playing', onFrame);
+            video.addEventListener('timeupdate', onFrame);
+          }
+
+          // Surface genuinely dead sources as errors via the peer connection
+          // state rather than spinning forever.
+          const pc: RTCPeerConnection | undefined = sdk.pc;
+          const onPcState = () => {
+            if (cancelled || !pc) return;
+            if (pc.connectionState === 'failed') markError();
+          };
+          pc?.addEventListener?.('connectionstatechange', onPcState);
+
+          detachVideoListeners = () => {
+            if (video) {
+              video.removeEventListener('loadeddata', onFrame);
+              video.removeEventListener('playing', onFrame);
+              video.removeEventListener('timeupdate', onFrame);
             }
-            
-            if (videoCheckCount < maxChecks) {
-              videoCheckTimer = setTimeout(checkVideoData, 500);
+            pc?.removeEventListener?.('connectionstatechange', onPcState);
+          };
+
+          // Start playing the stream. A rejection here means the WHEP endpoint
+          // refused (source offline / not found).
+          await sdk.play(stream.streamUrl);
+          if (cancelled) return;
+
+          // Fallback poll for browsers/sources that don't fire timeupdate
+          // promptly. Keeps checking for ~20s before declaring the source dead,
+          // far more forgiving than the old 3s cutoff.
+          let polls = 0;
+          const maxPolls = 40; // ~20 seconds at 500ms
+          const poll = () => {
+            if (cancelled) return;
+            if (hasFrames()) {
+              markOnline();
+              return;
+            }
+            polls++;
+            if (polls < maxPolls) {
+              videoCheckTimer = setTimeout(poll, 500);
             } else {
               console.warn('No valid video stream detected for:', stream.name);
-              setCurrentStatus('error');
-              onStatusChange?.('error');
+              markError();
             }
           };
-          
-          videoCheckTimer = setTimeout(checkVideoData, 500); // Start checking after 500ms
+          videoCheckTimer = setTimeout(poll, 500);
         } else {
           console.error('SRS SDK not loaded');
           setCurrentStatus('error');
