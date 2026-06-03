@@ -23,6 +23,7 @@ import {
   Eye,
   Menu,
   Monitor,
+  ExternalLink,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -632,6 +633,32 @@ export default function Multiviewer() {
                     )}
                   </SelectContent>
                 </Select>
+
+                {/* Pop out the saved layout into its own chrome-less window */}
+                {currentLayoutId && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="touch-area"
+                    onClick={() =>
+                      window.open(
+                        `/multiviewer/view/${currentLayoutId}`,
+                        `obtv-wall-${currentLayoutId}`,
+                        "noopener,noreferrer"
+                      )
+                    }
+                    disabled={isDirty}
+                    title={
+                      isDirty
+                        ? "Save your changes first to open this layout in a new window"
+                        : "Open this layout in its own window"
+                    }
+                    data-testid="button-popout-layout"
+                  >
+                    <ExternalLink size={16} className="mr-1" />
+                    Pop out
+                  </Button>
+                )}
 
                 {/* Edit toggle */}
                 <Button
