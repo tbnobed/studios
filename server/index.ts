@@ -23,22 +23,22 @@ app.use((req, res, next) => {
     if (path.startsWith("/api")) {
       // Invite and share links carry tokens in the URL/response. Never write
       // those to logs, or anyone with log access could hijack the link.
-      const isInvitePath = path.startsWith("/api/invite");
-      const isSharePath =
-        path.startsWith("/api/share") || path.startsWith("/api/admin/shares");
-      const isSecretPath = isInvitePath || isSharePath;
-      const loggedPath = isInvitePath
+      const loggedPath = path.startsWith("/api/invite")
         ? "/api/invite/[redacted]"
         : path.startsWith("/api/share")
           ? "/api/share/[redacted]"
-          : path;
+          : path.startsWith("/api/mv-share")
+            ? "/api/mv-share/[redacted]"
+            : path;
       let logLine = `${req.method} ${loggedPath} ${res.statusCode} in ${duration}ms`;
-      if (
-        capturedJsonResponse &&
-        !isSecretPath &&
-        !("inviteUrl" in capturedJsonResponse)
-      ) {
-        logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
+      // Skip the response body if the path was redacted, or if the body itself
+      // carries a token / share url / invite url (covers create + list shapes).
+      const serialized = capturedJsonResponse
+        ? JSON.stringify(capturedJsonResponse)
+        : "";
+      const bodyHasSecret = /"(token|shareUrl|inviteUrl)"\s*:/.test(serialized);
+      if (capturedJsonResponse && loggedPath === path && !bodyHasSecret) {
+        logLine += ` :: ${serialized}`;
       }
 
       if (logLine.length > 80) {

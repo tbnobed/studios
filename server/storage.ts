@@ -9,6 +9,8 @@ import {
   invites,
   favorites,
   multiviewerLayouts,
+  multiviewerShares,
+  multiviewerLayoutShares,
   streamShares,
   type User, 
   type InsertUser,
@@ -27,10 +29,12 @@ import {
   type InsertMultiviewerLayout,
   type Invite,
   type StreamShare,
-  type StreamShareWithStream
+  type StreamShareWithStream,
+  type MultiviewerLayoutWithMeta,
+  type MultiviewerShare
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, asc, desc, inArray, isNull } from "drizzle-orm";
+import { eq, and, or, asc, desc, inArray, isNull } from "drizzle-orm";
 import bcrypt from "bcrypt";
 
 // Favorites limits: up to 8 streams per page across up to 5 pages.
@@ -100,12 +104,29 @@ export interface IStorage {
   reorderFavorites(userId: string, orderedStreamIds: string[]): Promise<void>;
 
   // Multiviewer layout operations
-  getUserMultiviewerLayouts(userId: string): Promise<MultiviewerLayout[]>;
+  getUserMultiviewerLayouts(userId: string): Promise<MultiviewerLayoutWithMeta[]>;
+  getMultiviewerLayoutById(id: string): Promise<MultiviewerLayout | undefined>;
   getMultiviewerLayout(userId: string, id: string): Promise<MultiviewerLayout | undefined>;
   createMultiviewerLayout(userId: string, data: InsertMultiviewerLayout): Promise<MultiviewerLayout>;
   updateMultiviewerLayout(userId: string, id: string, data: Partial<InsertMultiviewerLayout>): Promise<MultiviewerLayout | undefined>;
   deleteMultiviewerLayout(userId: string, id: string): Promise<void>;
   setDefaultMultiviewerLayout(userId: string, id: string): Promise<MultiviewerLayout | undefined>;
+
+  // Stream lookup (no permission filter) used to resolve layout slots.
+  getStreamsByIds(ids: string[]): Promise<Stream[]>;
+  // Resolve layout slot streams scoped to what the owner can CURRENTLY access,
+  // so sharing never leaks streams the owner has since lost permission to.
+  getAccessibleStreamsByIds(ownerId: string, ids: string[]): Promise<Stream[]>;
+
+  // Multiviewer external (public) share links
+  getMultiviewerSharesByLayout(layoutId: string): Promise<MultiviewerShare[]>;
+  getMultiviewerShareByToken(token: string): Promise<MultiviewerShare | undefined>;
+  createMultiviewerShare(data: { layoutId: string; token: string; label?: string | null; expiresAt?: Date | null; createdBy?: string | null }): Promise<MultiviewerShare>;
+  deleteMultiviewerShare(id: string): Promise<void>;
+
+  // Multiviewer internal (logged-in users/groups) shares
+  getLayoutInternalShares(layoutId: string): Promise<{ userIds: string[]; groupIds: string[] }>;
+  setLayoutInternalShares(layoutId: string, userIds: string[], groupIds: string[]): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -619,12 +640,81 @@ export class DatabaseStorage implements IStorage {
 
   // Multiviewer layout operations -----------------------------------------
 
-  async getUserMultiviewerLayouts(userId: string): Promise<MultiviewerLayout[]> {
-    return db
+  async getUserMultiviewerLayouts(userId: string): Promise<MultiviewerLayoutWithMeta[]> {
+    const owned = await db
       .select()
       .from(multiviewerLayouts)
       .where(eq(multiviewerLayouts.userId, userId))
       .orderBy(desc(multiviewerLayouts.isDefault), asc(multiviewerLayouts.name));
+
+    // Layouts shared TO this user: directly, or via any group they belong to.
+    const groupRows = await db
+      .select({ groupId: userGroups.groupId })
+      .from(userGroups)
+      .where(eq(userGroups.userId, userId));
+    const groupIds = groupRows.map((r) => r.groupId);
+
+    const shareConds = [eq(multiviewerLayoutShares.userId, userId)];
+    if (groupIds.length > 0) {
+      shareConds.push(inArray(multiviewerLayoutShares.groupId, groupIds));
+    }
+    const shareRows = await db
+      .select({ layoutId: multiviewerLayoutShares.layoutId })
+      .from(multiviewerLayoutShares)
+      .where(shareConds.length === 1 ? shareConds[0] : or(...shareConds));
+
+    const ownedIds = new Set(owned.map((l) => l.id));
+    const sharedLayoutIds = Array.from(
+      new Set(shareRows.map((r) => r.layoutId))
+    ).filter((id) => !ownedIds.has(id));
+
+    const sharedWithMeta: MultiviewerLayoutWithMeta[] = [];
+    if (sharedLayoutIds.length > 0) {
+      const sharedLayouts = await db
+        .select()
+        .from(multiviewerLayouts)
+        .where(inArray(multiviewerLayouts.id, sharedLayoutIds));
+
+      // Resolve owner display names.
+      const ownerIds = Array.from(new Set(sharedLayouts.map((l) => l.userId)));
+      const owners = ownerIds.length
+        ? await db.select().from(users).where(inArray(users.id, ownerIds))
+        : [];
+      const ownerName = new Map(owners.map((u) => [u.id, u.username]));
+
+      for (const layout of sharedLayouts) {
+        const slotIds = (layout.slots ?? []).filter(
+          (s): s is string => Boolean(s)
+        );
+        const streamsForLayout = await this.getAccessibleStreamsByIds(
+          layout.userId,
+          slotIds
+        );
+        sharedWithMeta.push({
+          ...layout,
+          // Recipients can't make someone else's layout their own default.
+          isDefault: false,
+          shared: true,
+          ownerName: ownerName.get(layout.userId) ?? null,
+          streams: streamsForLayout,
+        });
+      }
+      sharedWithMeta.sort((a, b) => a.name.localeCompare(b.name));
+    }
+
+    const ownedWithMeta: MultiviewerLayoutWithMeta[] = owned.map((l) => ({
+      ...l,
+      shared: false,
+    }));
+    return [...ownedWithMeta, ...sharedWithMeta];
+  }
+
+  async getMultiviewerLayoutById(id: string): Promise<MultiviewerLayout | undefined> {
+    const [layout] = await db
+      .select()
+      .from(multiviewerLayouts)
+      .where(eq(multiviewerLayouts.id, id));
+    return layout;
   }
 
   async getMultiviewerLayout(userId: string, id: string): Promise<MultiviewerLayout | undefined> {
@@ -706,6 +796,101 @@ export class DatabaseStorage implements IStorage {
         .where(and(eq(multiviewerLayouts.id, id), eq(multiviewerLayouts.userId, userId)))
         .returning();
       return layout;
+    });
+  }
+
+  async getStreamsByIds(ids: string[]): Promise<Stream[]> {
+    if (ids.length === 0) return [];
+    return db.select().from(streams).where(inArray(streams.id, ids));
+  }
+
+  async getAccessibleStreamsByIds(ownerId: string, ids: string[]): Promise<Stream[]> {
+    const resolved = await this.getStreamsByIds(ids);
+    if (resolved.length === 0) return [];
+    const owner = await this.getUser(ownerId);
+    // Admins can see everything; everyone else is filtered to their current
+    // permission set, so a layout owner who lost access can't share it onward.
+    if (owner?.role === "admin") return resolved;
+    const accessible = await this.getUserAccessibleStreamIds(ownerId);
+    return resolved.filter((s) => accessible.has(s.id));
+  }
+
+  // Multiviewer external (public) share links ------------------------------
+
+  async getMultiviewerSharesByLayout(layoutId: string): Promise<MultiviewerShare[]> {
+    return db
+      .select()
+      .from(multiviewerShares)
+      .where(eq(multiviewerShares.layoutId, layoutId))
+      .orderBy(desc(multiviewerShares.createdAt));
+  }
+
+  async getMultiviewerShareByToken(token: string): Promise<MultiviewerShare | undefined> {
+    const [share] = await db
+      .select()
+      .from(multiviewerShares)
+      .where(eq(multiviewerShares.token, token));
+    return share;
+  }
+
+  async createMultiviewerShare(data: {
+    layoutId: string;
+    token: string;
+    label?: string | null;
+    expiresAt?: Date | null;
+    createdBy?: string | null;
+  }): Promise<MultiviewerShare> {
+    const [share] = await db
+      .insert(multiviewerShares)
+      .values({
+        layoutId: data.layoutId,
+        token: data.token,
+        label: data.label ?? null,
+        expiresAt: data.expiresAt ?? null,
+        createdBy: data.createdBy ?? null,
+      })
+      .returning();
+    return share;
+  }
+
+  async deleteMultiviewerShare(id: string): Promise<void> {
+    await db.delete(multiviewerShares).where(eq(multiviewerShares.id, id));
+  }
+
+  // Multiviewer internal (users/groups) shares -----------------------------
+
+  async getLayoutInternalShares(
+    layoutId: string
+  ): Promise<{ userIds: string[]; groupIds: string[] }> {
+    const rows = await db
+      .select()
+      .from(multiviewerLayoutShares)
+      .where(eq(multiviewerLayoutShares.layoutId, layoutId));
+    return {
+      userIds: rows.filter((r) => r.userId).map((r) => r.userId as string),
+      groupIds: rows.filter((r) => r.groupId).map((r) => r.groupId as string),
+    };
+  }
+
+  async setLayoutInternalShares(
+    layoutId: string,
+    userIds: string[],
+    groupIds: string[]
+  ): Promise<void> {
+    const uniqueUsers = Array.from(new Set(userIds.filter(Boolean)));
+    const uniqueGroups = Array.from(new Set(groupIds.filter(Boolean)));
+    await db.transaction(async (tx) => {
+      // Replace the full grant set for this layout.
+      await tx
+        .delete(multiviewerLayoutShares)
+        .where(eq(multiviewerLayoutShares.layoutId, layoutId));
+      const values = [
+        ...uniqueUsers.map((userId) => ({ layoutId, userId, groupId: null })),
+        ...uniqueGroups.map((groupId) => ({ layoutId, userId: null, groupId })),
+      ];
+      if (values.length > 0) {
+        await tx.insert(multiviewerLayoutShares).values(values);
+      }
     });
   }
 }

@@ -182,6 +182,30 @@ export const multiviewerLayouts = pgTable("multiviewer_layouts", {
     .where(sql`${table.isDefault} = true`),
 }));
 
+// Public, token-based external links for watching a saved multiview layout
+// without an account. A link works until it expires or is deleted.
+export const multiviewerShares = pgTable("multiviewer_shares", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  layoutId: varchar("layout_id").notNull().references(() => multiviewerLayouts.id, { onDelete: "cascade" }),
+  token: varchar("token", { length: 64 }).notNull().unique(),
+  label: varchar("label", { length: 100 }),
+  expiresAt: timestamp("expires_at"),
+  createdBy: varchar("created_by").references(() => users.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  tokenIdx: uniqueIndex("multiviewer_shares_token_idx").on(table.token),
+}));
+
+// Internal grants: make a saved layout viewable (read-only) by a specific
+// logged-in user OR a group. Exactly one of userId/groupId is set per row.
+export const multiviewerLayoutShares = pgTable("multiviewer_layout_shares", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  layoutId: varchar("layout_id").notNull().references(() => multiviewerLayouts.id, { onDelete: "cascade" }),
+  userId: varchar("user_id").references(() => users.id, { onDelete: "cascade" }),
+  groupId: varchar("group_id").references(() => groups.id, { onDelete: "cascade" }),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Relations
 export const usersRelations = relations(users, ({ many }) => ({
   studioPermissions: many(userStudioPermissions),
@@ -229,10 +253,34 @@ export const userStreamPermissionsRelations = relations(userStreamPermissions, (
   }),
 }));
 
-export const multiviewerLayoutsRelations = relations(multiviewerLayouts, ({ one }) => ({
+export const multiviewerLayoutsRelations = relations(multiviewerLayouts, ({ one, many }) => ({
   user: one(users, {
     fields: [multiviewerLayouts.userId],
     references: [users.id],
+  }),
+  shares: many(multiviewerShares),
+  internalShares: many(multiviewerLayoutShares),
+}));
+
+export const multiviewerSharesRelations = relations(multiviewerShares, ({ one }) => ({
+  layout: one(multiviewerLayouts, {
+    fields: [multiviewerShares.layoutId],
+    references: [multiviewerLayouts.id],
+  }),
+}));
+
+export const multiviewerLayoutSharesRelations = relations(multiviewerLayoutShares, ({ one }) => ({
+  layout: one(multiviewerLayouts, {
+    fields: [multiviewerLayoutShares.layoutId],
+    references: [multiviewerLayouts.id],
+  }),
+  user: one(users, {
+    fields: [multiviewerLayoutShares.userId],
+    references: [users.id],
+  }),
+  group: one(groups, {
+    fields: [multiviewerLayoutShares.groupId],
+    references: [groups.id],
   }),
 }));
 
@@ -328,6 +376,15 @@ export const insertStreamShareSchema = createInsertSchema(streamShares, {
   createdAt: true,
 });
 
+export const insertMultiviewerShareSchema = createInsertSchema(multiviewerShares, {
+  expiresAt: z.coerce.date().nullable().optional(),
+}).omit({
+  id: true,
+  token: true,
+  createdBy: true,
+  createdAt: true,
+});
+
 export const MULTIVIEWER_LAYOUT_TYPES = [
   // Basic equal grids
   "1x1", "2x2", "3x3", "4x4",
@@ -385,6 +442,28 @@ export type StreamShareWithStream = StreamShare & { stream: Stream };
 export type MultiviewerLayout = typeof multiviewerLayouts.$inferSelect;
 export type InsertMultiviewerLayout = z.infer<typeof insertMultiviewerLayoutSchema>;
 export type MultiviewerLayoutType = (typeof MULTIVIEWER_LAYOUT_TYPES)[number];
+
+export type MultiviewerShare = typeof multiviewerShares.$inferSelect;
+export type InsertMultiviewerShare = z.infer<typeof insertMultiviewerShareSchema>;
+export type MultiviewerLayoutShare = typeof multiviewerLayoutShares.$inferSelect;
+
+// A layout as returned to the Multiviewer page. `shared` layouts are ones
+// shared TO this user by someone else (read-only); they carry the owner's name
+// and the resolved stream objects for their slots (so they render even when the
+// recipient lacks direct permission to those streams).
+export type MultiviewerLayoutWithMeta = MultiviewerLayout & {
+  shared?: boolean;
+  ownerName?: string | null;
+  streams?: Stream[];
+};
+
+// The payload served to a public (no-account) multiview share viewer.
+export type MultiviewerSharePublic = {
+  label: string | null;
+  expiresAt: Date | string | null;
+  layout: Pick<MultiviewerLayout, "id" | "name" | "layoutType" | "slots">;
+  streams: Stream[];
+};
 
 // Extended types for API responses
 export type StudioWithStreams = Studio & {

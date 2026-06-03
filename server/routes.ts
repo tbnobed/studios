@@ -4,7 +4,7 @@ import { Readable } from "node:stream";
 import { pipeline } from "node:stream/promises";
 import { storage } from "./storage";
 import jwt from "jsonwebtoken";
-import { insertUserSchema, insertStudioSchema, insertStreamSchema, insertMultiviewerLayoutSchema, insertGroupSchema, insertStreamShareSchema } from "@shared/schema";
+import { insertUserSchema, insertStudioSchema, insertStreamSchema, insertMultiviewerLayoutSchema, insertGroupSchema, insertStreamShareSchema, insertMultiviewerShareSchema } from "@shared/schema";
 import { z } from "zod";
 import multer from "multer";
 import path from "path";
@@ -691,6 +691,173 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error deleting share:", error);
       res.status(500).json({ message: "Failed to delete share link" });
+    }
+  });
+
+  // --- Multiview sharing -------------------------------------------------
+
+  // Public (no account): watch a shared multiview layout by token. Resolves the
+  // layout's streams directly, bypassing per-user permissions, since this is an
+  // intentional public share gated only by the unguessable token + expiry.
+  app.get("/api/mv-share/:token", async (req, res) => {
+    try {
+      const share = await storage.getMultiviewerShareByToken(req.params.token);
+      const expired = !!share?.expiresAt && share.expiresAt.getTime() <= Date.now();
+      if (!share || expired) {
+        return res
+          .status(404)
+          .json({ message: "This share link is invalid or has expired." });
+      }
+      const layout = await storage.getMultiviewerLayoutById(share.layoutId);
+      if (!layout) {
+        return res
+          .status(404)
+          .json({ message: "This share link is invalid or has expired." });
+      }
+      const slotIds = (layout.slots ?? []).filter(
+        (s): s is string => Boolean(s)
+      );
+      // Scope to what the layout owner can CURRENTLY access so a revoked
+      // permission can't keep leaking a stream through an old share link.
+      const streams = await storage.getAccessibleStreamsByIds(
+        layout.userId,
+        slotIds
+      );
+      res.json({
+        label: share.label,
+        expiresAt: share.expiresAt,
+        layout: {
+          id: layout.id,
+          name: layout.name,
+          layoutType: layout.layoutType,
+          slots: layout.slots,
+        },
+        streams,
+      });
+    } catch (error) {
+      console.error("Error fetching shared multiview:", error);
+      res.status(500).json({ message: "Failed to load shared multiview" });
+    }
+  });
+
+  // Directory of users/groups a layout owner can share to (minimal fields).
+  app.get("/api/share-targets", requireAuth, async (_req: any, res) => {
+    try {
+      const [users, groups] = await Promise.all([
+        storage.getAllUsers(),
+        storage.getAllGroups(),
+      ]);
+      res.json({
+        users: users.map((u) => ({ id: u.id, username: u.username })),
+        groups: groups.map((g) => ({ id: g.id, name: g.name })),
+      });
+    } catch (error) {
+      console.error("Error fetching share targets:", error);
+      res.status(500).json({ message: "Failed to load share targets" });
+    }
+  });
+
+  // List external links for a layout the caller owns.
+  app.get("/api/multiviewer-layouts/:id/shares", requireAuth, async (req: any, res) => {
+    try {
+      const layout = await storage.getMultiviewerLayout(req.user.id, req.params.id);
+      if (!layout) {
+        return res.status(404).json({ message: "Layout not found" });
+      }
+      const shares = await storage.getMultiviewerSharesByLayout(layout.id);
+      const baseUrl = getAppBaseUrl(req);
+      res.json(shares.map((s) => ({ ...s, shareUrl: `${baseUrl}/mv/${s.token}` })));
+    } catch (error) {
+      console.error("Error listing multiview shares:", error);
+      res.status(500).json({ message: "Failed to list share links" });
+    }
+  });
+
+  // Create an external link for a layout the caller owns.
+  app.post("/api/multiviewer-layouts/:id/shares", requireAuth, async (req: any, res) => {
+    try {
+      const layout = await storage.getMultiviewerLayout(req.user.id, req.params.id);
+      if (!layout) {
+        return res.status(404).json({ message: "Layout not found" });
+      }
+      const data = insertMultiviewerShareSchema.omit({ layoutId: true }).parse(req.body);
+      const token = crypto.randomBytes(24).toString("hex");
+      const share = await storage.createMultiviewerShare({
+        layoutId: layout.id,
+        token,
+        label: data.label ?? null,
+        expiresAt: data.expiresAt ?? null,
+        createdBy: req.user?.id ?? null,
+      });
+      const shareUrl = `${getAppBaseUrl(req)}/mv/${token}`;
+      res.status(201).json({ ...share, shareUrl });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res
+          .status(400)
+          .json({ message: "Invalid share data", errors: error.errors });
+      }
+      console.error("Error creating multiview share:", error);
+      res.status(500).json({ message: "Failed to create share link" });
+    }
+  });
+
+  // Delete an external link (verified to belong to a layout the caller owns).
+  app.delete("/api/multiviewer-layouts/:id/shares/:shareId", requireAuth, async (req: any, res) => {
+    try {
+      const layout = await storage.getMultiviewerLayout(req.user.id, req.params.id);
+      if (!layout) {
+        return res.status(404).json({ message: "Layout not found" });
+      }
+      const shares = await storage.getMultiviewerSharesByLayout(layout.id);
+      if (!shares.some((s) => s.id === req.params.shareId)) {
+        return res.status(404).json({ message: "Share link not found" });
+      }
+      await storage.deleteMultiviewerShare(req.params.shareId);
+      res.status(204).end();
+    } catch (error) {
+      console.error("Error deleting multiview share:", error);
+      res.status(500).json({ message: "Failed to delete share link" });
+    }
+  });
+
+  // Read the internal (users/groups) share grants for an owned layout.
+  app.get("/api/multiviewer-layouts/:id/internal-shares", requireAuth, async (req: any, res) => {
+    try {
+      const layout = await storage.getMultiviewerLayout(req.user.id, req.params.id);
+      if (!layout) {
+        return res.status(404).json({ message: "Layout not found" });
+      }
+      const grants = await storage.getLayoutInternalShares(layout.id);
+      res.json(grants);
+    } catch (error) {
+      console.error("Error fetching internal shares:", error);
+      res.status(500).json({ message: "Failed to load internal shares" });
+    }
+  });
+
+  // Replace the internal share grants for an owned layout.
+  app.put("/api/multiviewer-layouts/:id/internal-shares", requireAuth, async (req: any, res) => {
+    try {
+      const layout = await storage.getMultiviewerLayout(req.user.id, req.params.id);
+      if (!layout) {
+        return res.status(404).json({ message: "Layout not found" });
+      }
+      const schema = z.object({
+        userIds: z.array(z.string()).default([]),
+        groupIds: z.array(z.string()).default([]),
+      });
+      const { userIds, groupIds } = schema.parse(req.body);
+      await storage.setLayoutInternalShares(layout.id, userIds, groupIds);
+      res.json({ userIds, groupIds });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res
+          .status(400)
+          .json({ message: "Invalid share data", errors: error.errors });
+      }
+      console.error("Error updating internal shares:", error);
+      res.status(500).json({ message: "Failed to update internal shares" });
     }
   });
 

@@ -1,2 +1,1 @@
-- [Token-bearing endpoints must be log-redacted](log-token-redaction.md) — any new route that returns a link token (invite/share) must be added to the server/index.ts request-logger redaction or the token leaks into logs.
-- [Schema changes need three-way rollout](schema-rollout.md) — a new table in shared/schema.ts must also be added to init.sql AND a numbered migrations/NNN_*.sql, not just db:push.
+- [Multiview sharing](multiview-sharing.md) — external token link + internal user/group grant; resolve shared streams via owner-scoped getAccessibleStreamsByIds, never unrestricted, to avoid leaking revoked streams.

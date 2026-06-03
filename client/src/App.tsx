@@ -13,6 +13,7 @@ import Multiviewer from "@/pages/Multiviewer";
 import MultiviewerWall from "@/pages/MultiviewerWall";
 import SetPassword from "@/pages/SetPassword";
 import SharedStream from "@/pages/SharedStream";
+import MultiviewerShare from "@/pages/MultiviewerShare";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -37,6 +38,9 @@ function Router() {
       {/* Public route: a shared stream link must work for outside viewers with
           no account, so it lives before the auth gate. */}
       <Route path="/share/:token" component={SharedStream} />
+      {/* Public route: a shared multiview link must work for outside viewers
+          with no account, so it lives before the auth gate. */}
+      <Route path="/mv/:token" component={MultiviewerShare} />
       {!isAuthenticated ? (
         <Route path="/" component={Landing} />
       ) : (

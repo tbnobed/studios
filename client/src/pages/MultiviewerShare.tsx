@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
-import { useRoute } from "wouter";
+import { useParams } from "wouter";
 import { useQuery } from "@tanstack/react-query";
-import { Monitor, Volume2 } from "lucide-react";
+import { Monitor, Volume2, Loader2, AlertCircle } from "lucide-react";
 import { MultiviewerTile } from "@/components/MultiviewerTile";
 import { StreamSingleView } from "@/components/StreamSingleView";
 import { MultiviewerGrid } from "@/components/MultiviewerGrid";
@@ -10,71 +10,43 @@ import {
   getSharedAudioContextState,
   resumeSharedAudioContext,
 } from "@/hooks/useAudioLevel";
-import { getAuthHeaders } from "@/lib/authUtils";
-import type {
-  MultiviewerLayoutWithMeta,
-  MultiviewerLayoutType,
-  Stream,
-  StudioWithStreams,
-} from "@shared/schema";
+import type { MultiviewerSharePublic, MultiviewerLayoutType } from "@shared/schema";
 
-type TileStream = Stream & { studio?: { id: string; name: string } };
+type TileStream = MultiviewerSharePublic["streams"][number] & {
+  studio?: { id: string; name: string };
+};
 
-// A distraction-free, chrome-less multiviewer wall meant to be popped out into
-// its own window (TV / second monitor). It renders nothing but the grid for a
-// single saved layout — no header, no sidebar, no edit controls.
-export default function MultiviewerWall() {
-  const [, params] = useRoute("/multiviewer/view/:id");
-  const layoutId = params?.id ?? null;
+// Public, chrome-less multiview wall for outside viewers with no account.
+// Data comes from the token-gated /api/mv-share/:token endpoint.
+export default function MultiviewerShare() {
+  const params = useParams<{ token: string }>();
+  const token = params.token;
   const [soloStreamId, setSoloStreamId] = useState<string | null>(null);
 
-  const { data: studiosData } = useQuery<StudioWithStreams[]>({
-    queryKey: ["/api/studios"],
-    meta: { headers: getAuthHeaders() },
+  const { data, isLoading, isError } = useQuery<MultiviewerSharePublic>({
+    queryKey: ["/api/mv-share", token],
+    retry: false,
   });
-  const studios = useMemo(() => studiosData ?? [], [studiosData]);
 
-  const { data: layoutsData, isLoading: layoutsLoading } = useQuery<
-    MultiviewerLayoutWithMeta[]
-  >({
-    queryKey: ["/api/multiviewer-layouts"],
-    meta: { headers: getAuthHeaders() },
-  });
-  const layouts = useMemo(() => layoutsData ?? [], [layoutsData]);
+  const layoutType = (data?.layout.layoutType as MultiviewerLayoutType) ?? "2x2";
 
-  const layout = useMemo(
-    () => layouts.find((l) => l.id === layoutId) ?? null,
-    [layouts, layoutId]
+  const slots = useMemo(
+    () => (data ? fitSlots(data.layout.slots ?? [], slotCount(layoutType)) : []),
+    [data, layoutType]
   );
 
   const streamMap = useMemo(() => {
     const map = new Map<string, TileStream>();
-    for (const studio of studios) {
-      for (const s of studio.streams) {
-        map.set(s.id, { ...s, studio: { id: studio.id, name: studio.name } });
-      }
-    }
-    // A layout shared TO me embeds its resolved streams so the wall renders even
-    // when I lack direct permission to those sources.
-    for (const s of layout?.streams ?? []) {
-      if (!map.has(s.id)) map.set(s.id, s);
-    }
+    for (const s of data?.streams ?? []) map.set(s.id, s);
     return map;
-  }, [studios, layout]);
+  }, [data]);
 
-  const layoutType = (layout?.layoutType as MultiviewerLayoutType) ?? "2x2";
-  const slots = useMemo(
-    () => (layout ? fitSlots(layout.slots ?? [], slotCount(layoutType)) : []),
-    [layout, layoutType]
-  );
-
-  // Keep the browser tab title meaningful for whoever's watching the wall.
   useEffect(() => {
-    if (layout) document.title = `${layout.name} · Multiviewer`;
+    if (data?.layout) document.title = `${data.layout.name} · Multiviewer`;
     return () => {
       document.title = "OBTV Studio Manager";
     };
-  }, [layout]);
+  }, [data]);
 
   const assignedStreams = useMemo(
     () =>
@@ -92,11 +64,8 @@ export default function MultiviewerWall() {
     if (soloStreamId && soloIndex === -1) setSoloStreamId(null);
   }, [soloStreamId, soloIndex]);
 
-  // The audio meters tap a Web Audio AnalyserNode whose AudioContext is held
-  // suspended by the browser's autoplay policy until a user gesture happens in
-  // THIS document. A freshly popped-out window has no such gesture, so the
-  // meters read zero. Poll the shared context's state so we can surface a
-  // one-tap prompt, and hide it again the moment the context is running.
+  // Audio meters need a user gesture in this document before the browser lets
+  // the shared AudioContext run; surface a one-tap prompt until it does.
   const hasAssignedStreams = assignedStreams.length > 0;
   const [audioState, setAudioState] = useState(getSharedAudioContextState());
   useEffect(() => {
@@ -125,7 +94,7 @@ export default function MultiviewerWall() {
         stream={stream}
         unavailable={unavailable}
         editMode={false}
-        studios={studios}
+        studios={[]}
         usedStreamIds={new Set()}
         onAssign={() => {}}
         onSolo={() => id && setSoloStreamId(id)}
@@ -134,12 +103,32 @@ export default function MultiviewerWall() {
     );
   };
 
+  if (isLoading) {
+    return (
+      <div className="h-screen w-screen flex flex-col items-center justify-center bg-black text-zinc-400">
+        <Loader2 className="w-8 h-8 animate-spin mb-3" />
+        <p className="text-sm">Loading multiview…</p>
+      </div>
+    );
+  }
+
+  if (isError || !data) {
+    return (
+      <div className="h-screen w-screen flex flex-col items-center justify-center bg-black text-zinc-400 p-4 text-center">
+        <AlertCircle className="w-8 h-8 text-destructive mb-3" />
+        <p className="text-sm" data-testid="text-mv-share-error">
+          This share link is invalid or has expired.
+        </p>
+      </div>
+    );
+  }
+
   let body: JSX.Element;
-  if (!layout) {
+  if (slots.length === 0) {
     body = (
       <div className="h-full flex flex-col items-center justify-center text-zinc-400">
         <Monitor size={40} className="mb-3 opacity-60" />
-        <p>{layoutsLoading ? "Loading layout…" : "Layout not found."}</p>
+        <p>This multiview has no sources.</p>
       </div>
     );
   } else if (soloStreamId && soloIndex !== -1) {

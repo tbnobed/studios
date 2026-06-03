@@ -20,6 +20,8 @@ import {
   Menu,
   Monitor,
   ExternalLink,
+  Share2,
+  Lock,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -43,12 +45,14 @@ import { MultiviewerTile, slotDndId } from "@/components/MultiviewerTile";
 import { StreamSingleView } from "@/components/StreamSingleView";
 import { MultiviewerGrid } from "@/components/MultiviewerGrid";
 import { LayoutPicker } from "@/components/LayoutPicker";
+import { MultiviewerShareDialog } from "@/components/MultiviewerShareDialog";
 import { slotCount, fitSlots } from "@/lib/multiviewerLayouts";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { getAuthHeaders } from "@/lib/authUtils";
 import type {
   MultiviewerLayout,
+  MultiviewerLayoutWithMeta,
   MultiviewerLayoutType,
   Stream,
   StudioWithStreams,
@@ -139,6 +143,7 @@ export default function Multiviewer() {
   } | null>(null);
   const [soloStreamId, setSoloStreamId] = useState<string | null>(null);
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
+  const [shareDialogOpen, setShareDialogOpen] = useState(false);
   const [layoutName, setLayoutName] = useState("");
   const appliedDefaultRef = useRef(false);
   // Layout id awaiting a "some sources unavailable" check once streams load.
@@ -150,7 +155,7 @@ export default function Multiviewer() {
   });
   const studios = useMemo(() => studiosData ?? [], [studiosData]);
 
-  const { data: layoutsData } = useQuery<MultiviewerLayout[]>({
+  const { data: layoutsData } = useQuery<MultiviewerLayoutWithMeta[]>({
     queryKey: ["/api/multiviewer-layouts"],
     meta: { headers: getAuthHeaders() },
   });
@@ -164,8 +169,15 @@ export default function Multiviewer() {
         map.set(s.id, { ...s, studio: { id: studio.id, name: studio.name } });
       }
     }
+    // Layouts shared TO me embed their resolved streams so they render even when
+    // I lack direct permission to those sources.
+    for (const l of layouts) {
+      for (const s of l.streams ?? []) {
+        if (!map.has(s.id)) map.set(s.id, s);
+      }
+    }
     return map;
-  }, [studios]);
+  }, [studios, layouts]);
 
   // On first arrival, either restore the saved baseline behind a recovered
   // draft, or auto-load the user's default layout.
@@ -452,6 +464,13 @@ export default function Multiviewer() {
   });
 
   const currentLayout = layouts.find((l) => l.id === currentLayoutId) ?? null;
+  // A layout someone else shared with me: view-only, no edit/save/delete/share.
+  const isShared = Boolean(currentLayout?.shared);
+
+  // Never leave edit mode on while viewing a read-only shared layout.
+  useEffect(() => {
+    if (isShared && editMode) setEditMode(false);
+  }, [isShared, editMode]);
 
   const handleSaveClick = () => {
     if (currentLayoutId) {
@@ -554,8 +573,27 @@ export default function Multiviewer() {
               </div>
 
               <div className="flex items-center gap-2 flex-wrap">
-                {/* Layout type selector */}
-                <LayoutPicker value={layoutType} onChange={changeLayoutType} />
+                {/* Read-only badge for layouts shared to me by someone else */}
+                {isShared && (
+                  <span
+                    className="inline-flex items-center gap-1 rounded-full bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground"
+                    data-testid="badge-shared-readonly"
+                    title={
+                      currentLayout?.ownerName
+                        ? `Shared by ${currentLayout.ownerName}`
+                        : "Shared with you"
+                    }
+                  >
+                    <Lock size={12} />
+                    View only
+                    {currentLayout?.ownerName ? ` · ${currentLayout.ownerName}` : ""}
+                  </span>
+                )}
+
+                {/* Layout type selector (editing only) */}
+                {!isShared && (
+                  <LayoutPicker value={layoutType} onChange={changeLayoutType} />
+                )}
 
                 {/* Saved layouts */}
                 <Select
@@ -617,85 +655,101 @@ export default function Multiviewer() {
                   </Button>
                 )}
 
-                {/* Edit toggle */}
-                <Button
-                  variant={editMode ? "default" : "secondary"}
-                  size="sm"
-                  className="touch-area"
-                  onClick={() => setEditMode((v) => !v)}
-                  data-testid="button-edit-mode"
-                >
-                  {editMode ? <Eye size={16} className="mr-1" /> : <Pencil size={16} className="mr-1" />}
-                  {editMode ? "Done" : "Edit"}
-                </Button>
-
-                {/* Save / update */}
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  className="touch-area"
-                  onClick={handleSaveClick}
-                  disabled={saveMutation.isPending || updateMutation.isPending}
-                  data-testid="button-save-layout"
-                >
-                  <Save size={16} className="mr-1" />
-                  {currentLayoutId ? "Update" : "Save"}
-                </Button>
-
-                {isDirty && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="touch-area text-muted-foreground"
-                    onClick={discardChanges}
-                    data-testid="button-discard-changes"
-                  >
-                    Discard
-                  </Button>
-                )}
-
-                {currentLayoutId && (
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    className="touch-area"
-                    onClick={() => {
-                      setLayoutName("");
-                      setSaveDialogOpen(true);
-                    }}
-                    data-testid="button-save-as"
-                  >
-                    Save as
-                  </Button>
-                )}
-
-                {currentLayout && (
+                {/* Editing controls are hidden for read-only shared layouts */}
+                {!isShared && (
                   <>
+                    {/* Edit toggle */}
                     <Button
-                      variant="ghost"
+                      variant={editMode ? "default" : "secondary"}
                       size="sm"
                       className="touch-area"
-                      onClick={() => setDefaultMutation.mutate(currentLayout.id)}
-                      disabled={currentLayout.isDefault || setDefaultMutation.isPending}
-                      title="Set as default"
-                      data-testid="button-set-default"
+                      onClick={() => setEditMode((v) => !v)}
+                      data-testid="button-edit-mode"
                     >
-                      <Star
-                        size={16}
-                        className={currentLayout.isDefault ? "fill-yellow-400 text-yellow-400" : ""}
-                      />
+                      {editMode ? <Eye size={16} className="mr-1" /> : <Pencil size={16} className="mr-1" />}
+                      {editMode ? "Done" : "Edit"}
                     </Button>
+
+                    {/* Save / update */}
                     <Button
-                      variant="ghost"
+                      variant="secondary"
                       size="sm"
-                      className="touch-area text-destructive"
-                      onClick={() => deleteMutation.mutate(currentLayout.id)}
-                      disabled={deleteMutation.isPending}
-                      title="Delete layout"
-                      data-testid="button-delete-layout"
+                      className="touch-area"
+                      onClick={handleSaveClick}
+                      disabled={saveMutation.isPending || updateMutation.isPending}
+                      data-testid="button-save-layout"
                     >
-                      <Trash2 size={16} />
+                      <Save size={16} className="mr-1" />
+                      {currentLayoutId ? "Update" : "Save"}
                     </Button>
+
+                    {isDirty && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="touch-area text-muted-foreground"
+                        onClick={discardChanges}
+                        data-testid="button-discard-changes"
+                      >
+                        Discard
+                      </Button>
+                    )}
+
+                    {currentLayoutId && (
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        className="touch-area"
+                        onClick={() => {
+                          setLayoutName("");
+                          setSaveDialogOpen(true);
+                        }}
+                        data-testid="button-save-as"
+                      >
+                        Save as
+                      </Button>
+                    )}
+
+                    {currentLayout && (
+                      <>
+                        {/* Share this owned layout (public link + people/groups) */}
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          className="touch-area"
+                          onClick={() => setShareDialogOpen(true)}
+                          data-testid="button-share-layout"
+                        >
+                          <Share2 size={16} className="mr-1" />
+                          Share
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="touch-area"
+                          onClick={() => setDefaultMutation.mutate(currentLayout.id)}
+                          disabled={currentLayout.isDefault || setDefaultMutation.isPending}
+                          title="Set as default"
+                          data-testid="button-set-default"
+                        >
+                          <Star
+                            size={16}
+                            className={currentLayout.isDefault ? "fill-yellow-400 text-yellow-400" : ""}
+                          />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="touch-area text-destructive"
+                          onClick={() => deleteMutation.mutate(currentLayout.id)}
+                          disabled={deleteMutation.isPending}
+                          title="Delete layout"
+                          data-testid="button-delete-layout"
+                        >
+                          <Trash2 size={16} />
+                        </Button>
+                      </>
+                    )}
                   </>
                 )}
               </div>
@@ -704,7 +758,7 @@ export default function Multiviewer() {
 
           {/* Grid / solo content */}
           <div className="flex-1 p-2 lg:p-3 min-h-0">
-            {studios.length === 0 ? (
+            {studios.length === 0 && assignedStreams.length === 0 ? (
               <div className="h-full flex flex-col items-center justify-center text-muted-foreground">
                 <Monitor size={40} className="mb-3 opacity-60" />
                 <p>No studios available.</p>
@@ -745,6 +799,16 @@ export default function Multiviewer() {
           ) : null}
         </DragOverlay>
       </DndContext>
+
+      {/* Share dialog (owned saved layouts only) */}
+      {currentLayout && !isShared && (
+        <MultiviewerShareDialog
+          layoutId={currentLayout.id}
+          layoutName={currentLayout.name}
+          open={shareDialogOpen}
+          onOpenChange={setShareDialogOpen}
+        />
+      )}
 
       {/* Save dialog */}
       <Dialog open={saveDialogOpen} onOpenChange={setSaveDialogOpen}>
