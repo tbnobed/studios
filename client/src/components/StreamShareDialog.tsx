@@ -99,12 +99,12 @@ export function StreamShareDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
-        <DialogHeader>
-          <DialogTitle>Share “{streamName}”</DialogTitle>
+      <DialogContent className="max-w-lg overflow-hidden">
+        <DialogHeader className="min-w-0">
+          <DialogTitle className="truncate">Share “{streamName}”</DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <div className="min-w-0 space-y-4">
           <p className="text-sm text-muted-foreground">
             Anyone with the link can watch this stream without signing in, until
             it expires or you revoke it.

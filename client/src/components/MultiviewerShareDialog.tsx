@@ -172,12 +172,12 @@ export function MultiviewerShareDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
-        <DialogHeader>
-          <DialogTitle>Share “{layoutName}”</DialogTitle>
+      <DialogContent className="max-w-lg overflow-hidden">
+        <DialogHeader className="min-w-0">
+          <DialogTitle className="truncate">Share “{layoutName}”</DialogTitle>
         </DialogHeader>
 
-        <Tabs defaultValue="external" className="w-full">
+        <Tabs defaultValue="external" className="w-full min-w-0">
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="external" data-testid="tab-share-external">
               <Link2 size={14} className="mr-1" />
