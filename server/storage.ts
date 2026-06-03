@@ -195,7 +195,7 @@ export class DatabaseStorage implements IStorage {
 
   // Studio operations
   async getAllStudios(): Promise<Studio[]> {
-    return db.select().from(studios).where(eq(studios.isActive, true)).orderBy(asc(studios.name));
+    return db.select().from(studios).where(eq(studios.isActive, true)).orderBy(asc(studios.name), asc(studios.id));
   }
 
   async getStudioWithStreams(id: string): Promise<StudioWithStreams | undefined> {
@@ -204,7 +204,7 @@ export class DatabaseStorage implements IStorage {
       with: {
         streams: {
           where: eq(streams.isActive, true),
-          orderBy: (streams, { asc }) => [asc(streams.name)],
+          orderBy: (streams, { asc }) => [asc(streams.name), asc(streams.id)],
         },
       },
     });
@@ -223,7 +223,7 @@ export class DatabaseStorage implements IStorage {
       with: {
         streams: {
           where: eq(streams.isActive, true),
-          orderBy: (streams, { asc }) => [asc(streams.name)],
+          orderBy: (streams, { asc }) => [asc(streams.name), asc(streams.id)],
         },
       },
     });
@@ -238,7 +238,7 @@ export class DatabaseStorage implements IStorage {
       // Only surface studios that have at least one viewable stream.
       .filter((studio) => studio.streams.length > 0);
 
-    return result.sort((a, b) => a.name.localeCompare(b.name));
+    return result.sort((a, b) => a.name.localeCompare(b.name) || a.id.localeCompare(b.id));
   }
 
   async createStudio(studioData: InsertStudio): Promise<Studio> {
@@ -259,13 +259,13 @@ export class DatabaseStorage implements IStorage {
   async getStreamsByStudio(studioId: string): Promise<Stream[]> {
     return db.select().from(streams).where(
       and(eq(streams.studioId, studioId), eq(streams.isActive, true))
-    ).orderBy(asc(streams.name));
+    ).orderBy(asc(streams.name), asc(streams.id));
   }
 
   async getAllStreamsByStudio(studioId: string): Promise<Stream[]> {
     return db.select().from(streams)
       .where(eq(streams.studioId, studioId))
-      .orderBy(asc(streams.name));
+      .orderBy(asc(streams.name), asc(streams.id));
   }
 
   async getStream(id: string): Promise<Stream | undefined> {
@@ -340,7 +340,7 @@ export class DatabaseStorage implements IStorage {
         streamPermissions: true,
         members: true,
       },
-      orderBy: (groups, { asc }) => [asc(groups.name)],
+      orderBy: (groups, { asc }) => [asc(groups.name), asc(groups.id)],
     });
     return allGroups.map((g: any) => {
       const { streamPermissions, members, ...rest } = g;
