@@ -197,7 +197,7 @@ export function MultiviewerShareDialog({
             </p>
 
             <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
-              <div className="flex-1">
+              <div className="min-w-0 flex-1">
                 <Label htmlFor="share-label" className="text-xs">
                   Label (optional)
                 </Label>
@@ -209,19 +209,21 @@ export function MultiviewerShareDialog({
                   data-testid="input-share-label"
                 />
               </div>
-              <div className="flex-1">
+              <div className="min-w-0 flex-1">
                 <Label htmlFor="share-expiry" className="text-xs">
                   Expires (optional)
                 </Label>
                 <Input
                   id="share-expiry"
                   type="datetime-local"
+                  className="w-full"
                   value={expiresAt}
                   onChange={(e) => setExpiresAt(e.target.value)}
                   data-testid="input-share-expiry"
                 />
               </div>
               <Button
+                className="shrink-0"
                 onClick={() => createShare.mutate()}
                 disabled={createShare.isPending}
                 data-testid="button-create-share"
@@ -233,7 +235,7 @@ export function MultiviewerShareDialog({
 
             <Separator />
 
-            <ScrollArea className="max-h-56">
+            <div className="max-h-56 overflow-y-auto">
               {sharesLoading ? (
                 <div className="flex items-center justify-center py-6 text-muted-foreground">
                   <Loader2 className="h-4 w-4 animate-spin" />
@@ -287,7 +289,7 @@ export function MultiviewerShareDialog({
                   ))}
                 </ul>
               )}
-            </ScrollArea>
+            </div>
           </TabsContent>
 
           {/* INTERNAL: grant view-only access to logged-in users / groups */}

@@ -10,7 +10,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -112,7 +111,7 @@ export function StreamShareDialog({
           </p>
 
           <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
-            <div className="flex-1">
+            <div className="min-w-0 flex-1">
               <Label htmlFor="stream-share-label" className="text-xs">
                 Label (optional)
               </Label>
@@ -124,19 +123,21 @@ export function StreamShareDialog({
                 data-testid="input-stream-share-label"
               />
             </div>
-            <div className="flex-1">
+            <div className="min-w-0 flex-1">
               <Label htmlFor="stream-share-expiry" className="text-xs">
                 Expires (optional)
               </Label>
               <Input
                 id="stream-share-expiry"
                 type="datetime-local"
+                className="w-full"
                 value={expiresAt}
                 onChange={(e) => setExpiresAt(e.target.value)}
                 data-testid="input-stream-share-expiry"
               />
             </div>
             <Button
+              className="shrink-0"
               onClick={() => createShare.mutate()}
               disabled={createShare.isPending}
               data-testid="button-create-stream-share"
@@ -148,7 +149,7 @@ export function StreamShareDialog({
 
           <Separator />
 
-          <ScrollArea className="max-h-56">
+          <div className="max-h-56 overflow-y-auto">
             {isLoading ? (
               <div className="flex items-center justify-center py-6 text-muted-foreground">
                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -189,6 +190,7 @@ export function StreamShareDialog({
                       <Button
                         variant="ghost"
                         size="sm"
+                        className="shrink-0"
                         onClick={() => copyLink(s)}
                         data-testid={`button-copy-stream-share-${s.id}`}
                         title="Copy link"
@@ -202,7 +204,7 @@ export function StreamShareDialog({
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="text-destructive"
+                        className="shrink-0 text-destructive"
                         onClick={() => deleteShare.mutate(s.id)}
                         disabled={deleteShare.isPending}
                         data-testid={`button-delete-stream-share-${s.id}`}
@@ -215,7 +217,7 @@ export function StreamShareDialog({
                 })}
               </ul>
             )}
-          </ScrollArea>
+          </div>
         </div>
       </DialogContent>
     </Dialog>
