@@ -99,7 +99,7 @@ export function StreamShareDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg overflow-hidden">
+      <DialogContent className="max-w-lg">
         <DialogHeader className="min-w-0">
           <DialogTitle className="truncate">Share “{streamName}”</DialogTitle>
         </DialogHeader>
