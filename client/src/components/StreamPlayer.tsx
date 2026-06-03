@@ -8,6 +8,9 @@ interface StreamPlayerProps {
   controls?: boolean;
   autoPlay?: boolean;
   showOverlay?: boolean;
+  /** Mute the video's audio output. Defaults to true (multiviewer tiles start
+   * muted; only an explicit unmute should let a tile play sound). */
+  muted?: boolean;
   onStatusChange?: (status: 'online' | 'offline' | 'error') => void;
 }
 
@@ -23,6 +26,7 @@ export function StreamPlayer({
   controls = true, 
   autoPlay = false,
   showOverlay = true,
+  muted = true,
   onStatusChange 
 }: StreamPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -224,6 +228,12 @@ export function StreamPlayer({
     return cleanup;
   }, [stream.streamUrl, streamType]);
 
+  // Apply mute imperatively: React doesn't reliably set the video element's
+  // `muted` property from the attribute alone.
+  useEffect(() => {
+    if (videoRef.current) videoRef.current.muted = muted;
+  }, [muted]);
+
   return (
     <div className={`relative ${className}`}>
       <video
@@ -231,7 +241,7 @@ export function StreamPlayer({
         className="w-full h-full object-contain bg-black rounded-lg"
         controls={controls}
         autoPlay={autoPlay}
-        muted
+        muted={muted}
         playsInline
         disablePictureInPicture
         data-testid={`stream-video-${stream.id}`}

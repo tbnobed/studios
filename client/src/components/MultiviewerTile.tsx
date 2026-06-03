@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { Maximize2, Plus, X, Volume2, GripVertical, AlertTriangle } from "lucide-react";
+import { Maximize2, Plus, X, Volume2, VolumeX, GripVertical, AlertTriangle } from "lucide-react";
 import { useDraggable, useDroppable } from "@dnd-kit/core";
 import {
   Select,
@@ -62,6 +62,9 @@ export function MultiviewerTile({
   const containerRef = useRef<HTMLDivElement | null>(null);
   const meterRef = useRef<HTMLDivElement>(null);
   const [status, setStatus] = useState<TileStatus>("loading");
+  // Tiles start muted (you don't want every tile blasting audio at once); the
+  // speaker button toggles this tile's audio output.
+  const [muted, setMuted] = useState(true);
 
   useAudioLevel(containerRef, meterRef, Boolean(stream));
 
@@ -175,6 +178,7 @@ export function MultiviewerTile({
         controls={false}
         autoPlay
         showOverlay={false}
+        muted={muted}
         onStatusChange={(s) => setStatus(s)}
       />
 
@@ -210,7 +214,25 @@ export function MultiviewerTile({
             {(stream as any).studio?.name ?? stream.resolution ?? ""}
           </p>
         </div>
-        <Volume2 size={featured ? 14 : 11} className="shrink-0 text-white/50" />
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            setMuted((m) => !m);
+          }}
+          className={`pointer-events-auto shrink-0 rounded p-1 transition-colors hover:bg-white/10 ${
+            muted ? "text-white/50" : "text-green-400"
+          }`}
+          data-testid={`button-mute-${stream.id}`}
+          aria-label={muted ? "Unmute audio" : "Mute audio"}
+          title={muted ? "Unmute" : "Mute"}
+        >
+          {muted ? (
+            <VolumeX size={featured ? 14 : 11} />
+          ) : (
+            <Volume2 size={featured ? 14 : 11} />
+          )}
+        </button>
       </div>
 
       {/* Hover controls in view mode */}
