@@ -36,6 +36,21 @@ let resumeBound = false;
 // remount rebuilt the node on an already-running context).
 let resumeGeneration = 0;
 
+// Active tiles register a reconnect callback here. When the context transitions
+// to "running" we invoke them synchronously from the statechange event so dead
+// (suspended-built) source nodes are rebuilt immediately, without waiting for
+// the next meter tick. This matters in a popped-out window: after the user taps
+// "enable audio meters" they often move focus back to the main window, and we
+// can't rely on the meter loop firing promptly to notice the resume.
+const reconnectCallbacks = new Set<() => void>();
+function notifyReconnect() {
+  reconnectCallbacks.forEach((cb) => {
+    try {
+      cb();
+    } catch {}
+  });
+}
+
 function getSharedCtx(): AudioContext | null {
   try {
     const Ctx = window.AudioContext || (window as any).webkitAudioContext;
@@ -43,7 +58,10 @@ function getSharedCtx(): AudioContext | null {
     if (!sharedCtx) {
       sharedCtx = new Ctx();
       sharedCtx.addEventListener("statechange", () => {
-        if (sharedCtx?.state === "running") resumeGeneration++;
+        if (sharedCtx?.state === "running") {
+          resumeGeneration++;
+          notifyReconnect();
+        }
       });
       if (sharedCtx.state === "running") resumeGeneration++;
     }
@@ -92,8 +110,6 @@ export function useAudioLevel(
     if (!enabled) return;
 
     let stopped = false;
-    let raf = 0;
-    let lastUpdate = 0;
     let analyser: AnalyserNode | null = null;
     let source: AudioNode | null = null;
     let connectedEl: HTMLVideoElement | null = null;
@@ -184,29 +200,33 @@ export function useAudioLevel(
       }
     };
 
-    const loop = (now: number) => {
+    const tick = () => {
       if (stopped) return;
-      if (now - lastUpdate >= UPDATE_INTERVAL_MS) {
-        lastUpdate = now;
-        ensureConnected();
-        if (analyser) {
-          analyser.getByteFrequencyData(data);
-          let sum = 0;
-          for (let i = 0; i < data.length; i++) sum += data[i] * data[i];
-          const rms = Math.sqrt(sum / data.length) / 255;
-          level = level * 0.7 + rms * 0.3;
-          if (barRef.current) {
-            barRef.current.style.height = `${Math.min(100, level * 140)}%`;
-          }
+      ensureConnected();
+      if (analyser) {
+        analyser.getByteFrequencyData(data);
+        let sum = 0;
+        for (let i = 0; i < data.length; i++) sum += data[i] * data[i];
+        const rms = Math.sqrt(sum / data.length) / 255;
+        level = level * 0.7 + rms * 0.3;
+        if (barRef.current) {
+          barRef.current.style.height = `${Math.min(100, level * 140)}%`;
         }
       }
-      raf = requestAnimationFrame(loop);
     };
-    raf = requestAnimationFrame(loop);
+    // Driven by a timer rather than requestAnimationFrame: rAF is paused while
+    // the window isn't the focused one, which froze the meters in a popped-out
+    // wall until the user clicked back into it. A timer keeps ticking.
+    const timer = window.setInterval(tick, UPDATE_INTERVAL_MS);
+
+    // Rebuild the source node the instant the shared context resumes, instead of
+    // waiting for the next tick (see notifyReconnect above).
+    reconnectCallbacks.add(ensureConnected);
 
     return () => {
       stopped = true;
-      cancelAnimationFrame(raf);
+      window.clearInterval(timer);
+      reconnectCallbacks.delete(ensureConnected);
       disconnect();
       // The shared AudioContext is intentionally left open; it is reused by
       // other tiles and across remounts.
