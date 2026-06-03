@@ -58,7 +58,7 @@ CREATE TYPE stream_type AS ENUM ('webrtc', 'hls');
 -- Create streams table
 CREATE TABLE IF NOT EXISTS streams (
     id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
-    stream_number SERIAL UNIQUE,
+    stream_number SERIAL CONSTRAINT streams_stream_number_unique UNIQUE,
     studio_id VARCHAR NOT NULL REFERENCES studios(id) ON DELETE CASCADE,
     name VARCHAR(100) NOT NULL,
     description TEXT,
