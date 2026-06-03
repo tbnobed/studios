@@ -79,13 +79,87 @@ function fitSlots(slots: (string | null)[], count: number): (string | null)[] {
   return next;
 }
 
+// Where the in-progress (unsaved) arrangement is stashed so a refresh or
+// accidental navigation doesn't lose it before the operator presses Save.
+const DRAFT_STORAGE_KEY = "obtv-multiviewer-draft";
+
+type LayoutDraft = {
+  layoutType: MultiviewerLayoutType;
+  slots: (string | null)[];
+  currentLayoutId: string | null;
+};
+
+function loadDraft(): LayoutDraft | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(DRAFT_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as LayoutDraft;
+    if (!parsed || !Array.isArray(parsed.slots) || !parsed.layoutType) {
+      return null;
+    }
+    return {
+      layoutType: parsed.layoutType,
+      slots: parsed.slots,
+      currentLayoutId: parsed.currentLayoutId ?? null,
+    };
+  } catch {
+    return null;
+  }
+}
+
+function saveDraft(draft: LayoutDraft) {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(draft));
+  } catch {
+    /* ignore quota / serialization errors */
+  }
+}
+
+function clearDraft() {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.removeItem(DRAFT_STORAGE_KEY);
+  } catch {
+    /* ignore */
+  }
+}
+
+function slotsEqual(a: (string | null)[], b: (string | null)[]): boolean {
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) {
+    if ((a[i] ?? null) !== (b[i] ?? null)) return false;
+  }
+  return true;
+}
+
 export default function Multiviewer() {
   const { toast } = useToast();
+  // Restore any unsaved arrangement stashed before a refresh / navigation.
+  const initialDraftRef = useRef<LayoutDraft | null>(loadDraft());
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [layoutType, setLayoutType] = useState<MultiviewerLayoutType>("2x2");
-  const [slots, setSlots] = useState<(string | null)[]>(() => fitSlots([], 4));
+  const [layoutType, setLayoutType] = useState<MultiviewerLayoutType>(
+    () => initialDraftRef.current?.layoutType ?? "2x2"
+  );
+  const [slots, setSlots] = useState<(string | null)[]>(() =>
+    initialDraftRef.current
+      ? fitSlots(
+          initialDraftRef.current.slots,
+          slotCount(initialDraftRef.current.layoutType)
+        )
+      : fitSlots([], 4)
+  );
   const [editMode, setEditMode] = useState(false);
-  const [currentLayoutId, setCurrentLayoutId] = useState<string | null>(null);
+  const [currentLayoutId, setCurrentLayoutId] = useState<string | null>(
+    () => initialDraftRef.current?.currentLayoutId ?? null
+  );
+  // The saved arrangement the working state is based on; used to detect
+  // unsaved changes. `null` means "new / unsaved layout".
+  const [baseline, setBaseline] = useState<{
+    layoutType: MultiviewerLayoutType;
+    slots: (string | null)[];
+  } | null>(null);
   const [soloStreamId, setSoloStreamId] = useState<string | null>(null);
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
   const [layoutName, setLayoutName] = useState("");
@@ -116,22 +190,40 @@ export default function Multiviewer() {
     return map;
   }, [studios]);
 
-  // Auto-load the user's default layout once, on first arrival.
+  // On first arrival, either restore the saved baseline behind a recovered
+  // draft, or auto-load the user's default layout.
   useEffect(() => {
     if (appliedDefaultRef.current || layouts.length === 0) return;
+    appliedDefaultRef.current = true;
+    if (initialDraftRef.current) {
+      // A draft was restored; recover its baseline from the saved layout it
+      // was based on (if it still exists) so the unsaved indicator is accurate.
+      const base = initialDraftRef.current.currentLayoutId
+        ? layouts.find((l) => l.id === initialDraftRef.current!.currentLayoutId)
+        : null;
+      if (base) {
+        const type = base.layoutType as MultiviewerLayoutType;
+        setBaseline({
+          layoutType: type,
+          slots: fitSlots(base.slots ?? [], slotCount(type)),
+        });
+      }
+      return;
+    }
     const def = layouts.find((l) => l.isDefault);
     if (def) {
       applyLayout(def);
     }
-    appliedDefaultRef.current = true;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [layouts]);
 
   const applyLayout = (layout: MultiviewerLayout) => {
     const type = layout.layoutType as MultiviewerLayoutType;
+    const fitted = fitSlots(layout.slots ?? [], slotCount(type));
     setLayoutType(type);
-    setSlots(fitSlots(layout.slots ?? [], slotCount(type)));
+    setSlots(fitted);
     setCurrentLayoutId(layout.id);
+    setBaseline({ layoutType: type, slots: fitted });
     setEditMode(false);
     // Flag this layout so we can warn (once) about any stale sources after
     // the studios/streams have loaded.
@@ -186,6 +278,35 @@ export default function Multiviewer() {
       next[from] = tmp;
       return next;
     });
+  };
+
+  // Whether the working arrangement differs from the saved baseline. With no
+  // baseline (a brand-new layout) any filled slot counts as unsaved.
+  const isDirty = useMemo(() => {
+    if (!baseline) return slots.some(Boolean);
+    return (
+      baseline.layoutType !== layoutType || !slotsEqual(baseline.slots, slots)
+    );
+  }, [baseline, layoutType, slots]);
+
+  // Persist unsaved work so a refresh doesn't lose it; clear once saved.
+  useEffect(() => {
+    if (isDirty) {
+      saveDraft({ layoutType, slots, currentLayoutId });
+    } else {
+      clearDraft();
+    }
+  }, [isDirty, layoutType, slots, currentLayoutId]);
+
+  // Throw away unsaved changes, reverting to the saved baseline (or empty).
+  const discardChanges = () => {
+    if (baseline) {
+      setLayoutType(baseline.layoutType);
+      setSlots(fitSlots(baseline.slots, slotCount(baseline.layoutType)));
+    } else {
+      setSlots((prev) => fitSlots([], prev.length));
+    }
+    clearDraft();
   };
 
   const [activeSlot, setActiveSlot] = useState<number | null>(null);
@@ -246,9 +367,13 @@ export default function Multiviewer() {
       const res = await apiRequest("POST", "/api/multiviewer-layouts", payload);
       return (await res.json()) as MultiviewerLayout;
     },
-    onSuccess: (layout) => {
+    onSuccess: (layout, variables) => {
       queryClient.invalidateQueries({ queryKey: ["/api/multiviewer-layouts"] });
       setCurrentLayoutId(layout.id);
+      setBaseline({
+        layoutType: variables.layoutType,
+        slots: fitSlots(variables.slots, slotCount(variables.layoutType)),
+      });
       setSaveDialogOpen(false);
       setLayoutName("");
       toast({ title: "Layout saved" });
@@ -271,8 +396,15 @@ export default function Multiviewer() {
       );
       return (await res.json()) as MultiviewerLayout;
     },
-    onSuccess: () => {
+    onSuccess: (layout) => {
       queryClient.invalidateQueries({ queryKey: ["/api/multiviewer-layouts"] });
+      if (layout) {
+        const type = layout.layoutType as MultiviewerLayoutType;
+        setBaseline({
+          layoutType: type,
+          slots: fitSlots(layout.slots ?? [], slotCount(type)),
+        });
+      }
       toast({ title: "Layout updated" });
     },
     onError: () =>
@@ -289,7 +421,10 @@ export default function Multiviewer() {
     },
     onSuccess: (_data, id) => {
       queryClient.invalidateQueries({ queryKey: ["/api/multiviewer-layouts"] });
-      if (currentLayoutId === id) setCurrentLayoutId(null);
+      if (currentLayoutId === id) {
+        setCurrentLayoutId(null);
+        setBaseline(null);
+      }
       toast({ title: "Layout deleted" });
     },
     onError: () =>
@@ -398,9 +533,20 @@ export default function Multiviewer() {
                   <h2 className="text-xl font-bold" data-testid="multiviewer-title">
                     Multiviewer
                   </h2>
-                  <p className="text-sm text-muted-foreground">
-                    {assignedStreams.length} of {slots.length} sources
-                    {currentLayout ? ` · ${currentLayout.name}` : ""}
+                  <p className="text-sm text-muted-foreground flex items-center gap-2">
+                    <span>
+                      {assignedStreams.length} of {slots.length} sources
+                      {currentLayout ? ` · ${currentLayout.name}` : ""}
+                    </span>
+                    {isDirty && (
+                      <span
+                        className="inline-flex items-center gap-1 rounded-full bg-amber-500/15 px-2 py-0.5 text-xs font-medium text-amber-500"
+                        data-testid="badge-unsaved-changes"
+                      >
+                        <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+                        Unsaved changes
+                      </span>
+                    )}
                   </p>
                 </div>
               </div>
@@ -479,6 +625,18 @@ export default function Multiviewer() {
                   <Save size={16} className="mr-1" />
                   {currentLayoutId ? "Update" : "Save"}
                 </Button>
+
+                {isDirty && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="touch-area text-muted-foreground"
+                    onClick={discardChanges}
+                    data-testid="button-discard-changes"
+                  >
+                    Discard
+                  </Button>
+                )}
 
                 {currentLayoutId && (
                   <Button
