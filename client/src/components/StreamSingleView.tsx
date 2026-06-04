@@ -1,5 +1,5 @@
-import { useRef } from "react";
-import { ChevronLeft, ChevronRight, Grid3X3 } from "lucide-react";
+import { useRef, useState } from "react";
+import { ChevronLeft, ChevronRight, Grid3X3, Volume2, VolumeX } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { GestureHandler } from "@/components/GestureHandler";
 import { StreamPlayer } from "@/components/StreamPlayer";
@@ -27,6 +27,11 @@ export function StreamSingleView({
 }: StreamSingleViewProps) {
   const stream = streams[currentIndex];
   const containerRef = useRef<HTMLDivElement>(null);
+  // The single/full view shows one stream the user explicitly chose to watch,
+  // so audio is ON by default (the grid/tiles stay muted to avoid everything
+  // blasting at once). Entering this view is always a user gesture, so the
+  // browser allows playback with sound.
+  const [muted, setMuted] = useState(false);
 
   return (
     <GestureHandler
@@ -53,6 +58,7 @@ export function StreamSingleView({
               className="w-full h-full"
               controls={false}
               autoPlay={true}
+              muted={muted}
               onStatusChange={(status) => onStatusChange?.(stream.id, status)}
             />
 
@@ -82,15 +88,30 @@ export function StreamSingleView({
                 </Button>
               </div>
 
-              <Button
-                variant="secondary"
-                size="sm"
-                className="bg-black/60 hover:bg-black/80 text-white touch-area"
-                onClick={onExit}
-                data-testid="button-exit-fullscreen"
-              >
-                <Grid3X3 size={16} />
-              </Button>
+              <div className="flex items-center space-x-3">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className={`bg-black/60 hover:bg-black/80 touch-area ${
+                    muted ? "text-white" : "text-green-400"
+                  }`}
+                  onClick={() => setMuted((m) => !m)}
+                  data-testid="button-toggle-audio"
+                  aria-label={muted ? "Unmute audio" : "Mute audio"}
+                  title={muted ? "Unmute" : "Mute"}
+                >
+                  {muted ? <VolumeX size={16} /> : <Volume2 size={16} />}
+                </Button>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="bg-black/60 hover:bg-black/80 text-white touch-area"
+                  onClick={onExit}
+                  data-testid="button-exit-fullscreen"
+                >
+                  <Grid3X3 size={16} />
+                </Button>
+              </div>
             </div>
 
             {/* Touch Gesture Indicators */}
