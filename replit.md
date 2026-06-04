@@ -10,6 +10,8 @@ Preferred communication style: Simple, everyday language.
 
 Never use or recommend Planning mode. Do not propose or create project tasks for the user to delegate. Work directly in Build mode. (Note: the agent cannot switch modes itself — the user controls the Plan/Build toggle — but the agent should never push the user toward Planning mode.)
 
+Always keep the Favorites tab's video player and surrounding UI in parity with the Studios (Dashboard) tab. Whenever the Studios tab player, its controls/overlay, styling, or features change, apply the same change to the Favorites tab (the only intentional difference is that the Favorites heart button removes a favorite instead of toggling one).
+
 ## System Architecture
 
 ### Frontend Architecture
