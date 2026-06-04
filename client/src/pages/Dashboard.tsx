@@ -17,7 +17,9 @@ import {
   Monitor,
   Video,
   Heart,
-  Share2
+  Share2,
+  Volume2,
+  VolumeX
 } from "lucide-react";
 import { StreamPlayer } from "@/components/StreamPlayer";
 import { GestureHandler } from "@/components/GestureHandler";
@@ -58,6 +60,16 @@ export default function Dashboard() {
   const [selectedStudio, setSelectedStudio] = useState<StudioWithStreams | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const [currentStreamIndex, setCurrentStreamIndex] = useState(0);
+  // Mute lives at the page level so a stream keeps playing audio across
+  // grid<->full-view transitions; absence from the set means muted.
+  const [unmutedStreamIds, setUnmutedStreamIds] = useState<Set<string>>(new Set());
+  const toggleStreamMute = (id: string) =>
+    setUnmutedStreamIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [streamStatuses, setStreamStatuses] = useState<Record<string, 'online' | 'offline' | 'error'>>({});
   const [currentStudioIndex, setCurrentStudioIndex] = useState(0);
@@ -485,12 +497,25 @@ export default function Dashboard() {
                       <StreamPlayer
                         stream={stream}
                         className="w-full h-full"
-                        controls={true}
+                        controls={false}
                         autoPlay={true}
+                        muted={!unmutedStreamIds.has(stream.id)}
                         onStatusChange={(status) => handleStreamStatusChange(stream.id, status)}
                       />
                       
                       <div className="absolute top-2 right-2 flex items-center space-x-2 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity duration-200">
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          className={`bg-black/60 hover:bg-black/80 touch-area ${
+                            unmutedStreamIds.has(stream.id) ? "text-green-400" : "text-white"
+                          }`}
+                          onClick={() => toggleStreamMute(stream.id)}
+                          data-testid={`button-mute-${stream.id}`}
+                          aria-label={unmutedStreamIds.has(stream.id) ? "Mute audio" : "Unmute audio"}
+                        >
+                          {unmutedStreamIds.has(stream.id) ? <Volume2 size={12} /> : <VolumeX size={12} />}
+                        </Button>
                         <Button
                           variant="secondary"
                           size="sm"
@@ -564,6 +589,15 @@ export default function Dashboard() {
                 onPrevious={handlePreviousStream}
                 onExit={() => setViewMode('grid')}
                 onStatusChange={handleStreamStatusChange}
+                muted={
+                  selectedStudio.streams[currentStreamIndex]
+                    ? !unmutedStreamIds.has(selectedStudio.streams[currentStreamIndex].id)
+                    : true
+                }
+                onToggleMute={() => {
+                  const s = selectedStudio.streams[currentStreamIndex];
+                  if (s) toggleStreamMute(s.id);
+                }}
               />)
             )}
           </div>

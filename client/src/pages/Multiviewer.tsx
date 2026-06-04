@@ -142,6 +142,18 @@ export default function Multiviewer() {
     slots: (string | null)[];
   } | null>(null);
   const [soloStreamId, setSoloStreamId] = useState<string | null>(null);
+  // Mute lives at the page level so a stream keeps playing audio across
+  // grid<->solo transitions; absence from the set means muted.
+  const [unmutedStreamIds, setUnmutedStreamIds] = useState<Set<string>>(
+    new Set()
+  );
+  const toggleStreamMute = (id: string) =>
+    setUnmutedStreamIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
   const [layoutName, setLayoutName] = useState("");
@@ -497,6 +509,8 @@ export default function Multiviewer() {
         usedStreamIds={usedStreamIds}
         onAssign={(streamId) => assignSlot(index, streamId)}
         onSolo={() => id && setSoloStreamId(id)}
+        muted={stream ? !unmutedStreamIds.has(stream.id) : true}
+        onToggleMute={() => stream && toggleStreamMute(stream.id)}
         featured={featured}
       />
     );
@@ -780,6 +794,8 @@ export default function Multiviewer() {
                   )
                 }
                 onExit={() => setSoloStreamId(null)}
+                muted={!unmutedStreamIds.has(soloStreamId)}
+                onToggleMute={() => toggleStreamMute(soloStreamId)}
               />
             ) : (
               <MultiviewerGrid

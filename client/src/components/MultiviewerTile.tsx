@@ -28,6 +28,10 @@ interface MultiviewerTileProps {
   usedStreamIds: Set<string>;
   onAssign: (streamId: string | null) => void;
   onSolo: () => void;
+  /** Controlled mute state, owned by the page so audio persists across
+   * grid<->solo transitions. When omitted, the tile manages its own state. */
+  muted?: boolean;
+  onToggleMute?: () => void;
   featured?: boolean;
 }
 
@@ -57,14 +61,22 @@ export function MultiviewerTile({
   usedStreamIds,
   onAssign,
   onSolo,
+  muted: controlledMuted,
+  onToggleMute,
   featured = false,
 }: MultiviewerTileProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const meterRef = useRef<HTMLDivElement>(null);
   const [status, setStatus] = useState<TileStatus>("loading");
-  // Tiles start muted (you don't want every tile blasting audio at once); the
-  // speaker button toggles this tile's audio output.
-  const [muted, setMuted] = useState(true);
+  // Tiles start muted; when the page passes `muted` it owns the state so audio
+  // persists across grid<->solo transitions, otherwise fall back to local state.
+  const isControlled = controlledMuted !== undefined;
+  const [internalMuted, setInternalMuted] = useState(true);
+  const muted = isControlled ? controlledMuted : internalMuted;
+  const toggleMute = () => {
+    if (isControlled) onToggleMute?.();
+    else setInternalMuted((m) => !m);
+  };
 
   useAudioLevel(containerRef, meterRef, Boolean(stream));
 
@@ -218,7 +230,7 @@ export function MultiviewerTile({
           type="button"
           onClick={(e) => {
             e.stopPropagation();
-            setMuted((m) => !m);
+            toggleMute();
           }}
           className={`pointer-events-auto shrink-0 rounded p-1 transition-colors hover:bg-white/10 ${
             muted ? "text-white/50" : "text-green-400"

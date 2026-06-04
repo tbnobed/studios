@@ -11,6 +11,10 @@ interface StreamSingleViewProps {
   onNext: () => void;
   onPrevious: () => void;
   onExit: () => void;
+  /** Controlled mute state. When provided, the parent owns it so audio persists
+   * across grid<->full transitions; when omitted the view manages it locally. */
+  muted?: boolean;
+  onToggleMute?: () => void;
   onStatusChange?: (
     streamId: string,
     status: "online" | "offline" | "error"
@@ -23,6 +27,8 @@ export function StreamSingleView({
   onNext,
   onPrevious,
   onExit,
+  muted: controlledMuted,
+  onToggleMute,
   onStatusChange,
 }: StreamSingleViewProps) {
   const stream = streams[currentIndex];
@@ -30,8 +36,15 @@ export function StreamSingleView({
   // The single/full view shows one stream the user explicitly chose to watch,
   // so audio is ON by default (the grid/tiles stay muted to avoid everything
   // blasting at once). Entering this view is always a user gesture, so the
-  // browser allows playback with sound.
-  const [muted, setMuted] = useState(false);
+  // browser allows playback with sound. When the parent passes `muted` it owns
+  // the state instead (so audio persists across grid<->full transitions).
+  const isControlled = controlledMuted !== undefined;
+  const [internalMuted, setInternalMuted] = useState(false);
+  const muted = isControlled ? controlledMuted : internalMuted;
+  const toggleMute = () => {
+    if (isControlled) onToggleMute?.();
+    else setInternalMuted((m) => !m);
+  };
 
   return (
     <GestureHandler
@@ -95,7 +108,7 @@ export function StreamSingleView({
                   className={`bg-black/60 hover:bg-black/80 touch-area ${
                     muted ? "text-white" : "text-green-400"
                   }`}
-                  onClick={() => setMuted((m) => !m)}
+                  onClick={toggleMute}
                   data-testid="button-toggle-audio"
                   aria-label={muted ? "Unmute audio" : "Mute audio"}
                   title={muted ? "Unmute" : "Mute"}
