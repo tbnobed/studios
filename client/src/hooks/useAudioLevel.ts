@@ -176,6 +176,9 @@ export function useAudioLevel(
       if (!ctx) return;
 
       try {
+        // Whether we tapped the element directly (vs. its MediaStream). The
+        // element path needs special routing so we don't mute the tile (below).
+        let isMediaElementSource = false;
         if (srcObj && typeof srcObj.getAudioTracks === "function") {
           if (srcObj.getAudioTracks().length === 0) return; // no audio yet
           source = ctx.createMediaStreamSource(srcObj);
@@ -184,6 +187,7 @@ export function useAudioLevel(
           if (connectedEl === video) return; // element already tapped
           source = ctx.createMediaElementSource(video);
           connectedSrcObject = null;
+          isMediaElementSource = true;
         } else {
           return; // MediaStream present but not ready
         }
@@ -191,6 +195,15 @@ export function useAudioLevel(
         analyser = ctx.createAnalyser();
         analyser.fftSize = 256;
         source.connect(analyser);
+        // createMediaElementSource() reroutes the element's audio into the Web
+        // Audio graph and removes its direct output to the speakers. For tiles
+        // that play through the media element (SRT via mpegts.js, HLS via
+        // hls.js) we must reconnect the source to the destination, or unmuting
+        // produces a moving meter but no sound. The element's own `muted` /
+        // `volume` still gate this node, so muted tiles stay silent. The
+        // MediaStream (WebRTC) path is left untouched — it isn't hijacked, and
+        // connecting it to the destination would double the audio.
+        if (isMediaElementSource) source.connect(ctx.destination);
         connectedEl = video;
         connectedGeneration = resumeGeneration;
       } catch {

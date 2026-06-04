@@ -1,1 +1,3 @@
 - [attached_assets is temporary](attached-assets-temporary.md) — never import images from attached_assets/ (@assets); put durable assets in client/src/assets and import via @/assets.
+- [Audio metering at scale](audio-metering-scaling.md) — share one AudioContext across tiles; createMediaElementSource (SRT/HLS) must also connect to ctx.destination or sound dies.
+- [Stream data model](stream-data-model.md) — streamType webrtc|hls|srt; SRT playback is HTTP-FLV (.flv via mpegts.js), NOT WHEP; streamKey is server-owned.
