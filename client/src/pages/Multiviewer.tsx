@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import {
   DndContext,
   DragOverlay,
@@ -22,6 +23,7 @@ import {
   ExternalLink,
   Share2,
   Lock,
+  ArrowLeft,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -115,8 +117,17 @@ function slotsEqual(a: (string | null)[], b: (string | null)[]): boolean {
   return true;
 }
 
-export default function Multiviewer() {
+type MultiviewerMode = "view" | "edit" | "new";
+
+export default function Multiviewer({
+  mode = "view",
+  layoutId = null,
+}: {
+  mode?: MultiviewerMode;
+  layoutId?: string | null;
+} = {}) {
   const { toast } = useToast();
+  const [, navigate] = useLocation();
   // Restore any unsaved arrangement stashed before a refresh / navigation.
   const initialDraftRef = useRef<LayoutDraft | null>(loadDraft());
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -131,7 +142,7 @@ export default function Multiviewer() {
         )
       : fitSlots([], 4)
   );
-  const [editMode, setEditMode] = useState(false);
+  const [editMode, setEditMode] = useState(mode === "edit" || mode === "new");
   const [currentLayoutId, setCurrentLayoutId] = useState<string | null>(
     () => initialDraftRef.current?.currentLayoutId ?? null
   );
@@ -167,7 +178,9 @@ export default function Multiviewer() {
   });
   const studios = useMemo(() => studiosData ?? [], [studiosData]);
 
-  const { data: layoutsData } = useQuery<MultiviewerLayoutWithMeta[]>({
+  const { data: layoutsData, isFetched: layoutsFetched } = useQuery<
+    MultiviewerLayoutWithMeta[]
+  >({
     queryKey: ["/api/multiviewer-layouts"],
     meta: { headers: getAuthHeaders() },
   });
@@ -191,32 +204,60 @@ export default function Multiviewer() {
     return map;
   }, [studios, layouts]);
 
-  // On first arrival, either restore the saved baseline behind a recovered
-  // draft, or auto-load the user's default layout.
+  // On first arrival, load whatever the route asks for: a brand-new blank
+  // layout, or a specific saved layout to view/edit.
   useEffect(() => {
-    if (appliedDefaultRef.current || layouts.length === 0) return;
-    appliedDefaultRef.current = true;
-    if (initialDraftRef.current) {
-      // A draft was restored; recover its baseline from the saved layout it
-      // was based on (if it still exists) so the unsaved indicator is accurate.
-      const base = initialDraftRef.current.currentLayoutId
-        ? layouts.find((l) => l.id === initialDraftRef.current!.currentLayoutId)
-        : null;
-      if (base) {
-        const type = base.layoutType as MultiviewerLayoutType;
-        setBaseline({
-          layoutType: type,
-          slots: fitSlots(base.slots ?? [], slotCount(type)),
-        });
+    if (appliedDefaultRef.current) return;
+
+    // Creating a new layout: start from a blank arrangement (unless an unsaved
+    // "new layout" draft was recovered, in which case keep it).
+    if (mode === "new") {
+      appliedDefaultRef.current = true;
+      if (initialDraftRef.current && !initialDraftRef.current.currentLayoutId) {
+        return; // keep the recovered draft already in state
       }
+      setCurrentLayoutId(null);
+      setBaseline(null);
+      setLayoutType("2x2");
+      setSlots(fitSlots([], slotCount("2x2")));
+      clearDraft();
       return;
     }
-    const def = layouts.find((l) => l.isDefault);
-    if (def) {
-      applyLayout(def);
+
+    // Viewing / editing an existing layout: wait until the layouts query has
+    // actually resolved (an empty array is a valid "no layouts" result, not
+    // "still loading"), so a bad/missing id always falls through to the redirect.
+    if (!layoutsFetched) return;
+    appliedDefaultRef.current = true;
+
+    const target = layoutId ? layouts.find((l) => l.id === layoutId) : null;
+    if (!target) {
+      // Unknown / missing layout id — return to the list.
+      navigate("/multiviewer");
+      return;
     }
+
+    // If the recovered draft is based on this exact layout, keep the draft's
+    // working state but recover its baseline so "unsaved changes" stays accurate.
+    if (
+      initialDraftRef.current &&
+      initialDraftRef.current.currentLayoutId === target.id
+    ) {
+      const type = target.layoutType as MultiviewerLayoutType;
+      setCurrentLayoutId(target.id);
+      setBaseline({
+        layoutType: type,
+        slots: fitSlots(target.slots ?? [], slotCount(type)),
+      });
+      if (mode === "edit") setEditMode(true);
+      pendingLayoutCheckRef.current = target.id;
+      return;
+    }
+
+    applyLayout(target);
+    if (mode === "edit") setEditMode(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [layouts]);
+  }, [layouts, layoutsFetched, mode, layoutId]);
 
   const applyLayout = (layout: MultiviewerLayout) => {
     const type = layout.layoutType as MultiviewerLayoutType;
@@ -448,6 +489,8 @@ export default function Multiviewer() {
       if (currentLayoutId === id) {
         setCurrentLayoutId(null);
         setBaseline(null);
+        clearDraft();
+        navigate("/multiviewer");
       }
       toast({ title: "Layout deleted" });
     },
@@ -587,6 +630,18 @@ export default function Multiviewer() {
               </div>
 
               <div className="flex items-center gap-2 flex-wrap">
+                {/* Back to the list of saved multiviewers */}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="touch-area"
+                  onClick={() => navigate("/multiviewer")}
+                  data-testid="button-back-to-list"
+                >
+                  <ArrowLeft size={16} className="mr-1" />
+                  All multiviewers
+                </Button>
+
                 {/* Read-only badge for layouts shared to me by someone else */}
                 {isShared && (
                   <span
@@ -605,39 +660,32 @@ export default function Multiviewer() {
                 )}
 
                 {/* Layout type selector (editing only) */}
-                {!isShared && (
+                {!isShared && editMode && (
                   <LayoutPicker value={layoutType} onChange={changeLayoutType} />
                 )}
 
-                {/* Saved layouts */}
-                <Select
-                  value={currentLayoutId ?? ""}
-                  onValueChange={(id) => {
-                    const layout = layouts.find((l) => l.id === id);
-                    if (layout) applyLayout(layout);
-                  }}
-                >
-                  <SelectTrigger
-                    className="h-9 w-40"
-                    data-testid="select-saved-layout"
+                {/* Quick-switch between saved layouts */}
+                {layouts.length > 0 && (
+                  <Select
+                    value={currentLayoutId ?? ""}
+                    onValueChange={(id) => navigate(`/multiviewer/${id}`)}
                   >
-                    <SelectValue placeholder="Saved layouts" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {layouts.length === 0 ? (
-                      <div className="px-2 py-1.5 text-sm text-muted-foreground">
-                        No saved layouts
-                      </div>
-                    ) : (
-                      layouts.map((l) => (
+                    <SelectTrigger
+                      className="h-9 w-40"
+                      data-testid="select-saved-layout"
+                    >
+                      <SelectValue placeholder="Switch layout" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {layouts.map((l) => (
                         <SelectItem key={l.id} value={l.id}>
                           {l.isDefault ? "★ " : ""}
                           {l.name}
                         </SelectItem>
-                      ))
-                    )}
-                  </SelectContent>
-                </Select>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
 
                 {/* Pop out the saved layout into its own chrome-less window */}
                 {currentLayoutId && (
@@ -684,44 +732,48 @@ export default function Multiviewer() {
                       {editMode ? "Done" : "Edit"}
                     </Button>
 
-                    {/* Save / update */}
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      className="touch-area"
-                      onClick={handleSaveClick}
-                      disabled={saveMutation.isPending || updateMutation.isPending}
-                      data-testid="button-save-layout"
-                    >
-                      <Save size={16} className="mr-1" />
-                      {currentLayoutId ? "Update" : "Save"}
-                    </Button>
+                    {/* Save / update (editing only) */}
+                    {editMode && (
+                      <>
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          className="touch-area"
+                          onClick={handleSaveClick}
+                          disabled={saveMutation.isPending || updateMutation.isPending}
+                          data-testid="button-save-layout"
+                        >
+                          <Save size={16} className="mr-1" />
+                          {currentLayoutId ? "Update" : "Save"}
+                        </Button>
 
-                    {isDirty && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="touch-area text-muted-foreground"
-                        onClick={discardChanges}
-                        data-testid="button-discard-changes"
-                      >
-                        Discard
-                      </Button>
-                    )}
+                        {isDirty && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="touch-area text-muted-foreground"
+                            onClick={discardChanges}
+                            data-testid="button-discard-changes"
+                          >
+                            Discard
+                          </Button>
+                        )}
 
-                    {currentLayoutId && (
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        className="touch-area"
-                        onClick={() => {
-                          setLayoutName("");
-                          setSaveDialogOpen(true);
-                        }}
-                        data-testid="button-save-as"
-                      >
-                        Save as
-                      </Button>
+                        {currentLayoutId && (
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            className="touch-area"
+                            onClick={() => {
+                              setLayoutName("");
+                              setSaveDialogOpen(true);
+                            }}
+                            data-testid="button-save-as"
+                          >
+                            Save as
+                          </Button>
+                        )}
+                      </>
                     )}
 
                     {currentLayout && (

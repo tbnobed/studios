@@ -10,6 +10,7 @@ import AdminPanel from "@/pages/AdminPanel";
 import Settings from "@/pages/Settings";
 import Favorites from "@/pages/Favorites";
 import Multiviewer from "@/pages/Multiviewer";
+import MultiviewerLanding from "@/pages/MultiviewerLanding";
 import MultiviewerWall from "@/pages/MultiviewerWall";
 import SetPassword from "@/pages/SetPassword";
 import SharedStream from "@/pages/SharedStream";
@@ -48,7 +49,20 @@ function Router() {
           <Route path="/" component={Favorites} />
           <Route path="/favorites" component={Favorites} />
           <Route path="/multiviewer/view/:id" component={MultiviewerWall} />
-          <Route path="/multiviewer" component={Multiviewer} />
+          <Route path="/multiviewer/new">
+            {() => <Multiviewer key="new" mode="new" />}
+          </Route>
+          <Route path="/multiviewer/:id/edit">
+            {(params) => (
+              <Multiviewer key={`${params.id}-edit`} mode="edit" layoutId={params.id} />
+            )}
+          </Route>
+          <Route path="/multiviewer/:id">
+            {(params) => (
+              <Multiviewer key={params.id} mode="view" layoutId={params.id} />
+            )}
+          </Route>
+          <Route path="/multiviewer" component={MultiviewerLanding} />
           <Route path="/dashboard" component={Dashboard} />
           <Route path="/settings" component={Settings} />
           {user?.role === 'admin' && (
