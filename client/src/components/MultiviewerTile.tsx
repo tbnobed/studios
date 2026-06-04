@@ -184,7 +184,7 @@ export function MultiviewerTile({
       className={`group relative h-full w-full overflow-hidden rounded-lg border-2 bg-black transition-colors ${STATUS_BORDER[status]} ${
         editMode ? "" : "cursor-pointer"
       } ${isDragging ? "opacity-40" : ""} ${dropHighlight} ${
-        audioOn ? "ring-2 ring-sky-400 ring-offset-2 ring-offset-black shadow-[0_0_18px_rgba(56,189,248,0.55)]" : ""
+        audioOn ? "ring-2 ring-red-500 ring-offset-2 ring-offset-black shadow-[0_0_18px_rgba(239,68,68,0.6)]" : ""
       }`}
       onClick={editMode ? undefined : onSolo}
       data-testid={`multiviewer-tile-${stream.id}`}
