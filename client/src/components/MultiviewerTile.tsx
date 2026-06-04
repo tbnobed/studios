@@ -103,6 +103,9 @@ export function MultiviewerTile({
   };
 
   const dropHighlight = isOver && !isDragging ? "ring-2 ring-primary ring-offset-1 ring-offset-black" : "";
+  // Highlight the tile whose audio is currently playing so it's obvious at a
+  // glance which source you're listening to.
+  const audioOn = Boolean(stream) && !muted && !editMode;
 
   // Empty slot, or a slot whose saved source is no longer available.
   if (!stream) {
@@ -180,7 +183,9 @@ export function MultiviewerTile({
       ref={setRefs}
       className={`group relative h-full w-full overflow-hidden rounded-lg border-2 bg-black transition-colors ${STATUS_BORDER[status]} ${
         editMode ? "" : "cursor-pointer"
-      } ${isDragging ? "opacity-40" : ""} ${dropHighlight}`}
+      } ${isDragging ? "opacity-40" : ""} ${dropHighlight} ${
+        audioOn ? "ring-2 ring-sky-400 ring-offset-2 ring-offset-black shadow-[0_0_18px_rgba(56,189,248,0.55)]" : ""
+      }`}
       onClick={editMode ? undefined : onSolo}
       data-testid={`multiviewer-tile-${stream.id}`}
     >
