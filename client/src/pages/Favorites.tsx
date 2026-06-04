@@ -32,10 +32,15 @@ import {
   Move,
   Menu,
   Maximize,
+  Expand,
+  Share2,
+  Volume2,
+  VolumeX,
 } from "lucide-react";
 import StudioSidebar from "@/components/StudioSidebar";
 import { StreamPlayer } from "@/components/StreamPlayer";
 import { StreamSingleView } from "@/components/StreamSingleView";
+import { StreamShareDialog } from "@/components/StreamShareDialog";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { getAuthHeaders } from "@/lib/authUtils";
@@ -116,9 +121,33 @@ export default function Favorites() {
   const [order, setOrder] = useState<FavoriteWithStream[]>([]);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [singleViewIndex, setSingleViewIndex] = useState<number | null>(null);
+  const [shareStream, setShareStream] = useState<Stream | null>(null);
   const [streamStatuses, setStreamStatuses] = useState<
     Record<string, "online" | "offline" | "error">
   >({});
+
+  // Mute lives at the page level so a stream keeps playing audio across
+  // grid<->full-view transitions; absence from the set means muted.
+  const [unmutedStreamIds, setUnmutedStreamIds] = useState<Set<string>>(
+    () => new Set()
+  );
+  const toggleStreamMute = (id: string) =>
+    setUnmutedStreamIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  // Native browser fullscreen for a single player tile. Falls back gracefully if
+  // the API is unavailable (older browsers).
+  const toggleNativeFullscreen = (el: HTMLElement | null) => {
+    if (!el) return;
+    if (document.fullscreenElement) {
+      document.exitFullscreen?.().catch(() => {});
+    } else {
+      el.requestFullscreen?.().catch(() => {});
+    }
+  };
 
   const getStreamStatus = (stream: Stream) => {
     return streamStatuses[stream.id] || stream.status;
@@ -396,6 +425,15 @@ export default function Favorites() {
               }
               onExit={() => setSingleViewIndex(null)}
               onStatusChange={handleStreamStatusChange}
+              muted={
+                favoriteStreams[singleViewIndex]
+                  ? !unmutedStreamIds.has(favoriteStreams[singleViewIndex].id)
+                  : true
+              }
+              onToggleMute={() => {
+                const s = favoriteStreams[singleViewIndex];
+                if (s) toggleStreamMute(s.id);
+              }}
             />
             </div>
           ) : (
@@ -411,15 +449,28 @@ export default function Favorites() {
                     className="overflow-hidden hover:border-accent transition-colors"
                     data-testid={`favorite-${favorite.streamId}`}
                   >
-                    <div className="video-container relative">
+                    <div className="video-container relative group">
                       <StreamPlayer
                         stream={stream}
                         className="w-full h-full"
-                        controls={true}
+                        controls={false}
                         autoPlay={true}
+                        muted={!unmutedStreamIds.has(stream.id)}
                         onStatusChange={(status) => handleStreamStatusChange(stream.id, status)}
                       />
-                      <div className="absolute top-2 right-2 flex items-center space-x-2">
+                      <div className="absolute top-2 right-2 flex items-center space-x-2 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity duration-200">
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          className={`bg-black/60 hover:bg-black/80 touch-area ${
+                            unmutedStreamIds.has(stream.id) ? "text-green-400" : "text-white"
+                          }`}
+                          onClick={() => toggleStreamMute(stream.id)}
+                          data-testid={`button-mute-${stream.id}`}
+                          aria-label={unmutedStreamIds.has(stream.id) ? "Mute audio" : "Unmute audio"}
+                        >
+                          {unmutedStreamIds.has(stream.id) ? <Volume2 size={12} /> : <VolumeX size={12} />}
+                        </Button>
                         <Button
                           variant="secondary"
                           size="sm"
@@ -435,11 +486,35 @@ export default function Favorites() {
                           variant="secondary"
                           size="sm"
                           className="bg-black/60 hover:bg-black/80 text-white touch-area"
+                          onClick={() => setShareStream(stream)}
+                          data-testid={`button-share-${stream.id}`}
+                          aria-label="Share this stream"
+                        >
+                          <Share2 size={12} />
+                        </Button>
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          className="bg-black/60 hover:bg-black/80 text-white touch-area"
                           onClick={() => setSingleViewIndex(globalIdx)}
-                          data-testid={`button-fullscreen-${stream.id}`}
-                          aria-label="View fullscreen"
+                          data-testid={`button-expand-${stream.id}`}
+                          aria-label="Expand to single view"
                         >
                           <Maximize size={12} />
+                        </Button>
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          className="bg-black/60 hover:bg-black/80 text-white touch-area"
+                          onClick={(e) =>
+                            toggleNativeFullscreen(
+                              (e.currentTarget as HTMLElement).closest<HTMLElement>(".video-container")
+                            )
+                          }
+                          data-testid={`button-fullscreen-${stream.id}`}
+                          aria-label="Toggle full screen"
+                        >
+                          <Expand size={12} />
                         </Button>
                       </div>
                     </div>
@@ -502,6 +577,15 @@ export default function Favorites() {
         </div>
         </main>
       </div>
+
+      {shareStream && (
+        <StreamShareDialog
+          streamId={shareStream.id}
+          streamName={shareStream.name}
+          open={!!shareStream}
+          onOpenChange={(open) => !open && setShareStream(null)}
+        />
+      )}
     </div>
   );
 }
