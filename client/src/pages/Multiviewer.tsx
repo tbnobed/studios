@@ -523,7 +523,7 @@ export default function Multiviewer() {
       : null;
 
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-br from-gray-900 via-slate-800 to-black">
+    <div className="h-[100dvh] overflow-hidden flex flex-col bg-gradient-to-br from-gray-900 via-slate-800 to-black">
       <DndContext
         sensors={sensors}
         collisionDetection={closestCenter}

@@ -2,4 +2,4 @@
 - [Audio metering at scale](audio-metering-scaling.md) — share one AudioContext across tiles; createMediaElementSource (SRT/HLS) must also connect to ctx.destination or sound dies.
 - [Stream data model](stream-data-model.md) — streamType webrtc|hls|srt; SRT playback is HTTP-FLV (.flv via mpegts.js), NOT WHEP; streamKey is server-owned.
 - [Per-stream mute persistence](mute-state-page-level.md) — mute must live at page level (Set of unmuted ids); child-local mute resets on grid<->full remount.
-- [Single-view viewport fit](single-view-viewport-fit.md) — wrap StreamSingleView in h-[calc(100dvh-Nrem)] on Dashboard/Favorites; md:h-auto wrapper leaves h-full unbounded so video overflows.
+- [Single-view viewport fit](single-view-viewport-fit.md) — bound expanded player: Dashboard/Favorites wrap in h-[calc(100dvh-Nrem)]; Multiviewer root must be h-[100dvh] overflow-hidden (min-h-screen isn't definite, h-full overflows).

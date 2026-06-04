@@ -19,5 +19,10 @@ conservative so the page doesn't scroll). Use `dvh`, not `vh`, for mobile chrome
 Do NOT make the shared content wrapper a fixed height — that breaks scrolling of
 the grid/paged/arrange views.
 
-**Multiviewer** does not need this: its solo view sits in a proper flex column
-with `min-h-0`, so `h-full` is already bounded there.
+**Multiviewer** has a proper flex column (`main flex-col min-h-0`, content
+`flex-1 min-h-0`), BUT its root was `min-h-screen` — a MIN height, not definite —
+so the chain could still grow and the solo `h-full` overflowed. Fix: root must be
+a DEFINITE viewport height with overflow hidden (`h-[100dvh] overflow-hidden`).
+Once the root is definite, `flex-1 min-h-0` + `h-full` bound the solo player and
+object-contain letterboxes. `min-h-screen` does NOT establish a definite height
+for descendant `h-full`/`flex-1 min-h-0` to resolve against.
