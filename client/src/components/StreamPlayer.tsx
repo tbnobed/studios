@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import Hls from "hls.js";
+import mpegts from "mpegts.js";
 import { Stream } from "@shared/schema";
 
 interface StreamPlayerProps {
@@ -62,6 +63,7 @@ export function StreamPlayer({
   const videoRef = useRef<HTMLVideoElement>(null);
   const sdkRef = useRef<any>(null);
   const hlsRef = useRef<Hls | null>(null);
+  const mpegtsRef = useRef<any>(null);
   const [currentStatus, setCurrentStatus] = useState<'online' | 'offline' | 'error'>('offline');
 
   const streamType = (stream as any).streamType ?? 'webrtc';
@@ -92,6 +94,14 @@ export function StreamPlayer({
       if (hlsRef.current) {
         hlsRef.current.destroy();
         hlsRef.current = null;
+      }
+      if (mpegtsRef.current) {
+        try {
+          mpegtsRef.current.destroy();
+        } catch {
+          // ignore teardown errors
+        }
+        mpegtsRef.current = null;
       }
       if (videoRef.current) {
         videoRef.current.srcObject = null;
@@ -146,6 +156,54 @@ export function StreamPlayer({
       }
     };
 
+    // SRT-ingested streams are republished by SRS as HTTP-FLV. Browsers can't
+    // play FLV natively, so mpegts.js demuxes it into the video element via
+    // Media Source Extensions. The FLV URL is served over HTTPS, so there's no
+    // mixed-content concern and it's fetched directly (no proxy).
+    const initializeFlv = () => {
+      const video = videoRef.current;
+      if (!video) return;
+
+      if (!mpegts.isSupported()) {
+        console.error('FLV (MSE) not supported in this browser');
+        setCurrentStatus('error');
+        onStatusChange?.('error');
+        return;
+      }
+
+      const player = mpegts.createPlayer(
+        { type: 'flv', isLive: true, url: stream.streamUrl },
+        { enableStashBuffer: false, liveBufferLatencyChasing: true },
+      );
+      mpegtsRef.current = player;
+      player.attachMediaElement(video);
+
+      const onReady = () => {
+        if (cancelled) return;
+        setCurrentStatus('online');
+        onStatusChange?.('online');
+        if (autoPlay) video.play().catch(() => {});
+      };
+      video.addEventListener('loadeddata', onReady, { once: true });
+      video.addEventListener('playing', onReady, { once: true });
+
+      player.on(mpegts.Events.ERROR, (errType: any, detail: any) => {
+        if (cancelled) return;
+        console.error('FLV fatal error for', stream.name, errType, detail);
+        setCurrentStatus('error');
+        onStatusChange?.('error');
+      });
+
+      player.load();
+      if (autoPlay) {
+        try {
+          player.play();
+        } catch {
+          // play() may reject on autoplay policy; the video element handles it
+        }
+      }
+    };
+
     const initializeStream = async () => {
       try {
         // Tear down any prior connection without cancelling this effect run.
@@ -153,6 +211,11 @@ export function StreamPlayer({
 
         if (streamType === 'hls') {
           initializeHls();
+          return;
+        }
+
+        if (streamType === 'srt') {
+          initializeFlv();
           return;
         }
 
