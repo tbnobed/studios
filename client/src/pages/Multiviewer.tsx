@@ -167,6 +167,11 @@ export default function Multiviewer({
     });
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
+  // When the user clicks "Done" with unsaved changes, we ask what to do. If they
+  // choose to save, this flag tells the save/update success handler to also leave
+  // edit mode once the save lands.
+  const [exitConfirmOpen, setExitConfirmOpen] = useState(false);
+  const exitAfterSaveRef = useRef(false);
   const [layoutName, setLayoutName] = useState("");
   const appliedDefaultRef = useRef(false);
   // Layout id awaiting a "some sources unavailable" check once streams load.
@@ -442,6 +447,10 @@ export default function Multiviewer({
       setSaveDialogOpen(false);
       setLayoutName("");
       toast({ title: "Layout saved" });
+      if (exitAfterSaveRef.current) {
+        exitAfterSaveRef.current = false;
+        setEditMode(false);
+      }
     },
     onError: () =>
       toast({
@@ -471,13 +480,19 @@ export default function Multiviewer({
         });
       }
       toast({ title: "Layout updated" });
+      if (exitAfterSaveRef.current) {
+        exitAfterSaveRef.current = false;
+        setEditMode(false);
+      }
     },
-    onError: () =>
+    onError: () => {
+      exitAfterSaveRef.current = false;
       toast({
         title: "Could not update layout",
         description: "Please try again.",
         variant: "destructive",
-      }),
+      });
+    },
   });
 
   const deleteMutation = useMutation({
@@ -534,6 +549,30 @@ export default function Multiviewer({
       setLayoutName("");
       setSaveDialogOpen(true);
     }
+  };
+
+  // Leaving edit mode: if there are unsaved changes, ask whether to save or
+  // discard them instead of silently dropping (or silently keeping) them.
+  const handleDoneClick = () => {
+    if (editMode && isDirty) {
+      setExitConfirmOpen(true);
+    } else {
+      setEditMode((v) => !v);
+    }
+  };
+
+  // "Save & exit" from the confirm dialog: persist, then leave edit mode once the
+  // save lands (handled by exitAfterSaveRef in the mutation success callbacks).
+  const handleSaveAndExit = () => {
+    exitAfterSaveRef.current = true;
+    setExitConfirmOpen(false);
+    handleSaveClick();
+  };
+
+  const handleDiscardAndExit = () => {
+    discardChanges();
+    setExitConfirmOpen(false);
+    setEditMode(false);
   };
 
   const renderTile = (index: number, featured = false) => {
@@ -725,7 +764,7 @@ export default function Multiviewer({
                       variant={editMode ? "default" : "secondary"}
                       size="sm"
                       className="touch-area"
-                      onClick={() => setEditMode((v) => !v)}
+                      onClick={handleDoneClick}
                       data-testid="button-edit-mode"
                     >
                       {editMode ? <Eye size={16} className="mr-1" /> : <Pencil size={16} className="mr-1" />}
@@ -878,7 +917,42 @@ export default function Multiviewer({
         />
       )}
 
-      {/* Save dialog */}
+      {/* Unsaved-changes prompt when leaving edit mode */}
+      <Dialog open={exitConfirmOpen} onOpenChange={setExitConfirmOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Save your changes?</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            You have unsaved changes to this layout. Do you want to save them
+            before leaving edit mode?
+          </p>
+          <DialogFooter className="gap-2 sm:gap-2">
+            <Button
+              variant="ghost"
+              onClick={() => setExitConfirmOpen(false)}
+              data-testid="button-exit-cancel"
+            >
+              Keep editing
+            </Button>
+            <Button
+              variant="outline"
+              onClick={handleDiscardAndExit}
+              data-testid="button-exit-discard"
+            >
+              Discard changes
+            </Button>
+            <Button
+              onClick={handleSaveAndExit}
+              disabled={saveMutation.isPending || updateMutation.isPending}
+              data-testid="button-exit-save"
+            >
+              {currentLayoutId ? "Save & exit" : "Name & save…"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={saveDialogOpen} onOpenChange={setSaveDialogOpen}>
         <DialogContent>
           <DialogHeader>

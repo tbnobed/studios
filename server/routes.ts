@@ -1024,11 +1024,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     if (!slots || slots.length === 0) return null;
     const ids = slots.filter((s): s is string => Boolean(s));
     if (ids.length === 0) return null;
-    const studios = await storage.getUserStudios(userId);
-    const viewable = new Set<string>();
-    for (const studio of studios) {
-      for (const stream of studio.streams) viewable.add(stream.id);
-    }
+    // Use the same access resolution as the display path so any stream the user
+    // can see in a layout can also be saved (this includes streams that are
+    // currently inactive, which getUserStudios would otherwise filter out).
+    const accessible = await storage.getAccessibleStreamsByIds(userId, ids);
+    const viewable = new Set(accessible.map((s) => s.id));
     const invalid = ids.find((id) => !viewable.has(id));
     return invalid ? `Stream not accessible: ${invalid}` : null;
   };

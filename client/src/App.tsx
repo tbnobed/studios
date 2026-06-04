@@ -43,7 +43,10 @@ function Router() {
           with no account, so it lives before the auth gate. */}
       <Route path="/mv/:token" component={MultiviewerShare} />
       {!isAuthenticated ? (
-        <Route path="/" component={Landing} />
+        // Not logged in (or the session expired): show the login screen for any
+        // non-public path instead of a confusing 404. Public routes above still
+        // win because <Switch> renders the first matching child.
+        <Route component={Landing} />
       ) : (
         <>
           <Route path="/" component={Favorites} />

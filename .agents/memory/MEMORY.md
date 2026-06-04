@@ -4,3 +4,4 @@
 - [Per-stream mute persistence](mute-state-page-level.md) — mute must live at page level (Set of unmuted ids); child-local mute resets on grid<->full remount.
 - [Player controls parity](player-controls-parity.md) — Favorites grid players must mirror Dashboard: custom overlay (controls=false), never native HTML5 controls; same mute/share/expand/fullscreen buttons.
 - [Single-view viewport fit](single-view-viewport-fit.md) — bound expanded player: Dashboard/Favorites wrap in h-[calc(100dvh-Nrem)]; Multiviewer root must be h-[100dvh] overflow-hidden (min-h-screen isn't definite, h-full overflows).
+- [Multiviewer slot access](multiviewer-slot-access.md) — validate layout slot writes with the display access path (getAccessibleStreamsByIds), not getUserStudios, or inactive streams cause 403 on save.
