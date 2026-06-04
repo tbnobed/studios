@@ -9,6 +9,7 @@ import {
   Settings, 
   Grid3X3, 
   Maximize, 
+  Expand,
   ChevronLeft, 
   ChevronRight,
   Play,
@@ -70,6 +71,16 @@ export default function Dashboard() {
       else next.add(id);
       return next;
     });
+  // Native browser fullscreen for a single player tile. Falls back gracefully if
+  // the API is unavailable (older browsers).
+  const toggleNativeFullscreen = (el: HTMLElement | null) => {
+    if (!el) return;
+    if (document.fullscreenElement) {
+      document.exitFullscreen?.().catch(() => {});
+    } else {
+      el.requestFullscreen?.().catch(() => {});
+    }
+  };
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [streamStatuses, setStreamStatuses] = useState<Record<string, 'online' | 'offline' | 'error'>>({});
   const [currentStudioIndex, setCurrentStudioIndex] = useState(0);
@@ -548,9 +559,24 @@ export default function Dashboard() {
                             setCurrentStreamIndex(selectedStudio.streams.indexOf(stream));
                             setViewMode('single');
                           }}
-                          data-testid={`button-fullscreen-${stream.id}`}
+                          data-testid={`button-expand-${stream.id}`}
+                          aria-label="Expand to single view"
                         >
                           <Maximize size={12} />
+                        </Button>
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          className="bg-black/60 hover:bg-black/80 text-white touch-area"
+                          onClick={(e) =>
+                            toggleNativeFullscreen(
+                              (e.currentTarget as HTMLElement).closest<HTMLElement>(".video-container")
+                            )
+                          }
+                          data-testid={`button-fullscreen-${stream.id}`}
+                          aria-label="Toggle full screen"
+                        >
+                          <Expand size={12} />
                         </Button>
                       </div>
                     </div>
