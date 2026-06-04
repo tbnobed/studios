@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight, Grid3X3, Volume2, VolumeX } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { GestureHandler } from "@/components/GestureHandler";
@@ -45,6 +45,35 @@ export function StreamSingleView({
     if (isControlled) onToggleMute?.();
     else setInternalMuted((m) => !m);
   };
+
+  // Keyboard navigation: left/right arrows move between streams, Escape exits to
+  // the grid. Ignore keystrokes while typing in an input/textarea so we don't
+  // hijack form fields elsewhere on the page.
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.altKey || e.metaKey || e.ctrlKey) return;
+      const target = e.target as HTMLElement | null;
+      if (
+        target &&
+        (target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.isContentEditable)
+      ) {
+        return;
+      }
+      if (e.key === "ArrowLeft") {
+        e.preventDefault();
+        onPrevious();
+      } else if (e.key === "ArrowRight") {
+        e.preventDefault();
+        onNext();
+      } else if (e.key === "Escape") {
+        onExit();
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [onNext, onPrevious, onExit]);
 
   return (
     <GestureHandler
@@ -129,7 +158,7 @@ export function StreamSingleView({
 
             {/* Touch Gesture Indicators */}
             <div className="absolute top-4 right-4 bg-black/60 text-white px-3 py-2 rounded-lg text-xs gesture-hint">
-              Pinch to zoom • Swipe to navigate
+              Pinch to zoom • Swipe or ← → to navigate
             </div>
           </>
         )}
