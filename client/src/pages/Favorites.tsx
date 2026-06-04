@@ -376,6 +376,9 @@ export default function Favorites() {
             </div>
           ) : singleViewIndex !== null && favorites[singleViewIndex] ? (
             // Single View Mode (identical to studio tabs)
+            // Bound to the viewport so the expanded player fits the screen
+            // (the player letterboxes via object-contain instead of overflowing).
+            <div className="h-[calc(100dvh-6.5rem)]">
             <StreamSingleView
               streams={favoriteStreams}
               currentIndex={singleViewIndex}
@@ -394,6 +397,7 @@ export default function Favorites() {
               onExit={() => setSingleViewIndex(null)}
               onStatusChange={handleStreamStatusChange}
             />
+            </div>
           ) : (
             // View mode (paged live players)
             <div>

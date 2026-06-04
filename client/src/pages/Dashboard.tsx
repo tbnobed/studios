@@ -581,8 +581,10 @@ export default function Dashboard() {
                 ))}
               </div>)
             ) : (
-              // Single View Mode
-              (<StreamSingleView
+              // Single View Mode — bound to the viewport so the expanded player
+              // fits the screen (object-contain letterboxes instead of overflowing).
+              (<div className="h-[calc(100dvh-6.5rem)]">
+              <StreamSingleView
                 streams={selectedStudio.streams}
                 currentIndex={currentStreamIndex}
                 onNext={handleNextStream}
@@ -598,7 +600,8 @@ export default function Dashboard() {
                   const s = selectedStudio.streams[currentStreamIndex];
                   if (s) toggleStreamMute(s.id);
                 }}
-              />)
+              />
+              </div>)
             )}
           </div>
         </main>
