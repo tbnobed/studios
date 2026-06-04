@@ -746,9 +746,27 @@ export class DatabaseStorage implements IStorage {
       sharedWithMeta.sort((a, b) => a.name.localeCompare(b.name));
     }
 
+    // Resolve stream objects for owned layouts too (one batched lookup) so the
+    // landing page can show source names without loading any video.
+    const ownedSlotIds = Array.from(
+      new Set(
+        owned.flatMap((l) =>
+          (l.slots ?? []).filter((s): s is string => Boolean(s))
+        )
+      )
+    );
+    const ownedStreams = ownedSlotIds.length
+      ? await this.getAccessibleStreamsByIds(userId, ownedSlotIds)
+      : [];
+    const ownedStreamById = new Map(ownedStreams.map((s) => [s.id, s]));
+
     const ownedWithMeta: MultiviewerLayoutWithMeta[] = owned.map((l) => ({
       ...l,
       shared: false,
+      streams: (l.slots ?? [])
+        .filter((s): s is string => Boolean(s))
+        .map((id) => ownedStreamById.get(id))
+        .filter((s): s is Stream => Boolean(s)),
     }));
     return [...ownedWithMeta, ...sharedWithMeta];
   }

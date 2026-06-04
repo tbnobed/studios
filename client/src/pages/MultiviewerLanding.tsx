@@ -23,13 +23,16 @@ import type {
   MultiviewerLayoutType,
 } from "@shared/schema";
 
-// A small static schematic of a layout, with filled slots highlighted.
+// A small static schematic of a layout. Filled slots are highlighted and show
+// the assigned source's name (no video is loaded).
 function LayoutThumb({
   type,
   slots,
+  nameById,
 }: {
   type: MultiviewerLayoutType;
   slots: (string | null)[];
+  nameById: Map<string, string>;
 }) {
   const def = getLayoutDef(type);
   return (
@@ -40,18 +43,30 @@ function LayoutThumb({
         gridTemplateRows: `repeat(${def.rows}, 1fr)`,
       }}
     >
-      {def.cells.map((c, i) => (
-        <div
-          key={i}
-          className={`rounded-[2px] ${
-            slots[i] ? "bg-primary/70" : "bg-muted-foreground/20"
-          }`}
-          style={{
-            gridColumn: `${c.c} / span ${c.cs}`,
-            gridRow: `${c.r} / span ${c.rs}`,
-          }}
-        />
-      ))}
+      {def.cells.map((c, i) => {
+        const id = slots[i];
+        const name = id ? nameById.get(id) : undefined;
+        return (
+          <div
+            key={i}
+            className={`flex items-center justify-center overflow-hidden rounded-[2px] p-0.5 text-center ${
+              id ? "bg-primary/25 ring-1 ring-primary/50" : "bg-muted-foreground/10"
+            }`}
+            style={{
+              gridColumn: `${c.c} / span ${c.cs}`,
+              gridRow: `${c.r} / span ${c.rs}`,
+            }}
+          >
+            {name ? (
+              <span className="line-clamp-2 text-[9px] font-medium leading-tight text-foreground/90">
+                {name}
+              </span>
+            ) : id ? (
+              <span className="text-[8px] text-muted-foreground">—</span>
+            ) : null}
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -201,6 +216,9 @@ export default function MultiviewerLanding() {
                   const total = slotCount(type);
                   const filled = (layout.slots ?? []).filter(Boolean).length;
                   const isShared = Boolean(layout.shared);
+                  const nameById = new Map(
+                    (layout.streams ?? []).map((s) => [s.id, s.name])
+                  );
                   return (
                     <div
                       key={layout.id}
@@ -214,7 +232,11 @@ export default function MultiviewerLanding() {
                         data-testid={`button-launch-${layout.id}`}
                       >
                         <div className="relative p-3 bg-black/40">
-                          <LayoutThumb type={type} slots={layout.slots ?? []} />
+                          <LayoutThumb
+                            type={type}
+                            slots={layout.slots ?? []}
+                            nameById={nameById}
+                          />
                           <div className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/40 transition">
                             <span className="flex items-center gap-1.5 rounded-full bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground opacity-0 group-hover:opacity-100 transition shadow-lg">
                               <Play size={15} className="fill-current" />
