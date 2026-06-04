@@ -67,6 +67,19 @@ export default function MultiviewerLanding() {
   });
   const layouts = useMemo(() => layoutsData ?? [], [layoutsData]);
 
+  // Launch a layout into its own chrome-less pop-up window (the live wall).
+  const launchLayout = (id: string) => {
+    const w = Math.min(window.screen.availWidth, 1600);
+    const h = Math.min(window.screen.availHeight, 900);
+    const left = window.screen.availWidth / 2 - w / 2;
+    const top = window.screen.availHeight / 2 - h / 2;
+    window.open(
+      `/multiviewer/view/${id}`,
+      `obtv-wall-${id}`,
+      `popup=yes,noopener,noreferrer,width=${w},height=${h},left=${left},top=${top}`
+    );
+  };
+
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
       await apiRequest("DELETE", `/api/multiviewer-layouts/${id}`);
@@ -196,7 +209,7 @@ export default function MultiviewerLanding() {
                     >
                       <button
                         type="button"
-                        onClick={() => navigate(`/multiviewer/${layout.id}`)}
+                        onClick={() => launchLayout(layout.id)}
                         className="block w-full text-left"
                         data-testid={`button-launch-${layout.id}`}
                       >
