@@ -25,3 +25,12 @@ ids once and filter the result set. `getUserStudios` returns only studios that
 still have at least one viewable stream (studios are just UI grouping now —
 there is no whole-studio permission anymore; `user_studio_permissions` is kept
 defined-but-unused so db:push won't drop it).
+
+**Sensitive field stripping:** `streams.srtSourceUrl` (an external `srt://` pull
+source that can carry credentials in its streamid) must be stripped from every
+non-admin/public response via `sanitizeStreamForViewer()` in `server/routes.ts`
+— covers `/api/studios`, `/api/studios/:id`, `/api/streams/:id`, and the
+unauthenticated `/api/share/:token` + `/api/mv-share/:token`. Admin endpoints
+(e.g. `/api/admin/studios-with-streams`) keep it so the edit dialog can show it.
+Note `streamKey` is NOT stripped: it's also embedded in `streamUrl` (the WHEP
+playback URL viewers need), so hiding the field alone would be theater.

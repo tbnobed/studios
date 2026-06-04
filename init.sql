@@ -53,7 +53,7 @@ CREATE TABLE IF NOT EXISTS studios (
 CREATE TYPE stream_status AS ENUM ('online', 'offline', 'error');
 
 -- Create stream type enum (WebRTC/WHEP vs HLS/.m3u8)
-CREATE TYPE stream_type AS ENUM ('webrtc', 'hls');
+CREATE TYPE stream_type AS ENUM ('webrtc', 'hls', 'srt');
 
 -- Create streams table
 CREATE TABLE IF NOT EXISTS streams (
@@ -64,6 +64,8 @@ CREATE TABLE IF NOT EXISTS streams (
     description TEXT,
     stream_url TEXT NOT NULL,
     stream_type stream_type NOT NULL DEFAULT 'webrtc',
+    stream_key VARCHAR,
+    srt_source_url TEXT,
     resolution VARCHAR(20) DEFAULT '1080p',
     fps INTEGER DEFAULT 30,
     status stream_status NOT NULL DEFAULT 'offline',

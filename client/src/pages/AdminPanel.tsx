@@ -18,6 +18,7 @@ import { getAuthHeaders } from "@/lib/authUtils";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import StudioSidebar from "@/components/StudioSidebar";
 import { Users as UsersIcon } from "lucide-react";
+import { buildSrtIngestUrl } from "@shared/srt";
 
 // Format the auto-incrementing stream number as a friendly, zero-padded ID (e.g. 7 -> "001"... "007").
 function formatStreamId(streamNumber: number | null | undefined): string {
@@ -163,7 +164,8 @@ export default function AdminPanel() {
     name: "",
     description: "",
     streamUrl: "",
-    streamType: "webrtc" as "webrtc" | "hls",
+    streamType: "webrtc" as "webrtc" | "hls" | "srt",
+    srtSourceUrl: "",
     resolution: "1080p",
     fps: 30,
   });
@@ -565,6 +567,7 @@ export default function AdminPanel() {
         description: "",
         streamUrl: "",
         streamType: "webrtc",
+        srtSourceUrl: "",
         resolution: "1080p",
         fps: 30,
       });
@@ -959,7 +962,12 @@ export default function AdminPanel() {
     }
 
     const finalStreamData = { ...newStream };
-    if (!finalStreamData.streamUrl.trim()) {
+    if (finalStreamData.streamType === "srt") {
+      // SRT streams: the server generates the stream key and the WebRTC playback
+      // URL from it, so leave streamUrl blank. srtSourceUrl is optional (only for
+      // pulling an external SRT source).
+      finalStreamData.streamUrl = "";
+    } else if (!finalStreamData.streamUrl.trim()) {
       // HLS streams need an explicit .m3u8 URL — only WebRTC can be auto-generated.
       if (finalStreamData.streamType === "hls") {
         toast({
@@ -1163,15 +1171,21 @@ export default function AdminPanel() {
       return;
     }
 
-    const updateData = {
+    const updateData: Record<string, unknown> = {
       name: editingStream.name,
       description: editingStream.description,
-      streamUrl: editingStream.streamUrl,
+      // For SRT the server derives the WebRTC playback URL from the stream key,
+      // so don't overwrite it with the editable field's value.
+      streamUrl: streamType === "srt" ? "" : editingStream.streamUrl,
       streamType,
       resolution: editingStream.resolution,
       fps: editingStream.fps,
       isActive: editingStream.isActive,
     };
+
+    if (streamType === "srt") {
+      updateData.srtSourceUrl = (editingStream.srtSourceUrl || "").trim();
+    }
 
     updateStreamMutation.mutate({ 
       streamId: editingStream.id, 
@@ -2213,7 +2227,7 @@ export default function AdminPanel() {
                           <Label htmlFor="streamType">Stream Type</Label>
                           <Select
                             value={newStream.streamType}
-                            onValueChange={(value) => setNewStream({ ...newStream, streamType: value as "webrtc" | "hls" })}
+                            onValueChange={(value) => setNewStream({ ...newStream, streamType: value as "webrtc" | "hls" | "srt" })}
                           >
                             <SelectTrigger data-testid="select-stream-type">
                               <SelectValue />
@@ -2221,27 +2235,46 @@ export default function AdminPanel() {
                             <SelectContent>
                               <SelectItem value="webrtc">WebRTC (low-latency, WHEP)</SelectItem>
                               <SelectItem value="hls">HLS (.m3u8)</SelectItem>
+                              <SelectItem value="srt">SRT (ingest → WebRTC)</SelectItem>
                             </SelectContent>
                           </Select>
                         </div>
 
-                        <div>
-                          <Label htmlFor="streamUrl">Stream URL</Label>
-                          <Input
-                            id="streamUrl"
-                            value={newStream.streamUrl}
-                            onChange={(e) => setNewStream({ ...newStream, streamUrl: e.target.value })}
-                            placeholder={newStream.streamType === "hls"
-                              ? "https://your-server/live/stream.m3u8"
-                              : "http://cdn1.obedtv.live:2022/rtc/v1/whep/?app=live&stream=..."}
-                            data-testid="input-stream-url"
-                          />
-                          <p className="text-xs text-muted-foreground mt-1">
-                            {newStream.streamType === "hls"
-                              ? "Required for HLS — paste the full .m3u8 playlist URL."
-                              : "Or leave blank to auto-generate based on studio and stream name"}
-                          </p>
-                        </div>
+                        {newStream.streamType === "srt" ? (
+                          <div>
+                            <Label htmlFor="srtSourceUrl">External SRT source (pull) — optional</Label>
+                            <Input
+                              id="srtSourceUrl"
+                              value={newStream.srtSourceUrl}
+                              onChange={(e) => setNewStream({ ...newStream, srtSourceUrl: e.target.value })}
+                              placeholder="srt://source-host:port?streamid=..."
+                              data-testid="input-srt-source-url"
+                            />
+                            <p className="text-xs text-muted-foreground mt-1">
+                              Leave blank for a push stream (an encoder pushes to the generated SRT URL).
+                              Paste an external SRT source here to pull it instead. The SRT ingest URL and
+                              playback link appear after you create the stream.
+                            </p>
+                          </div>
+                        ) : (
+                          <div>
+                            <Label htmlFor="streamUrl">Stream URL</Label>
+                            <Input
+                              id="streamUrl"
+                              value={newStream.streamUrl}
+                              onChange={(e) => setNewStream({ ...newStream, streamUrl: e.target.value })}
+                              placeholder={newStream.streamType === "hls"
+                                ? "https://your-server/live/stream.m3u8"
+                                : "http://cdn1.obedtv.live:2022/rtc/v1/whep/?app=live&stream=..."}
+                              data-testid="input-stream-url"
+                            />
+                            <p className="text-xs text-muted-foreground mt-1">
+                              {newStream.streamType === "hls"
+                                ? "Required for HLS — paste the full .m3u8 playlist URL."
+                                : "Or leave blank to auto-generate based on studio and stream name"}
+                            </p>
+                          </div>
+                        )}
 
                         <div className="grid grid-cols-2 gap-4">
                           <div>
@@ -2370,7 +2403,7 @@ export default function AdminPanel() {
                         <Label htmlFor="editStreamType">Stream Type</Label>
                         <Select
                           value={editingStream.streamType || "webrtc"}
-                          onValueChange={(value) => setEditingStream({ ...editingStream, streamType: value as "webrtc" | "hls" })}
+                          onValueChange={(value) => setEditingStream({ ...editingStream, streamType: value as "webrtc" | "hls" | "srt" })}
                         >
                           <SelectTrigger data-testid="select-edit-stream-type">
                             <SelectValue />
@@ -2378,22 +2411,67 @@ export default function AdminPanel() {
                           <SelectContent>
                             <SelectItem value="webrtc">WebRTC (low-latency, WHEP)</SelectItem>
                             <SelectItem value="hls">HLS (.m3u8)</SelectItem>
+                            <SelectItem value="srt">SRT (ingest → WebRTC)</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
 
-                      <div>
-                        <Label htmlFor="editStreamUrl">Stream URL</Label>
-                        <Input
-                          id="editStreamUrl"
-                          value={editingStream.streamUrl}
-                          onChange={(e) => setEditingStream({ ...editingStream, streamUrl: e.target.value })}
-                          placeholder={editingStream.streamType === "hls"
-                            ? "https://your-server/live/stream.m3u8"
-                            : "http://cdn1.obedtv.live:2022/rtc/v1/whep/?app=live&stream=..."}
-                          data-testid="input-edit-stream-url"
-                        />
-                      </div>
+                      {editingStream.streamType === "srt" ? (
+                        <>
+                          {editingStream.streamKey && (
+                            <div>
+                              <Label>SRT ingest URL (push to this)</Label>
+                              <div className="flex items-center gap-2">
+                                <Input
+                                  readOnly
+                                  value={buildSrtIngestUrl(editingStream.streamKey)}
+                                  className="font-mono text-xs"
+                                  data-testid="text-srt-ingest-url"
+                                />
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="icon"
+                                  onClick={() => handleCopy(buildSrtIngestUrl(editingStream.streamKey!), `srt-ingest-${editingStream.id}`)}
+                                  data-testid="button-copy-srt-ingest"
+                                >
+                                  {copiedId === `srt-ingest-${editingStream.id}` ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                                </Button>
+                              </div>
+                              <p className="text-xs text-muted-foreground mt-1">
+                                Point an encoder here to push. Playback (WebRTC):{" "}
+                                <span className="font-mono break-all">{editingStream.streamUrl}</span>
+                              </p>
+                            </div>
+                          )}
+                          <div>
+                            <Label htmlFor="editSrtSourceUrl">External SRT source (pull) — optional</Label>
+                            <Input
+                              id="editSrtSourceUrl"
+                              value={editingStream.srtSourceUrl || ""}
+                              onChange={(e) => setEditingStream({ ...editingStream, srtSourceUrl: e.target.value })}
+                              placeholder="srt://source-host:port?streamid=..."
+                              data-testid="input-edit-srt-source-url"
+                            />
+                            <p className="text-xs text-muted-foreground mt-1">
+                              Leave blank for a push stream. Paste an external SRT source to pull it instead.
+                            </p>
+                          </div>
+                        </>
+                      ) : (
+                        <div>
+                          <Label htmlFor="editStreamUrl">Stream URL</Label>
+                          <Input
+                            id="editStreamUrl"
+                            value={editingStream.streamUrl}
+                            onChange={(e) => setEditingStream({ ...editingStream, streamUrl: e.target.value })}
+                            placeholder={editingStream.streamType === "hls"
+                              ? "https://your-server/live/stream.m3u8"
+                              : "http://cdn1.obedtv.live:2022/rtc/v1/whep/?app=live&stream=..."}
+                            data-testid="input-edit-stream-url"
+                          />
+                        </div>
+                      )}
 
                       <div className="grid grid-cols-2 gap-4">
                         <div>
@@ -2586,7 +2664,7 @@ export default function AdminPanel() {
                                             <div className="flex items-center gap-2">
                                               <span className="font-medium">{stream.name}</span>
                                               <Badge variant="outline" className="text-[10px] uppercase">
-                                                {stream.streamType === "hls" ? "HLS" : "WebRTC"}
+                                                {stream.streamType === "hls" ? "HLS" : stream.streamType === "srt" ? "SRT" : "WebRTC"}
                                               </Badge>
                                             </div>
                                             {stream.description && (

@@ -37,6 +37,8 @@ import {
 import { db } from "./db";
 import { eq, and, or, asc, desc, inArray, isNull } from "drizzle-orm";
 import bcrypt from "bcrypt";
+import { randomBytes } from "crypto";
+import { buildSrtPlaybackUrl } from "@shared/srt";
 
 // Favorites limits: up to 8 streams per page across up to 5 pages.
 export const FAVORITES_PER_PAGE = 8;
@@ -315,7 +317,15 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createStream(streamData: InsertStream): Promise<Stream> {
-    const [stream] = await db.insert(streams).values(streamData).returning();
+    const values: any = { ...streamData };
+    // SRT streams get a server-generated key; playback is the WebRTC (WHEP) URL
+    // SRS serves under that key.
+    if (values.streamType === "srt") {
+      const key = values.streamKey || randomBytes(16).toString("hex");
+      values.streamKey = key;
+      values.streamUrl = buildSrtPlaybackUrl(key);
+    }
+    const [stream] = await db.insert(streams).values(values).returning();
     return stream;
   }
 
@@ -325,9 +335,20 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateStream(id: string, data: Partial<InsertStream>): Promise<Stream> {
+    const values: any = { ...data, updatedAt: new Date() };
+    // Keep SRT streams consistent: ensure a key exists (reusing the current one)
+    // and fall back to the generated WebRTC playback URL when none is provided.
+    if (values.streamType === "srt") {
+      const existing = await this.getStream(id);
+      const key = existing?.streamKey || values.streamKey || randomBytes(16).toString("hex");
+      values.streamKey = key;
+      if (!values.streamUrl || !String(values.streamUrl).trim()) {
+        values.streamUrl = buildSrtPlaybackUrl(key);
+      }
+    }
     const [stream] = await db
       .update(streams)
-      .set({ ...data, updatedAt: new Date() })
+      .set(values)
       .where(eq(streams.id, id))
       .returning();
     return stream;

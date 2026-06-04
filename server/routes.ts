@@ -145,6 +145,14 @@ function requireAdmin(req: any, res: any, next: any) {
   next();
 }
 
+// srtSourceUrl is the external SRT source SRS pulls from for a PULL stream and
+// can carry credentials in its streamid. Viewers only ever need the WebRTC
+// playback URL (streamUrl), so strip the pull source from non-admin responses.
+function sanitizeStreamForViewer<T extends { srtSourceUrl?: string | null }>(stream: T): Omit<T, "srtSourceUrl"> {
+  const { srtSourceUrl, ...rest } = stream;
+  return rest;
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
   
   // Health check endpoint
@@ -379,7 +387,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/studios", requireAuth, async (req: any, res) => {
     try {
       const studios = await storage.getUserStudios(req.user.id);
-      res.json(studios);
+      const sanitized = req.user.role === "admin"
+        ? studios
+        : studios.map((studio) => ({
+            ...studio,
+            streams: studio.streams.map(sanitizeStreamForViewer),
+          }));
+      res.json(sanitized);
     } catch (error) {
       console.error("Error fetching studios:", error);
       res.status(500).json({ message: "Failed to fetch studios" });
@@ -405,7 +419,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (visibleStreams.length === 0) {
         return res.status(403).json({ message: "No access to this studio" });
       }
-      res.json({ ...studio, streams: visibleStreams });
+      res.json({ ...studio, streams: visibleStreams.map(sanitizeStreamForViewer) });
     } catch (error) {
       console.error("Error fetching studio:", error);
       res.status(500).json({ message: "Failed to fetch studio" });
@@ -428,7 +442,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "No access to this stream" });
       }
 
-      res.json(stream);
+      res.json(req.user.role === "admin" ? stream : sanitizeStreamForViewer(stream));
     } catch (error) {
       console.error("Error fetching stream:", error);
       res.status(500).json({ message: "Failed to fetch stream" });
@@ -649,7 +663,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       res.json({
-        stream: share.stream,
+        stream: sanitizeStreamForViewer(share.stream),
         label: share.label,
         expiresAt: share.expiresAt,
       });
@@ -784,7 +798,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           layoutType: layout.layoutType,
           slots: layout.slots,
         },
-        streams,
+        streams: streams.map(sanitizeStreamForViewer),
       });
     } catch (error) {
       console.error("Error fetching shared multiview:", error);
@@ -1384,7 +1398,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch("/api/admin/streams/:id", requireAuth, requireAdmin, async (req, res) => {
     try {
       const { id } = req.params;
-      const updateData = req.body;
+      // streamKey is server-generated and opaque; never let a client set or
+      // change it (it would break the SRT ingest/playback pairing). Strip it
+      // along with other server-managed fields before updating.
+      const { streamKey, streamNumber, createdAt, updatedAt, id: _ignoredId, ...updateData } = req.body ?? {};
       const stream = await storage.updateStream(id, updateData);
       res.json(stream);
     } catch (error) {

@@ -19,7 +19,7 @@ import { z } from "zod";
 // Enums
 export const userRoleEnum = pgEnum("user_role", ["admin", "viewer"]);
 export const streamStatusEnum = pgEnum("stream_status", ["online", "offline", "error"]);
-export const streamTypeEnum = pgEnum("stream_type", ["webrtc", "hls"]);
+export const streamTypeEnum = pgEnum("stream_type", ["webrtc", "hls", "srt"]);
 
 // Users table
 export const users = pgTable("users", {
@@ -59,6 +59,13 @@ export const streams = pgTable("streams", {
   description: text("description"),
   streamUrl: text("stream_url").notNull(),
   streamType: streamTypeEnum("stream_type").notNull().default("webrtc"),
+  // SRT-only fields. `streamKey` is the opaque `live/<key>` identifier SRS uses
+  // for both the SRT ingest point and the WebRTC playback; it is generated
+  // server-side at creation. `srtSourceUrl` is set only for PULL streams (an
+  // external SRT source SRS pulls in); blank means a PUSH stream (operator
+  // pushes to the generated SRT ingest URL).
+  streamKey: varchar("stream_key"),
+  srtSourceUrl: text("srt_source_url"),
   resolution: varchar("resolution", { length: 20 }).default("1080p"),
   fps: integer("fps").default(30),
   status: streamStatusEnum("status").notNull().default("offline"),
@@ -357,6 +364,7 @@ export const insertStudioSchema = createInsertSchema(studios).omit({
 export const insertStreamSchema = createInsertSchema(streams).omit({
   id: true,
   streamNumber: true,
+  streamKey: true,
   createdAt: true,
   updatedAt: true,
 });

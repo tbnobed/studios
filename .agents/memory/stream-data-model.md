@@ -19,11 +19,19 @@ description: Non-obvious conventions for streams, isActive semantics, and admin 
   `http://cdn1.obedtv.live:2022/rtc/v1/whep/?app=live&stream=${studioSlug}_${streamSlug}` where
   `studioSlug = name.toLowerCase().replace(/\s+/g,"")` and
   `streamSlug = name.toLowerCase().replace(/\s+/g,"_")`.
-- `streamType` enum is `webrtc | hls` (default `webrtc`). Only WebRTC URLs can be auto-generated from the
-  WHEP rule above; **HLS streams must carry an explicit `.m3u8` URL** — every create path (single dialog,
+- `streamType` enum is `webrtc | hls | srt` (default `webrtc`). Only WebRTC URLs can be auto-generated from
+  the WHEP rule above; **HLS streams must carry an explicit `.m3u8` URL** — every create path (single dialog,
   quick-add, edit dialog) must block submit when type is HLS and the URL is blank. Bulk-add is WebRTC-only
   by design (no m3u8 pattern to generate). **Why:** there is no deterministic way to synthesize an HLS
   playlist URL, so silently auto-generating one produces dead streams.
+- SRT is ingest-only (browsers can't play SRT). An `srt` stream's *playback* is WebRTC/WHEP under an opaque
+  server-generated `streamKey` (32-char hex). PUSH = operator pushes to the generated SRT ingest URL; PULL
+  (Option A) = admin stores an external `srt://` source in `srtSourceUrl` and SRS does the pull — the app
+  only stores/displays it, never runs ffmpeg. Helpers + SRS host/port live in `shared/srt.ts`
+  (buildSrtIngestUrl / buildSrtPlaybackUrl). On create/update the server sets `streamKey` and derives
+  `streamUrl = buildSrtPlaybackUrl(key)`; clients must never set `streamKey` (insertStreamSchema omits it,
+  PATCH strips it). StreamPlayer needs NO srt branch — non-`hls` already takes the WHEP path. **Why:** the
+  key ties the SRT ingest point and the WebRTC playback together and must stay stable + server-owned.
 - Streams carry a human-readable ID separate from the UUID PK: `streamNumber` is a Postgres `serial`
   (auto-incrementing), `.notNull().unique()`, omitted from `insertStreamSchema` so it's DB-assigned at
   creation and stable across renames. UI shows it zero-padded to 3 digits (`String(n).padStart(3,"0")`,
