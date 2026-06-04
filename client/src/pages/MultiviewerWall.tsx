@@ -28,6 +28,19 @@ export default function MultiviewerWall() {
   const layoutId = params?.id ?? null;
   const [soloStreamId, setSoloStreamId] = useState<string | null>(null);
 
+  // Per-stream mute lives at the page level so it survives grid<->solo
+  // transitions; absence from the set means muted.
+  const [unmutedStreamIds, setUnmutedStreamIds] = useState<Set<string>>(
+    () => new Set()
+  );
+  const toggleStreamMute = (id: string) =>
+    setUnmutedStreamIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+
   const { data: studiosData } = useQuery<StudioWithStreams[]>({
     queryKey: ["/api/studios"],
     meta: { headers: getAuthHeaders() },
@@ -130,6 +143,8 @@ export default function MultiviewerWall() {
         onAssign={() => {}}
         onSolo={() => id && setSoloStreamId(id)}
         featured={featured}
+        muted={stream ? !unmutedStreamIds.has(stream.id) : true}
+        onToggleMute={() => stream && toggleStreamMute(stream.id)}
       />
     );
   };
@@ -160,6 +175,8 @@ export default function MultiviewerWall() {
           )
         }
         onExit={() => setSoloStreamId(null)}
+        muted={!unmutedStreamIds.has(soloStreamId)}
+        onToggleMute={() => toggleStreamMute(soloStreamId)}
       />
     );
   } else {
