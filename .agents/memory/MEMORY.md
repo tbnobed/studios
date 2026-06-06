@@ -5,3 +5,4 @@
 - [Player controls parity](player-controls-parity.md) — Favorites grid players must mirror Dashboard: custom overlay (controls=false), never native HTML5 controls; same mute/share/expand/fullscreen buttons.
 - [Single-view viewport fit](single-view-viewport-fit.md) — bound expanded player: Dashboard/Favorites wrap in h-[calc(100dvh-Nrem)]; Multiviewer root must be h-[100dvh] overflow-hidden (min-h-screen isn't definite, h-full overflows).
 - [Multiviewer slot access](multiviewer-slot-access.md) — validate layout slot writes with the display access path (getAccessibleStreamsByIds), not getUserStudios, or inactive streams cause 403 on save.
+- [DeckLink output app](decklink-output-app.md) — Windows SDI output lives in isolated decklink-multiviewer/ (Electron+N-API); NEVER touch the web app; consumes public /mv/:token; Duo 2 1080i59.94.

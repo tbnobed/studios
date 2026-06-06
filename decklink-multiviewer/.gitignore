@@ -1,0 +1,4 @@
+node_modules/
+native/build/
+config.json
+*.log

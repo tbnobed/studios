@@ -1,0 +1,36 @@
+{
+  "_comment": "Copy this file to config.json and fill in your values. config.json is gitignored.",
+
+  "multiviewerUrl": "https://YOUR-APP.replit.app/mv/PASTE_PUBLIC_SHARE_TOKEN_HERE",
+  "_multiviewerUrl_note": "Use a public multiview SHARE link (/mv/:token) generated from the web app. No login needed. You can instead point at an authenticated /multiviewer/view/:id URL, but then you must set 'auth' below.",
+
+  "output": {
+    "width": 1920,
+    "height": 1080,
+    "mode": "1080i5994",
+    "_mode_note": "Only 1080i5994 is implemented in the native addon for now. The DeckLink Duo 2 channel will run at 1080i59.94.",
+    "deviceIndex": 0,
+    "_deviceIndex_note": "Which DeckLink device/sub-device to output on. The Duo 2 exposes its channels as separate devices; index 0 is usually the first output-capable channel."
+  },
+
+  "audio": {
+    "enabled": true,
+    "channels": 2,
+    "sampleRate": 48000,
+    "autoUnmuteSlot": 0,
+    "_autoUnmuteSlot_note": "Tile index (0-based, in slot order) whose audio should be embedded. The app clicks that tile's unmute button after load. Set to null to leave audio control to a human operator."
+  },
+
+  "auth": {
+    "enabled": false,
+    "loginUrl": "https://YOUR-APP.replit.app/api/auth/login",
+    "username": "",
+    "password": "",
+    "_note": "ONLY needed if multiviewerUrl points at an authenticated /multiviewer/view/:id route instead of a public /mv/:token share link. When enabled, the app logs in, stores the returned JWT in localStorage under 'auth_token' (the same key the web app uses), then loads the URL."
+  },
+
+  "debug": {
+    "showWindow": false,
+    "_showWindow_note": "When true, opens a visible window mirroring the offscreen render so you can see what is being sent to SDI. Leave false for production/kiosk use."
+  }
+}
