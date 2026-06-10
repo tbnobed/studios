@@ -11,3 +11,6 @@ The OTT/TV home (`/tv`, TvHome) must surface the SAME curated content the user h
 - Favorites/studio streams open a fullscreen `StreamSingleView` (keeps player parity with Dashboard/Favorites — see player-controls-parity.md).
 - A multiviewer card navigates to `/multiviewer/view/:id` (the fullscreen wall).
 - Remote nav is 2D on home (Left/Right within a row, Up/Down between rows); guard against empty rows so arrow math never produces a -1 focus index.
+
+## OTT CPU: one live preview at a time
+On the TV home (favorites row + studio streams grid) NEVER mount a live StreamPlayer on every card — OTT/TV devices have weak CPUs and decoding N streams at once kills them. Only the currently highlighted card mounts a live player (StreamPreview `active` prop); all other cards show a static placeholder + the stream name. The live preview follows the remote highlight, so exactly one stream decodes at any moment. The fullscreen StreamSingleView is the only place a stream plays "for real."
