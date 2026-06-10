@@ -81,6 +81,9 @@ export default function TvHome() {
   // Home navigation (2D across rows / cards).
   const [rowIndex, setRowIndex] = useState(0);
   const [colIndex, setColIndex] = useState(0);
+  // When true, focus sits on the header "Sign out" button (reached by pressing
+  // Up from the top row), so the remote can navigate to it.
+  const [headerFocus, setHeaderFocus] = useState(false);
   // Studio drill-down.
   const [studioIndex, setStudioIndex] = useState(0);
   const [streamFocus, setStreamFocus] = useState(0);
@@ -141,13 +144,18 @@ export default function TvHome() {
   // Keep the focused card actually focused + scrolled into view.
   useEffect(() => {
     if (player) return;
-    const key = level === "home" ? `h-${rowIndex}-${colIndex}` : `s-${streamFocus}`;
+    const key =
+      level === "home"
+        ? headerFocus
+          ? "header-signout"
+          : `h-${rowIndex}-${colIndex}`
+        : `s-${streamFocus}`;
     const el = focusRefs.current.get(key);
     if (el) {
       el.focus();
       el.scrollIntoView({ block: "nearest", inline: "center", behavior: "smooth" });
     }
-  }, [level, rowIndex, colIndex, streamFocus, player, rows]);
+  }, [level, rowIndex, colIndex, headerFocus, streamFocus, player, rows]);
 
   const openStudio = useCallback((idx: number) => {
     setStudioIndex(idx);
@@ -181,6 +189,12 @@ export default function TvHome() {
     }
   }, [player, level]);
 
+  const handleLogout = useCallback(() => {
+    removeAuthToken();
+    queryClient.clear();
+    setLocation("/tv/login");
+  }, [setLocation]);
+
   // Remote / keyboard navigation. The fullscreen player owns its own arrow keys
   // (via StreamSingleView), so we only handle Back while it's open.
   useEffect(() => {
@@ -210,6 +224,33 @@ export default function TvHome() {
         e.key === "BrowserBack";
 
       if (level === "home") {
+        // Header "Sign out" focus zone — sits above the top row.
+        if (headerFocus) {
+          switch (e.key) {
+            case "ArrowDown":
+              e.preventDefault();
+              setHeaderFocus(false);
+              break;
+            case "Enter":
+              e.preventDefault();
+              handleLogout();
+              break;
+            default:
+              if (isBack) {
+                e.preventDefault();
+                setHeaderFocus(false);
+              }
+          }
+          return;
+        }
+
+        // From the very top row, Up jumps to the header Sign out button.
+        if (e.key === "ArrowUp" && rowIndex === 0) {
+          e.preventDefault();
+          setHeaderFocus(true);
+          return;
+        }
+
         const rowLen = rows[rowIndex]?.items.length ?? 0;
         if (rowLen === 0 && e.key !== "Enter") {
           // Empty row: nothing to move to or select; let the browser be.
@@ -286,13 +327,7 @@ export default function TvHome() {
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [level, rows, rowIndex, studioStreams, streamFocus, player, selectHome, goBack]);
-
-  const handleLogout = () => {
-    removeAuthToken();
-    queryClient.clear();
-    setLocation("/tv/login");
-  };
+  }, [level, rows, rowIndex, headerFocus, studioStreams, streamFocus, player, selectHome, goBack, handleLogout]);
 
   // The currently-focused home item drives the hero band + ambient backdrop so
   // the whole screen reflects what you're pointing at (modern OTT behaviour).
@@ -471,8 +506,14 @@ export default function TvHome() {
       <header className="relative z-10 flex shrink-0 items-center justify-between px-[4vw] pt-[2vh] pb-[0.5vh]">
         <img src={tbnLogo} alt="TBN Studios" className="h-[clamp(2.25rem,3.5vw,3.5rem)] w-auto" />
         <button
+          ref={(el) => focusRefs.current.set("header-signout", el)}
           onClick={handleLogout}
-          className="flex items-center gap-2 rounded-full bg-white/5 px-4 py-2 text-base text-white/70 ring-1 ring-white/10 transition hover:bg-white/10 hover:text-white focus:outline-none focus:ring-2 focus:ring-white"
+          onMouseEnter={() => setHeaderFocus(true)}
+          className={`flex items-center gap-2 rounded-full px-4 py-2 text-base ring-1 transition focus:outline-none ${
+            headerFocus
+              ? "scale-105 bg-white text-gray-900 ring-white shadow-[0_0_24px_rgba(255,255,255,0.5)]"
+              : "bg-white/5 text-white/70 ring-white/10 hover:bg-white/10 hover:text-white"
+          }`}
         >
           <LogOut size={20} /> Sign out
         </button>
@@ -535,9 +576,10 @@ export default function TvHome() {
                           ref={(el) => focusRefs.current.set(`h-${ri}-${ci}`, el)}
                           onClick={() => setLocation(`/multiviewer/view/${layout.id}`)}
                           onMouseEnter={() => {
+                            setHeaderFocus(false);
                             setRowIndex(ri);
                             setColIndex(ci);
-                          }}
+                            }}
                           className={`${CARD_BASE} h-[80%] aspect-video ${cardFocus(active)}`}
                         >
                           <div className="absolute inset-0 bg-gradient-to-br from-indigo-900 via-slate-900 to-black" />
@@ -569,9 +611,10 @@ export default function TvHome() {
                               openStudio(pos === -1 ? ci : pos);
                             }}
                             onMouseEnter={() => {
+                              setHeaderFocus(false);
                               setRowIndex(ri);
                               setColIndex(ci);
-                            }}
+                              }}
                             className={`${CARD_BASE} h-[80%] aspect-video ${cardFocus(active)}`}
                           >
                             <StudioArt studio={studio} />
@@ -593,9 +636,10 @@ export default function TvHome() {
                             ref={(el) => focusRefs.current.set(`h-${ri}-${ci}`, el)}
                             onClick={() => setPlayer({ streams: row.items as Stream[], index: ci })}
                             onMouseEnter={() => {
+                              setHeaderFocus(false);
                               setRowIndex(ri);
                               setColIndex(ci);
-                            }}
+                              }}
                             className={`${CARD_BASE} h-[80%] aspect-video ${cardFocus(active)}`}
                           >
                             <StreamThumbnail stream={stream} />
