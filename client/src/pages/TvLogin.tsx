@@ -80,7 +80,7 @@ export default function TvLogin() {
       <img
         src={obLogo}
         alt="OB"
-        className="h-[clamp(3.5rem,9vh,7rem)] w-auto object-contain opacity-90"
+        className="h-[clamp(4.5rem,12vh,9rem)] w-auto object-contain opacity-90"
       />
       <h1 className="mt-[1vh] text-[clamp(1.4rem,3vw,2.5rem)] font-extrabold tracking-tight">
         TBN Studios
@@ -89,7 +89,7 @@ export default function TvLogin() {
         <Tv size={22} /> Living Room Mode
       </p>
 
-      <div className="flex w-full max-w-3xl flex-col items-center gap-[clamp(1rem,2.2vw,2.25rem)] rounded-3xl border border-white/10 bg-white/5 p-[clamp(1.25rem,2.4vw,2.25rem)] md:flex-row">
+      <div className="flex w-full max-w-3xl flex-col items-center justify-center gap-[clamp(1rem,2.2vw,2.25rem)] rounded-3xl border border-white/10 bg-white/5 p-[clamp(1.25rem,2.4vw,2.25rem)] md:flex-row">
         {/* QR */}
         <div className="shrink-0 rounded-2xl bg-white p-[clamp(0.6rem,1vw,1.2rem)]">
           {pair ? (
@@ -108,7 +108,7 @@ export default function TvLogin() {
         </div>
 
         {/* Instructions */}
-        <div className="flex-1 text-center md:text-left">
+        <div className="text-center md:text-left">
           <h2 className="mb-[1.5vh] flex items-center justify-center gap-2.5 text-[clamp(1.15rem,2vw,1.6rem)] font-bold md:justify-start">
             <Smartphone size={24} /> Sign in with your phone
           </h2>
