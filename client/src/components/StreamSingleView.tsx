@@ -46,9 +46,27 @@ export function StreamSingleView({
     else setInternalMuted((m) => !m);
   };
 
-  // Keyboard navigation: left/right arrows move between streams, Escape exits to
-  // the grid. Ignore keystrokes while typing in an input/textarea so we don't
-  // hijack form fields elsewhere on the page.
+  // Remote focus model. Watching the video is the default zone; pressing Down
+  // moves focus onto the control bar so a TV remote can reach the volume and
+  // "back to grid" buttons (which are otherwise mouse-only). Order matches the
+  // on-screen layout: previous, next, mute, exit-to-grid.
+  const CONTROLS = ["prev", "next", "mute", "exit"] as const;
+  const MUTE_INDEX = 2;
+  const [focusZone, setFocusZone] = useState<"video" | "controls">("video");
+  const [controlsIndex, setControlsIndex] = useState(MUTE_INDEX);
+  const btnRefs = useRef<Array<HTMLButtonElement | null>>([]);
+
+  // Keep the focused control button actually focused for the remote.
+  useEffect(() => {
+    if (focusZone === "controls") {
+      btnRefs.current[controlsIndex]?.focus();
+    }
+  }, [focusZone, controlsIndex]);
+
+  // Keyboard / remote navigation. In the video zone Left/Right change streams
+  // and Down reveals the control bar; in the control zone Left/Right move
+  // between buttons and Enter activates one. Back/Escape always returns to the
+  // stream grid (so the remote Back key never falls through and exits the app).
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.altKey || e.metaKey || e.ctrlKey) return;
@@ -61,19 +79,77 @@ export function StreamSingleView({
       ) {
         return;
       }
-      if (e.key === "ArrowLeft") {
+
+      const isBack =
+        e.key === "Backspace" ||
+        e.key === "Escape" ||
+        e.key === "GoBack" ||
+        e.key === "BrowserBack";
+
+      if (isBack) {
         e.preventDefault();
-        onPrevious();
-      } else if (e.key === "ArrowRight") {
-        e.preventDefault();
-        onNext();
-      } else if (e.key === "Escape") {
         onExit();
+        return;
+      }
+
+      if (focusZone === "controls") {
+        switch (e.key) {
+          case "ArrowLeft":
+            e.preventDefault();
+            setControlsIndex((i) => Math.max(0, i - 1));
+            break;
+          case "ArrowRight":
+            e.preventDefault();
+            setControlsIndex((i) => Math.min(CONTROLS.length - 1, i + 1));
+            break;
+          case "ArrowUp":
+            e.preventDefault();
+            setFocusZone("video");
+            break;
+          case "Enter":
+            e.preventDefault();
+            {
+              const action = CONTROLS[controlsIndex];
+              if (action === "prev") onPrevious();
+              else if (action === "next") onNext();
+              else if (action === "mute") toggleMute();
+              else onExit();
+            }
+            break;
+        }
+        return;
+      }
+
+      // Video zone.
+      switch (e.key) {
+        case "ArrowLeft":
+          e.preventDefault();
+          onPrevious();
+          break;
+        case "ArrowRight":
+          e.preventDefault();
+          onNext();
+          break;
+        case "ArrowDown":
+          e.preventDefault();
+          setControlsIndex(MUTE_INDEX);
+          setFocusZone("controls");
+          break;
+        case "Enter":
+          e.preventDefault();
+          setControlsIndex(MUTE_INDEX);
+          setFocusZone("controls");
+          break;
       }
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [onNext, onPrevious, onExit]);
+  }, [onNext, onPrevious, onExit, focusZone, controlsIndex, toggleMute]);
+
+  const controlFocus = (i: number) =>
+    focusZone === "controls" && controlsIndex === i
+      ? "ring-2 ring-white scale-110 shadow-[0_0_20px_rgba(255,255,255,0.5)]"
+      : "";
 
   return (
     <GestureHandler
@@ -108,9 +184,10 @@ export function StreamSingleView({
             <div className="absolute bottom-4 left-4 right-4 flex items-center justify-between">
               <div className="flex items-center space-x-3">
                 <Button
+                  ref={(el) => (btnRefs.current[0] = el)}
                   variant="secondary"
                   size="sm"
-                  className="bg-black/60 hover:bg-black/80 text-white touch-area"
+                  className={`bg-black/60 hover:bg-black/80 text-white touch-area transition focus:outline-none ${controlFocus(0)}`}
                   onClick={onPrevious}
                   data-testid="button-previous-stream"
                 >
@@ -120,9 +197,10 @@ export function StreamSingleView({
                   Stream {currentIndex + 1} of {streams.length}
                 </div>
                 <Button
+                  ref={(el) => (btnRefs.current[1] = el)}
                   variant="secondary"
                   size="sm"
-                  className="bg-black/60 hover:bg-black/80 text-white touch-area"
+                  className={`bg-black/60 hover:bg-black/80 text-white touch-area transition focus:outline-none ${controlFocus(1)}`}
                   onClick={onNext}
                   data-testid="button-next-stream"
                 >
@@ -132,11 +210,12 @@ export function StreamSingleView({
 
               <div className="flex items-center space-x-3">
                 <Button
+                  ref={(el) => (btnRefs.current[2] = el)}
                   variant="secondary"
                   size="sm"
-                  className={`bg-black/60 hover:bg-black/80 touch-area ${
+                  className={`bg-black/60 hover:bg-black/80 touch-area transition focus:outline-none ${
                     muted ? "text-white" : "text-green-400"
-                  }`}
+                  } ${controlFocus(2)}`}
                   onClick={toggleMute}
                   data-testid="button-toggle-audio"
                   aria-label={muted ? "Unmute audio" : "Mute audio"}
@@ -145,9 +224,10 @@ export function StreamSingleView({
                   {muted ? <VolumeX size={16} /> : <Volume2 size={16} />}
                 </Button>
                 <Button
+                  ref={(el) => (btnRefs.current[3] = el)}
                   variant="secondary"
                   size="sm"
-                  className="bg-black/60 hover:bg-black/80 text-white touch-area"
+                  className={`bg-black/60 hover:bg-black/80 text-white touch-area transition focus:outline-none ${controlFocus(3)}`}
                   onClick={onExit}
                   data-testid="button-exit-fullscreen"
                 >
