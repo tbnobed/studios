@@ -13,6 +13,7 @@ import type {
   MultiviewerLayoutWithMeta,
 } from "@shared/schema";
 import { Tv, LogOut, ChevronLeft, Radio, Heart, LayoutGrid } from "lucide-react";
+import tbnLogo from "@/assets/tbnlogo-white_1756354700943.png";
 
 type Level = "home" | "streams";
 
@@ -340,9 +341,8 @@ export default function TvHome() {
   return (
     <div className="min-h-[100dvh] bg-gradient-to-b from-gray-900 via-slate-900 to-black text-white">
       <header className="flex items-center justify-between px-10 py-6 border-b border-white/10">
-        <div className="flex items-center gap-3 text-2xl font-bold">
-          <Tv size={30} /> TBN Studios
-        </div>
+        <img src={tbnLogo} alt="TBN Studios" className="h-12 w-auto" />
+        
         <button
           onClick={handleLogout}
           className="flex items-center gap-2 text-lg text-white/50 hover:text-white focus:outline-none focus:text-white"
