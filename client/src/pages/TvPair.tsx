@@ -38,6 +38,20 @@ export default function TvPair() {
   const params = new URLSearchParams(window.location.search);
   const [code, setCode] = useState((params.get("code") || "").toUpperCase());
 
+  // After an SSO round-trip the IdP sends us back to /tv/pair?code=XXXX&sso_token=YYYY.
+  // Store the token, strip it from the URL (keeping the code), then reload so the
+  // page comes back authenticated on the "Allow this TV?" screen — no rescan needed.
+  useState(() => {
+    const ssoToken = params.get("sso_token");
+    if (ssoToken) {
+      setAuthToken(ssoToken);
+      params.delete("sso_token");
+      const qs = params.toString();
+      window.history.replaceState({}, "", `/tv/pair${qs ? `?${qs}` : ""}`);
+      window.location.reload();
+    }
+  });
+
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [approved, setApproved] = useState(false);
@@ -155,7 +169,8 @@ export default function TvPair() {
               variant="outline"
               className="w-full mt-3"
               onClick={() => {
-                window.location.href = "/api/auth/sso";
+                const returnTo = `/tv/pair?code=${encodeURIComponent(code)}`;
+                window.location.href = `/api/auth/sso?returnTo=${encodeURIComponent(returnTo)}`;
               }}
             >
               Sign in with SSO

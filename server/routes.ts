@@ -350,7 +350,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const redirectUri = getSsoRedirectUri(req);
 
-      const state = Math.random().toString(36).substring(2);
+      // Carry an optional post-login destination through the OAuth round-trip by
+      // packing it into `state` (echoed back verbatim by the IdP). Used by the
+      // TV pairing flow so the phone returns to /tv/pair?code=XXXX after SSO
+      // instead of landing on / and forcing the user to rescan the QR code.
+      const returnTo = typeof req.query.returnTo === "string" ? req.query.returnTo : "";
+      const state = Buffer.from(
+        JSON.stringify({ n: Math.random().toString(36).substring(2), r: returnTo }),
+      ).toString("base64url");
       const params = new URLSearchParams({
         client_id: clientId,
         redirect_uri: redirectUri,
@@ -367,7 +374,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   app.get("/api/auth/sso/callback", async (req, res) => {
-    const { code } = req.query;
+    const { code, state } = req.query;
+    // Recover the post-login destination packed into `state` at authorize time.
+    // Only honor safe, app-relative paths to avoid an open-redirect.
+    let returnTo = "/";
+    try {
+      if (typeof state === "string") {
+        const parsed = JSON.parse(Buffer.from(state, "base64url").toString("utf8"));
+        if (parsed && typeof parsed.r === "string" && parsed.r.startsWith("/") && !parsed.r.startsWith("//")) {
+          returnTo = parsed.r;
+        }
+      }
+    } catch {
+      // Malformed state — fall back to the default destination.
+    }
+    const withToken = (token: string) => {
+      const sep = returnTo.includes("?") ? "&" : "?";
+      return `${returnTo}${sep}sso_token=${token}`;
+    };
     const clientId = process.env.AUTHENTIK_CLIENT_ID;
     const clientSecret = process.env.AUTHENTIK_CLIENT_SECRET;
     const issuerUrl = process.env.AUTHENTIK_ISSUER_URL;
@@ -445,7 +469,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: "24h" });
-      res.redirect(`/?sso_token=${token}`);
+      res.redirect(withToken(token));
     } catch (error) {
       console.error("SSO callback error:", error);
       res.redirect("/?sso_error=server_error");

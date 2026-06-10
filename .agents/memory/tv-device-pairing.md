@@ -28,3 +28,16 @@ let an attacker hijack the session during the short pending window.
 **How to apply:** any change to the pairing endpoints or storage methods must
 preserve the conditional approve and the atomic consume. Public TV pages also
 call useAuth() — see auth-query-retry-loop.md for the mount-loop trap.
+
+## SSO must preserve the pairing code across the redirect round-trip
+The inline username/password login on `/tv/pair` keeps `?code=XXXX` because it
+never leaves the page. **SSO is a full-page redirect** to the IdP and back, so
+the code is dropped unless it is carried through. The fix: the SSO button passes
+`?returnTo=/tv/pair?code=XXXX` to `/api/auth/sso`; the server packs `returnTo`
+into the OAuth `state` (base64url JSON, IdP echoes it verbatim), and the callback
+redirects to `returnTo` (sanitized: must start with `/`, not `//`) with
+`sso_token` appended instead of the default `/`. `TvPair` consumes `sso_token`
+on mount (setAuthToken, strip token from URL keeping the code, reload), landing
+back on the "Allow this TV?" screen — no rescan. **Why:** without this the phone
+lands on `/` post-SSO, authenticated but with no pairing context, forcing a QR
+rescan to approve the TV.
