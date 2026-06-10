@@ -8,3 +8,4 @@
 - [DeckLink output app](decklink-output-app.md) — Windows SDI output lives in isolated decklink-multiviewer/ (Electron+N-API); NEVER touch the web app; consumes public /mv/:token; Duo 2 1080i59.94.
 - [Auth query retry loop](auth-query-retry-loop.md) — public pages calling useAuth() while logged out loop forever; errored query needs retryOnMount:false (not just refetchOnMount:false).
 - [TV device pairing](tv-device-pairing.md) — QR/phone TV login; approve must be conditional false->true (no takeover) and /status must atomically consume (single-use token).
+- [TV/OTT home surfaces](tv-home-surfaces.md) — the 10-foot home must show Favorites + Multiviewers + Studios (same per-user data as desktop), not just studios; reuses StreamSingleView for parity.
