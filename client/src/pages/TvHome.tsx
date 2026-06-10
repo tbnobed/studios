@@ -78,12 +78,15 @@ export default function TvHome() {
   const { isAuthenticated, isLoading: authLoading } = useAuth();
 
   const [level, setLevel] = useState<Level>("home");
-  // Home navigation (2D across rows / cards).
-  const [rowIndex, setRowIndex] = useState(0);
+  // Home navigation, Android-TV "immersive list" style: a row of pill tabs (one
+  // per content category) and a content grid of cards for the active tab.
+  const [tabIndex, setTabIndex] = useState(0);
   const [colIndex, setColIndex] = useState(0);
-  // When true, focus sits on the header "Sign out" button (reached by pressing
-  // Up from the top row), so the remote can navigate to it.
-  const [headerFocus, setHeaderFocus] = useState(false);
+  // Which zone the remote is in. When in "tabs", topIndex highlights a top-bar
+  // item; the slot AFTER the last tab (index === rows.length) is the Sign out
+  // button, so the remote can always reach it.
+  const [focusZone, setFocusZone] = useState<"tabs" | "grid">("grid");
+  const [topIndex, setTopIndex] = useState(0);
   // Studio drill-down.
   const [studioIndex, setStudioIndex] = useState(0);
   const [streamFocus, setStreamFocus] = useState(0);
@@ -134,28 +137,29 @@ export default function TvHome() {
 
   // Clamp home focus whenever the rows change (data loads in, etc).
   useEffect(() => {
-    setRowIndex((ri) => Math.min(Math.max(0, rows.length - 1), ri));
+    setTabIndex((ti) => Math.min(Math.max(0, rows.length - 1), ti));
+    setTopIndex((ti) => Math.min(Math.max(0, rows.length), ti));
   }, [rows.length]);
   useEffect(() => {
-    const len = rows[rowIndex]?.items.length ?? 0;
+    const len = rows[tabIndex]?.items.length ?? 0;
     setColIndex((ci) => Math.min(Math.max(0, len - 1), ci));
-  }, [rowIndex, rows]);
+  }, [tabIndex, rows]);
 
-  // Keep the focused card actually focused + scrolled into view.
+  // Keep the focused element (tab, card, or stream) actually focused + in view.
   useEffect(() => {
     if (player) return;
     const key =
       level === "home"
-        ? headerFocus
-          ? "header-signout"
-          : `h-${rowIndex}-${colIndex}`
+        ? focusZone === "tabs"
+          ? `top-${topIndex}`
+          : `g-${colIndex}`
         : `s-${streamFocus}`;
     const el = focusRefs.current.get(key);
     if (el) {
       el.focus();
       el.scrollIntoView({ block: "nearest", inline: "center", behavior: "smooth" });
     }
-  }, [level, rowIndex, colIndex, headerFocus, streamFocus, player, rows]);
+  }, [level, focusZone, topIndex, colIndex, streamFocus, player, rows]);
 
   const openStudio = useCallback((idx: number) => {
     setStudioIndex(idx);
@@ -164,7 +168,7 @@ export default function TvHome() {
   }, []);
 
   const selectHome = useCallback(() => {
-    const row = rows[rowIndex];
+    const row = rows[tabIndex];
     if (!row) return;
     if (row.kind === "streams") {
       if (row.items[colIndex]) setPlayer({ streams: row.items, index: colIndex });
@@ -177,7 +181,7 @@ export default function TvHome() {
         openStudio(studioPos === -1 ? colIndex : studioPos);
       }
     }
-  }, [rows, rowIndex, colIndex, studios, openStudio, setLocation]);
+  }, [rows, tabIndex, colIndex, studios, openStudio, setLocation]);
 
   const goBack = useCallback(() => {
     if (player) {
@@ -224,69 +228,82 @@ export default function TvHome() {
         e.key === "BrowserBack";
 
       if (level === "home") {
-        // Header "Sign out" focus zone — sits above the top row.
-        if (headerFocus) {
+        // Tab bar zone: a horizontal list of pill tabs + a trailing Sign out
+        // button (at index === rows.length). Focusing a tab switches content.
+        if (focusZone === "tabs") {
+          const signOutIdx = rows.length;
           switch (e.key) {
+            case "ArrowRight":
+              e.preventDefault();
+              setTopIndex((t) => {
+                const nt = Math.min(signOutIdx, t + 1);
+                if (nt < rows.length) {
+                  setTabIndex(nt);
+                  setColIndex(0);
+                }
+                return nt;
+              });
+              break;
+            case "ArrowLeft":
+              e.preventDefault();
+              setTopIndex((t) => {
+                const nt = Math.max(0, t - 1);
+                if (nt < rows.length) {
+                  setTabIndex(nt);
+                  setColIndex(0);
+                }
+                return nt;
+              });
+              break;
             case "ArrowDown":
               e.preventDefault();
-              setHeaderFocus(false);
+              setFocusZone("grid");
               break;
             case "Enter":
               e.preventDefault();
-              handleLogout();
+              if (topIndex >= rows.length) {
+                handleLogout();
+              } else {
+                setTabIndex(topIndex);
+                setColIndex(0);
+                setFocusZone("grid");
+              }
               break;
             default:
               if (isBack) {
                 e.preventDefault();
-                setHeaderFocus(false);
+                setFocusZone("grid");
               }
           }
           return;
         }
 
-        // From the very top row, Up jumps to the header Sign out button.
-        if (e.key === "ArrowUp" && rowIndex === 0) {
-          e.preventDefault();
-          setHeaderFocus(true);
-          return;
-        }
-
-        const rowLen = rows[rowIndex]?.items.length ?? 0;
-        if (rowLen === 0 && e.key !== "Enter") {
-          // Empty row: nothing to move to or select; let the browser be.
-          return;
-        }
+        // Content grid zone.
+        const rowLen = rows[tabIndex]?.items.length ?? 0;
         switch (e.key) {
+          case "ArrowUp":
+            e.preventDefault();
+            setTopIndex(tabIndex);
+            setFocusZone("tabs");
+            break;
           case "ArrowRight":
             e.preventDefault();
-            setColIndex((c) => Math.max(0, Math.min(rowLen - 1, c + 1)));
+            if (rowLen) setColIndex((c) => Math.min(rowLen - 1, c + 1));
             break;
           case "ArrowLeft":
             e.preventDefault();
             setColIndex((c) => Math.max(0, c - 1));
             break;
-          case "ArrowDown":
-            e.preventDefault();
-            setRowIndex((r) => {
-              const nr = Math.min(rows.length - 1, r + 1);
-              const nlen = rows[nr]?.items.length ?? 0;
-              setColIndex((c) => Math.min(c, Math.max(0, nlen - 1)));
-              return nr;
-            });
-            break;
-          case "ArrowUp":
-            e.preventDefault();
-            setRowIndex((r) => {
-              const nr = Math.max(0, r - 1);
-              const nlen = rows[nr]?.items.length ?? 0;
-              setColIndex((c) => Math.min(c, Math.max(0, nlen - 1)));
-              return nr;
-            });
-            break;
           case "Enter":
             e.preventDefault();
-            selectHome();
+            if (rowLen) selectHome();
             break;
+          default:
+            if (isBack) {
+              e.preventDefault();
+              setTopIndex(tabIndex);
+              setFocusZone("tabs");
+            }
         }
         return;
       }
@@ -327,11 +344,11 @@ export default function TvHome() {
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [level, rows, rowIndex, headerFocus, studioStreams, streamFocus, player, selectHome, goBack, handleLogout]);
+  }, [level, rows, tabIndex, colIndex, topIndex, focusZone, studioStreams, streamFocus, player, selectHome, goBack, handleLogout]);
 
   // The currently-focused home item drives the hero band + ambient backdrop so
   // the whole screen reflects what you're pointing at (modern OTT behaviour).
-  const focusedRow = rows[rowIndex];
+  const focusedRow = rows[tabIndex];
   const focusedItem: any = focusedRow?.items[colIndex];
   let heroKind = "";
   let heroTitle = "";
@@ -483,185 +500,217 @@ export default function TvHome() {
     );
   }
 
-  // Home: Netflix-style rows over a cinematic, focus-reactive backdrop.
+  // Home: Android-TV immersive list — pill tabs, a focus-reactive cinematic
+  // backdrop + content block, and a content grid of large 16:9 cards.
+  const activeRow = rows[tabIndex];
+  const gridItems = activeRow?.items ?? [];
+  const signOutFocused = focusZone === "tabs" && topIndex === rows.length;
+
   return (
     <div className="relative flex h-[100dvh] flex-col overflow-hidden bg-[#06060a] text-white">
-      {/* Layer 1 — the brand background image, always present. */}
+      {/* Image background (1) — brand image, always present, dim. */}
       <div
-        className="pointer-events-none fixed inset-0 bg-cover bg-center"
+        className="pointer-events-none fixed inset-0 bg-cover bg-center opacity-80"
         style={{ backgroundImage: `url(${tvBackground})` }}
       />
-      {/* Layer 2 — ambient artwork of whatever card is focused, crossfading in. */}
+      {/* Poster (2) — the focused item's artwork, scaled + aligned to the top
+          right for a cinematic immersive backdrop (per Android TV guidance). */}
       <div
-        className="pointer-events-none fixed inset-0 bg-cover bg-center blur-xl scale-110 transition-opacity duration-700"
+        key={heroBackdrop ?? "none"}
+        className="pointer-events-none fixed right-0 top-0 h-[70vh] w-[64vw] animate-in fade-in duration-700"
         style={{
           backgroundImage: heroBackdrop ? `url(${heroBackdrop})` : "none",
-          opacity: heroBackdrop ? 0.4 : 0,
+          backgroundSize: "cover",
+          backgroundPosition: "top right",
+          opacity: heroBackdrop ? 0.95 : 0,
         }}
       />
-      {/* Layer 3 — scrims so text + cards stay legible over any image. */}
-      <div className="pointer-events-none fixed inset-0 bg-gradient-to-r from-black via-black/75 to-black/30" />
-      <div className="pointer-events-none fixed inset-0 bg-gradient-to-t from-black via-black/30 to-black/60" />
+      {/* Cinematic scrims — left→right + bottom→up keep text and cards legible. */}
+      <div className="pointer-events-none fixed inset-0 bg-gradient-to-r from-[#06060a] via-[#06060a]/85 to-transparent" />
+      <div className="pointer-events-none fixed inset-0 bg-gradient-to-t from-[#06060a] via-[#06060a]/45 to-transparent" />
 
-      <header className="relative z-10 flex shrink-0 items-center justify-between px-[4vw] pt-[2vh] pb-[0.5vh]">
-        <img src={tbnLogo} alt="TBN Studios" className="h-[clamp(2.25rem,3.5vw,3.5rem)] w-auto" />
+      {/* Top app bar — logo, pill tabs, and Sign out (Android TV pill tabs). */}
+      <header className="relative z-20 flex shrink-0 items-center gap-[2vw] px-[4vw] pt-[3vh] pb-[1vh]">
+        <img src={tbnLogo} alt="TBN Studios" className="h-[clamp(1.6rem,2.6vw,2.6rem)] w-auto shrink-0" />
+        <nav className="flex items-center gap-[0.6vw]">
+          {rows.map((row, ti) => {
+            const selected = ti === tabIndex;
+            const focused = focusZone === "tabs" && topIndex === ti;
+            return (
+              <button
+                key={row.key}
+                ref={(el) => focusRefs.current.set(`top-${ti}`, el)}
+                onClick={() => {
+                  setTabIndex(ti);
+                  setColIndex(0);
+                  setFocusZone("grid");
+                }}
+                onMouseEnter={() => {
+                  setTopIndex(ti);
+                  setTabIndex(ti);
+                  setColIndex(0);
+                  setFocusZone("tabs");
+                }}
+                className={`flex items-center gap-2 rounded-full px-[1.4vw] py-[0.9vh] text-[clamp(0.85rem,1.15vw,1.15rem)] font-semibold transition-all duration-200 focus:outline-none ${
+                  focused
+                    ? "scale-105 bg-white text-gray-900 shadow-[0_0_24px_rgba(255,255,255,0.45)]"
+                    : selected
+                      ? "bg-white/15 text-white ring-1 ring-white/25"
+                      : "text-white/55 hover:text-white"
+                }`}
+              >
+                {row.key === "favorites" && (
+                  <Heart size={18} className={focused ? "text-red-600" : "text-red-500"} />
+                )}
+                {row.key === "multiviewers" && <LayoutGrid size={18} />}
+                {row.key === "studios" && <Tv size={18} />}
+                {row.title}
+              </button>
+            );
+          })}
+        </nav>
         <button
-          ref={(el) => focusRefs.current.set("header-signout", el)}
+          ref={(el) => focusRefs.current.set(`top-${rows.length}`, el)}
           onClick={handleLogout}
-          onMouseEnter={() => setHeaderFocus(true)}
-          className={`flex items-center gap-2 rounded-full px-4 py-2 text-base ring-1 transition focus:outline-none ${
-            headerFocus
-              ? "scale-105 bg-white text-gray-900 ring-white shadow-[0_0_24px_rgba(255,255,255,0.5)]"
-              : "bg-white/5 text-white/70 ring-white/10 hover:bg-white/10 hover:text-white"
+          onMouseEnter={() => {
+            setTopIndex(rows.length);
+            setFocusZone("tabs");
+          }}
+          className={`ml-auto flex shrink-0 items-center gap-2 rounded-full px-[1.2vw] py-[0.9vh] text-[clamp(0.8rem,1.05vw,1.05rem)] transition focus:outline-none ${
+            signOutFocused
+              ? "scale-105 bg-white text-gray-900 shadow-[0_0_24px_rgba(255,255,255,0.45)]"
+              : "bg-white/5 text-white/65 ring-1 ring-white/10 hover:bg-white/10 hover:text-white"
           }`}
         >
-          <LogOut size={20} /> Sign out
+          <LogOut size={18} /> Sign out
         </button>
       </header>
 
-      {/* Hero band — mirrors the focused card so the selection is unmistakable. */}
-      <section className="relative z-10 flex shrink-0 flex-col justify-end px-[4vw] pt-[0.5vh] pb-[1vh]">
+      {/* Content block (3) — overline, title, meta and action; reflects focus. */}
+      <section className="relative z-10 flex min-h-[28vh] shrink-0 flex-col justify-center px-[4vw] pt-[1vh] pb-[1vh]">
         {heroTitle ? (
-          <div key={heroTitle} className="max-w-3xl animate-in fade-in slide-in-from-bottom-2 duration-500">
-            <p className="mb-1 text-[clamp(0.65rem,0.9vw,0.95rem)] font-semibold uppercase tracking-[0.3em] text-primary">
+          <div key={heroTitle} className="max-w-[48vw] animate-in fade-in slide-in-from-bottom-3 duration-500">
+            <p className="mb-[1vh] text-[clamp(0.7rem,0.95vw,1rem)] font-semibold uppercase tracking-[0.35em] text-primary">
               {heroKind}
             </p>
-            <h1 className="text-[clamp(1.75rem,4vw,3.5rem)] font-extrabold leading-none drop-shadow-[0_4px_20px_rgba(0,0,0,0.8)]">
+            <h1 className="text-[clamp(2rem,5vw,4.5rem)] font-extrabold leading-[1.02] drop-shadow-[0_4px_24px_rgba(0,0,0,0.85)]">
               {heroTitle}
             </h1>
-            <div className="mt-2 flex items-center gap-4 text-[clamp(0.85rem,1.2vw,1.15rem)] text-white/70">
-              <span>{heroSub}</span>
-              <span className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-[clamp(0.7rem,0.95vw,0.9rem)] font-medium text-white/85 ring-1 ring-white/15">
-                <Play size={14} className="fill-current" /> {heroHint}
-              </span>
+            <p className="mt-[1.2vh] text-[clamp(0.9rem,1.3vw,1.3rem)] text-white/75">{heroSub}</p>
+            <div className="mt-[2.4vh] inline-flex items-center gap-2 rounded-full bg-white px-[1.8vw] py-[1.1vh] text-[clamp(0.85rem,1.1vw,1.15rem)] font-bold text-gray-900 shadow-[0_10px_34px_rgba(0,0,0,0.55)]">
+              <Play size={18} className="fill-current" /> {heroHint}
             </div>
           </div>
         ) : (
-          <h1 className="text-[clamp(1.5rem,3.5vw,2.75rem)] font-extrabold text-white/90">Welcome to TBN Studios</h1>
+          <h1 className="text-[clamp(1.75rem,4vw,3rem)] font-extrabold text-white/90">Welcome to TBN Studios</h1>
         )}
       </section>
 
-      <main className="relative z-10 flex min-h-0 flex-1 flex-col gap-[0.5vh] px-[4vw] py-[1vh]">
-        {rows.map((row, ri) => {
-          const rowActive = ri === rowIndex;
-          return (
-          <section key={row.key} className="flex min-h-0 flex-1 flex-col">
-            <h2
-              className={`mb-[0.5vh] flex shrink-0 items-center gap-2.5 text-[clamp(1rem,1.5vw,1.35rem)] font-bold tracking-tight transition-colors duration-200 ${
-                rowActive ? "text-white" : "text-white/45"
-              }`}
-            >
-              <span
-                className={`h-[clamp(0.9rem,1.6vh,1.4rem)] w-1 rounded-full transition-all duration-200 ${
-                  rowActive ? "bg-primary" : "bg-transparent"
-                }`}
-              />
-              {row.key === "favorites" && <Heart size={20} className="text-red-500" />}
-              {row.key === "multiviewers" && <LayoutGrid size={20} className="text-primary" />}
-              {row.key === "studios" && <Tv size={20} className="text-white/80" />}
-              {row.title}
-            </h2>
+      <div className="flex-1" />
 
-            {row.items.length === 0 ? (
-              <div className="flex min-h-0 flex-1 items-center text-lg text-white/40">Nothing here yet.</div>
-            ) : (
-              <div className={ROW_SCROLL}>
-                {row.kind === "layouts"
-                  ? (row.items as MultiviewerLayoutWithMeta[]).map((layout, ci) => {
-                      const active = ri === rowIndex && ci === colIndex;
-                      const filled = (layout.slots ?? []).filter(Boolean).length;
-                      return (
-                        <button
-                          key={layout.id}
-                          ref={(el) => focusRefs.current.set(`h-${ri}-${ci}`, el)}
-                          onClick={() => setLocation(`/multiviewer/view/${layout.id}`)}
-                          onMouseEnter={() => {
-                            setHeaderFocus(false);
-                            setRowIndex(ri);
-                            setColIndex(ci);
-                            }}
-                          className={`${CARD_BASE} h-[80%] aspect-video ${cardFocus(active)}`}
-                        >
-                          <div className="absolute inset-0 bg-gradient-to-br from-indigo-900 via-slate-900 to-black" />
-                          <div className="absolute inset-0 opacity-30 [background-image:linear-gradient(white_1px,transparent_1px),linear-gradient(90deg,white_1px,transparent_1px)] [background-size:28px_28px]" />
-                          <div className="absolute inset-0 flex flex-col justify-between p-5">
-                            <div className="self-start rounded-md bg-black/50 px-2 py-1 text-[0.7rem] font-semibold uppercase tracking-wide ring-1 ring-white/10">
-                              {layout.layoutType}
-                            </div>
-                            <div>
-                              <div className="truncate text-2xl font-bold">{layout.name}</div>
-                              <div className="flex items-center gap-2 text-sm text-white/70">
-                                <LayoutGrid size={15} /> {filled} sources
-                                {layout.shared && layout.ownerName ? ` · ${layout.ownerName}` : ""}
-                              </div>
-                            </div>
+      {/* Content grid (4) — the active tab's cards as a focusable row. */}
+      <section className="relative z-10 flex h-[34vh] shrink-0 flex-col px-[4vw] pb-[0.5vh]">
+        <h2 className="mb-[1vh] flex shrink-0 items-center gap-2.5 text-[clamp(0.95rem,1.3vw,1.3rem)] font-bold tracking-tight text-white/90">
+          {activeRow?.key === "favorites" && <Heart size={20} className="text-red-500" />}
+          {activeRow?.key === "multiviewers" && <LayoutGrid size={20} className="text-primary" />}
+          {activeRow?.key === "studios" && <Tv size={20} className="text-white/80" />}
+          {activeRow?.title}
+        </h2>
+
+        {gridItems.length === 0 ? (
+          <div className="flex min-h-0 flex-1 items-center text-lg text-white/40">Nothing here yet.</div>
+        ) : (
+          <div className={ROW_SCROLL}>
+            {activeRow?.kind === "layouts"
+              ? (gridItems as MultiviewerLayoutWithMeta[]).map((layout, ci) => {
+                  const active = focusZone === "grid" && ci === colIndex;
+                  const filled = (layout.slots ?? []).filter(Boolean).length;
+                  return (
+                    <button
+                      key={layout.id}
+                      ref={(el) => focusRefs.current.set(`g-${ci}`, el)}
+                      onClick={() => setLocation(`/multiviewer/view/${layout.id}`)}
+                      onMouseEnter={() => {
+                        setFocusZone("grid");
+                        setColIndex(ci);
+                      }}
+                      className={`${CARD_BASE} h-[80%] aspect-video ${cardFocus(active)}`}
+                    >
+                      <div className="absolute inset-0 bg-gradient-to-br from-indigo-900 via-slate-900 to-black" />
+                      <div className="absolute inset-0 opacity-30 [background-image:linear-gradient(white_1px,transparent_1px),linear-gradient(90deg,white_1px,transparent_1px)] [background-size:28px_28px]" />
+                      <div className="absolute inset-0 flex flex-col justify-between p-5">
+                        <div className="self-start rounded-md bg-black/50 px-2 py-1 text-[0.7rem] font-semibold uppercase tracking-wide ring-1 ring-white/10">
+                          {layout.layoutType}
+                        </div>
+                        <div>
+                          <div className="truncate text-2xl font-bold">{layout.name}</div>
+                          <div className="flex items-center gap-2 text-sm text-white/70">
+                            <LayoutGrid size={15} /> {filled} sources
+                            {layout.shared && layout.ownerName ? ` · ${layout.ownerName}` : ""}
                           </div>
-                        </button>
-                      );
-                    })
-                  : row.kind === "studios"
-                    ? (row.items as StudioWithStreams[]).map((studio, ci) => {
-                        const active = ri === rowIndex && ci === colIndex;
-                        return (
-                          <button
-                            key={studio.id}
-                            ref={(el) => focusRefs.current.set(`h-${ri}-${ci}`, el)}
-                            onClick={() => {
-                              const pos = studios.findIndex((s) => s.id === studio.id);
-                              openStudio(pos === -1 ? ci : pos);
-                            }}
-                            onMouseEnter={() => {
-                              setHeaderFocus(false);
-                              setRowIndex(ri);
-                              setColIndex(ci);
-                              }}
-                            className={`${CARD_BASE} h-[80%] aspect-video ${cardFocus(active)}`}
-                          >
-                            <StudioArt studio={studio} />
-                            <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent" />
-                            <div className="pointer-events-none absolute inset-x-0 bottom-0 p-5">
-                              <div className="truncate text-2xl font-bold drop-shadow">{studio.name}</div>
-                              <div className="flex items-center gap-2 text-sm text-white/75">
-                                <Radio size={15} /> {studio.streams?.length ?? 0} streams
-                              </div>
-                            </div>
-                          </button>
-                        );
-                      })
-                    : (row.items as Stream[]).map((stream, ci) => {
-                        const active = ri === rowIndex && ci === colIndex;
-                        return (
-                          <button
-                            key={stream.id}
-                            ref={(el) => focusRefs.current.set(`h-${ri}-${ci}`, el)}
-                            onClick={() => setPlayer({ streams: row.items as Stream[], index: ci })}
-                            onMouseEnter={() => {
-                              setHeaderFocus(false);
-                              setRowIndex(ri);
-                              setColIndex(ci);
-                              }}
-                            className={`${CARD_BASE} h-[80%] aspect-video ${cardFocus(active)}`}
-                          >
-                            <StreamThumbnail stream={stream} />
-                            <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent" />
-                            <div className="pointer-events-none absolute left-3 top-3 flex items-center gap-1.5 rounded-full bg-red-600/90 px-2 py-0.5 text-[0.7rem] font-bold uppercase tracking-wide shadow">
-                              <span className="h-1.5 w-1.5 rounded-full bg-white" /> Live
-                            </div>
-                            <div className="pointer-events-none absolute inset-x-0 bottom-0 p-4">
-                              <div className="truncate text-xl font-bold">{stream.name}</div>
-                            </div>
-                          </button>
-                        );
-                      })}
-              </div>
-            )}
-          </section>
-          );
-        })}
-      </main>
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })
+              : activeRow?.kind === "studios"
+                ? (gridItems as StudioWithStreams[]).map((studio, ci) => {
+                    const active = focusZone === "grid" && ci === colIndex;
+                    return (
+                      <button
+                        key={studio.id}
+                        ref={(el) => focusRefs.current.set(`g-${ci}`, el)}
+                        onClick={() => {
+                          const pos = studios.findIndex((s) => s.id === studio.id);
+                          openStudio(pos === -1 ? ci : pos);
+                        }}
+                        onMouseEnter={() => {
+                          setFocusZone("grid");
+                          setColIndex(ci);
+                        }}
+                        className={`${CARD_BASE} h-[80%] aspect-video ${cardFocus(active)}`}
+                      >
+                        <StudioArt studio={studio} />
+                        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent" />
+                        <div className="pointer-events-none absolute inset-x-0 bottom-0 p-5">
+                          <div className="truncate text-2xl font-bold drop-shadow">{studio.name}</div>
+                          <div className="flex items-center gap-2 text-sm text-white/75">
+                            <Radio size={15} /> {studio.streams?.length ?? 0} streams
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  })
+                : (gridItems as Stream[]).map((stream, ci) => {
+                    const active = focusZone === "grid" && ci === colIndex;
+                    return (
+                      <button
+                        key={stream.id}
+                        ref={(el) => focusRefs.current.set(`g-${ci}`, el)}
+                        onClick={() => setPlayer({ streams: gridItems as Stream[], index: ci })}
+                        onMouseEnter={() => {
+                          setFocusZone("grid");
+                          setColIndex(ci);
+                        }}
+                        className={`${CARD_BASE} h-[80%] aspect-video ${cardFocus(active)}`}
+                      >
+                        <StreamThumbnail stream={stream} />
+                        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent" />
+                        <div className="pointer-events-none absolute left-3 top-3 flex items-center gap-1.5 rounded-full bg-red-600/90 px-2 py-0.5 text-[0.7rem] font-bold uppercase tracking-wide shadow">
+                          <span className="h-1.5 w-1.5 rounded-full bg-white" /> Live
+                        </div>
+                        <div className="pointer-events-none absolute inset-x-0 bottom-0 p-4">
+                          <div className="truncate text-xl font-bold">{stream.name}</div>
+                        </div>
+                      </button>
+                    );
+                  })}
+          </div>
+        )}
+      </section>
 
-      <p className="relative z-10 shrink-0 pb-[2vh] text-center text-[clamp(0.65rem,0.9vw,0.85rem)] text-white/35">
-        Use the arrow keys to move · Enter / OK to select · Back to go up
+      <p className="relative z-10 shrink-0 pb-[1.5vh] text-center text-[clamp(0.6rem,0.85vw,0.8rem)] text-white/35">
+        Use the arrow keys to move · Enter / OK to select
       </p>
     </div>
   );
