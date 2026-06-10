@@ -27,11 +27,11 @@ type HomeRow =
 
 // ── Shared 10-foot UI styling ───────────────────────────────────────────────
 // One card "language" used everywhere so the grid feels like a single TV app.
-// Generous padding (and matching negative margin to keep cards aligned under
-// the section heading) so a focused card's 8% scale-up + white ring + glow has
-// room to render instead of being clipped flat by overflow-x-auto.
+// The row is a flex-1 child of its section and vertically centers its cards so
+// each focused card's scale-up + ring has slack inside the row instead of being
+// clipped flat by overflow-x-auto.
 const ROW_SCROLL =
-  "flex gap-[1.2vw] overflow-x-auto pt-[1.5vh] pb-[2vh] -mx-2 px-2 snap-x [scrollbar-width:none] [&::-webkit-scrollbar]:hidden";
+  "flex min-h-0 flex-1 items-center gap-[1.2vw] overflow-x-auto px-2 snap-x [scrollbar-width:none] [&::-webkit-scrollbar]:hidden";
 const CARD_BASE =
   "group relative shrink-0 snap-start rounded-2xl overflow-hidden text-left transition-all duration-300 ease-out focus:outline-none will-change-transform";
 
@@ -468,7 +468,7 @@ export default function TvHome() {
       <div className="pointer-events-none fixed inset-0 bg-gradient-to-r from-black via-black/75 to-black/30" />
       <div className="pointer-events-none fixed inset-0 bg-gradient-to-t from-black via-black/30 to-black/60" />
 
-      <header className="relative z-10 flex shrink-0 items-center justify-between px-[4vw] pt-[3vh] pb-[1vh]">
+      <header className="relative z-10 flex shrink-0 items-center justify-between px-[4vw] pt-[2vh] pb-[0.5vh]">
         <img src={tbnLogo} alt="TBN Studios" className="h-[clamp(2.25rem,3.5vw,3.5rem)] w-auto" />
         <button
           onClick={handleLogout}
@@ -479,7 +479,7 @@ export default function TvHome() {
       </header>
 
       {/* Hero band — mirrors the focused card so the selection is unmistakable. */}
-      <section className="relative z-10 flex shrink-0 flex-col justify-end px-[4vw] pt-[1vh] pb-[1.5vh]">
+      <section className="relative z-10 flex shrink-0 flex-col justify-end px-[4vw] pt-[0.5vh] pb-[1vh]">
         {heroTitle ? (
           <div key={heroTitle} className="max-w-3xl animate-in fade-in slide-in-from-bottom-2 duration-500">
             <p className="mb-1 text-[clamp(0.65rem,0.9vw,0.95rem)] font-semibold uppercase tracking-[0.3em] text-primary">
@@ -500,29 +500,29 @@ export default function TvHome() {
         )}
       </section>
 
-      <main className="relative z-10 flex min-h-0 flex-1 flex-col justify-start gap-[1vh] overflow-y-auto px-[4vw] py-[1vh] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <main className="relative z-10 flex min-h-0 flex-1 flex-col gap-[0.5vh] px-[4vw] py-[1vh]">
         {rows.map((row, ri) => {
           const rowActive = ri === rowIndex;
           return (
-          <section key={row.key}>
+          <section key={row.key} className="flex min-h-0 flex-1 flex-col">
             <h2
-              className={`mb-1 flex items-center gap-2.5 text-xl font-bold tracking-tight transition-colors duration-200 ${
+              className={`mb-[0.5vh] flex shrink-0 items-center gap-2.5 text-[clamp(1rem,1.5vw,1.35rem)] font-bold tracking-tight transition-colors duration-200 ${
                 rowActive ? "text-white" : "text-white/45"
               }`}
             >
               <span
-                className={`h-5 w-1 rounded-full transition-all duration-200 ${
+                className={`h-[clamp(0.9rem,1.6vh,1.4rem)] w-1 rounded-full transition-all duration-200 ${
                   rowActive ? "bg-primary" : "bg-transparent"
                 }`}
               />
-              {row.key === "favorites" && <Heart size={22} className="text-red-500" />}
-              {row.key === "multiviewers" && <LayoutGrid size={22} className="text-primary" />}
-              {row.key === "studios" && <Tv size={22} className="text-white/80" />}
+              {row.key === "favorites" && <Heart size={20} className="text-red-500" />}
+              {row.key === "multiviewers" && <LayoutGrid size={20} className="text-primary" />}
+              {row.key === "studios" && <Tv size={20} className="text-white/80" />}
               {row.title}
             </h2>
 
             {row.items.length === 0 ? (
-              <div className="py-6 text-lg text-white/40">Nothing here yet.</div>
+              <div className="flex min-h-0 flex-1 items-center text-lg text-white/40">Nothing here yet.</div>
             ) : (
               <div className={ROW_SCROLL}>
                 {row.kind === "layouts"
@@ -538,7 +538,7 @@ export default function TvHome() {
                             setRowIndex(ri);
                             setColIndex(ci);
                           }}
-                          className={`${CARD_BASE} h-[clamp(7rem,16vh,12rem)] aspect-video ${cardFocus(active)}`}
+                          className={`${CARD_BASE} h-[80%] aspect-video ${cardFocus(active)}`}
                         >
                           <div className="absolute inset-0 bg-gradient-to-br from-indigo-900 via-slate-900 to-black" />
                           <div className="absolute inset-0 opacity-30 [background-image:linear-gradient(white_1px,transparent_1px),linear-gradient(90deg,white_1px,transparent_1px)] [background-size:28px_28px]" />
@@ -572,7 +572,7 @@ export default function TvHome() {
                               setRowIndex(ri);
                               setColIndex(ci);
                             }}
-                            className={`${CARD_BASE} h-[clamp(7rem,16vh,12rem)] aspect-video ${cardFocus(active)}`}
+                            className={`${CARD_BASE} h-[80%] aspect-video ${cardFocus(active)}`}
                           >
                             <StudioArt studio={studio} />
                             <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent" />
@@ -596,7 +596,7 @@ export default function TvHome() {
                               setRowIndex(ri);
                               setColIndex(ci);
                             }}
-                            className={`${CARD_BASE} h-[clamp(7rem,16vh,12rem)] aspect-video ${cardFocus(active)}`}
+                            className={`${CARD_BASE} h-[80%] aspect-video ${cardFocus(active)}`}
                           >
                             <StreamThumbnail stream={stream} />
                             <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent" />
