@@ -243,6 +243,21 @@ CREATE INDEX IF NOT EXISTS idx_multiviewer_layout_shares_layout ON multiviewer_l
 CREATE INDEX IF NOT EXISTS idx_multiviewer_layout_shares_user ON multiviewer_layout_shares(user_id);
 CREATE INDEX IF NOT EXISTS idx_multiviewer_layout_shares_group ON multiviewer_layout_shares(group_id);
 
+-- TV ("10-foot") sign-in pairing. The /tv device shows a QR code + short user
+-- code; a logged-in phone approves the user_code, which sets user_id + approved,
+-- and the TV's next poll mints a JWT. Rows are short-lived and single-use.
+CREATE TABLE IF NOT EXISTS tv_pairings (
+    id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
+    device_code VARCHAR(64) NOT NULL UNIQUE,
+    user_code VARCHAR(12) NOT NULL UNIQUE,
+    user_id VARCHAR REFERENCES users(id) ON DELETE CASCADE,
+    approved BOOLEAN NOT NULL DEFAULT FALSE,
+    expires_at TIMESTAMP NOT NULL,
+    created_at TIMESTAMP DEFAULT NOW()
+);
+CREATE UNIQUE INDEX IF NOT EXISTS tv_pairings_device_code_idx ON tv_pairings(device_code);
+CREATE UNIQUE INDEX IF NOT EXISTS tv_pairings_user_code_idx ON tv_pairings(user_code);
+
 -- Create indexes for performance
 CREATE INDEX IF NOT EXISTS idx_streams_studio_id ON streams(studio_id);
 CREATE INDEX IF NOT EXISTS idx_user_studio_permissions_user_id ON user_studio_permissions(user_id);

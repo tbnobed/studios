@@ -7,6 +7,7 @@
 - [Multiviewer slot access](multiviewer-slot-access.md) — validate layout slot writes with the display access path (getAccessibleStreamsByIds), not getUserStudios, or inactive streams cause 403 on save.
 - [DeckLink output app](decklink-output-app.md) — Windows SDI output lives in isolated decklink-multiviewer/ (Electron+N-API); NEVER touch the web app; consumes public /mv/:token; Duo 2 1080i59.94.
 - [Auth query retry loop](auth-query-retry-loop.md) — public pages calling useAuth() while logged out loop forever; errored query needs retryOnMount:false (not just refetchOnMount:false).
+- [Schema lives in three places](schema-three-places.md) — any DB change must land in shared/schema.ts, init.sql, AND migrations/NNN_*.sql; Docker deploy runs SQL not drizzle, so a missing migration = runtime 500 "relation does not exist" despite a clean build.
 - [TV device pairing](tv-device-pairing.md) — QR/phone TV login; approve must be conditional false->true (no takeover) and /status must atomically consume (single-use token).
 - [TV/OTT home surfaces](tv-home-surfaces.md) — the 10-foot home must show Favorites + Multiviewers + Studios (same per-user data as desktop), not just studios; reuses StreamSingleView for parity.
 - [Media-abort overlay](media-abort-overlay.md) — "media resource aborted" overlay = uncaught play() rejection; global suppressor cant beat the plugin, must .catch() every play() (incl mpegts Promise.resolve(player.play())).
