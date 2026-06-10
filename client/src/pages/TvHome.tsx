@@ -26,8 +26,11 @@ type HomeRow =
 
 // ── Shared 10-foot UI styling ───────────────────────────────────────────────
 // One card "language" used everywhere so the grid feels like a single TV app.
+// Generous padding (and matching negative margin to keep cards aligned under
+// the section heading) so a focused card's 8% scale-up + white ring + glow has
+// room to render instead of being clipped flat by overflow-x-auto.
 const ROW_SCROLL =
-  "flex gap-5 overflow-x-auto pb-6 pt-2 -mx-2 px-2 snap-x [scrollbar-width:none] [&::-webkit-scrollbar]:hidden";
+  "flex gap-5 overflow-x-auto pt-5 pb-10 -mx-6 px-6 snap-x [scrollbar-width:none] [&::-webkit-scrollbar]:hidden";
 const CARD_BASE =
   "group relative shrink-0 snap-start rounded-2xl overflow-hidden text-left transition-all duration-300 ease-out focus:outline-none will-change-transform";
 
