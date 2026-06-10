@@ -11,6 +11,23 @@ import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import obLogo from "@/assets/ob-logo.png";
 
+// Kept at module scope (NOT defined inside TvPair). A component defined inside
+// the render function is recreated on every render, which makes React remount
+// its whole subtree on each keystroke and steals focus from the inputs.
+function Shell({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="min-h-[100dvh] bg-gradient-to-br from-gray-900 via-slate-900 to-black flex items-center justify-center p-4">
+      <div className="w-full max-w-sm">
+        <div className="text-center mb-6">
+          <img src={obLogo} alt="OB" className="w-20 h-20 object-contain opacity-90 mx-auto mb-2" />
+          <h1 className="text-3xl font-extrabold text-white">TBN Studios</h1>
+        </div>
+        {children}
+      </div>
+    </div>
+  );
+}
+
 // Phone-side page for the TV QR login. The QR opens this page with ?code=XXXX.
 // If the visitor isn't signed in on their phone, they sign in inline (no page
 // reload, so the code in the URL is preserved), then approve the TV.
@@ -61,18 +78,6 @@ export default function TvPair() {
       });
     },
   });
-
-  const Shell = ({ children }: { children: React.ReactNode }) => (
-    <div className="min-h-[100dvh] bg-gradient-to-br from-gray-900 via-slate-900 to-black flex items-center justify-center p-4">
-      <div className="w-full max-w-sm">
-        <div className="text-center mb-6">
-          <img src={obLogo} alt="OB" className="w-20 h-20 object-contain opacity-90 mx-auto mb-2" />
-          <h1 className="text-3xl font-extrabold text-white">TBN Studios</h1>
-        </div>
-        {children}
-      </div>
-    </div>
-  );
 
   if (isLoading) {
     return (
