@@ -12,6 +12,7 @@ import {
   multiviewerShares,
   multiviewerLayoutShares,
   streamShares,
+  tvPairings,
   type User, 
   type InsertUser,
   type Studio,
@@ -32,7 +33,8 @@ import {
   type StreamShareWithStream,
   type StreamShareWithStreamAndCreator,
   type MultiviewerLayoutWithMeta,
-  type MultiviewerShare
+  type MultiviewerShare,
+  type TvPairing
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, or, asc, desc, inArray, isNull } from "drizzle-orm";
@@ -132,6 +134,14 @@ export interface IStorage {
   // Multiviewer internal (logged-in users/groups) shares
   getLayoutInternalShares(layoutId: string): Promise<{ userIds: string[]; groupIds: string[] }>;
   setLayoutInternalShares(layoutId: string, userIds: string[], groupIds: string[]): Promise<void>;
+
+  // TV / OTT device pairing (QR phone login)
+  createTvPairing(deviceCode: string, userCode: string, expiresAt: Date): Promise<TvPairing>;
+  getTvPairingByDeviceCode(deviceCode: string): Promise<TvPairing | undefined>;
+  getTvPairingByUserCode(userCode: string): Promise<TvPairing | undefined>;
+  approveTvPairing(userCode: string, userId: string): Promise<TvPairing | undefined>;
+  consumeApprovedTvPairing(deviceCode: string): Promise<TvPairing | undefined>;
+  deleteTvPairing(id: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -954,6 +964,58 @@ export class DatabaseStorage implements IStorage {
         await tx.insert(multiviewerLayoutShares).values(values);
       }
     });
+  }
+
+  // TV / OTT device pairing -------------------------------------------------
+  async createTvPairing(deviceCode: string, userCode: string, expiresAt: Date): Promise<TvPairing> {
+    const [pairing] = await db
+      .insert(tvPairings)
+      .values({ deviceCode, userCode, expiresAt })
+      .returning();
+    return pairing;
+  }
+
+  async getTvPairingByDeviceCode(deviceCode: string): Promise<TvPairing | undefined> {
+    const [pairing] = await db
+      .select()
+      .from(tvPairings)
+      .where(eq(tvPairings.deviceCode, deviceCode));
+    return pairing;
+  }
+
+  async getTvPairingByUserCode(userCode: string): Promise<TvPairing | undefined> {
+    const [pairing] = await db
+      .select()
+      .from(tvPairings)
+      .where(eq(tvPairings.userCode, userCode));
+    return pairing;
+  }
+
+  async approveTvPairing(userCode: string, userId: string): Promise<TvPairing | undefined> {
+    // Only allow the false -> true transition so an already-approved pairing
+    // cannot be re-bound to a different user (approval takeover). Returns
+    // undefined when the row is missing or was already approved.
+    const [pairing] = await db
+      .update(tvPairings)
+      .set({ approved: true, userId })
+      .where(and(eq(tvPairings.userCode, userCode), eq(tvPairings.approved, false)))
+      .returning();
+    return pairing;
+  }
+
+  async consumeApprovedTvPairing(deviceCode: string): Promise<TvPairing | undefined> {
+    // Atomically claim an approved pairing: delete + return in a single
+    // statement so only one concurrent caller can ever consume it (single-use
+    // token mint). Returns undefined if it wasn't approved or was already taken.
+    const [pairing] = await db
+      .delete(tvPairings)
+      .where(and(eq(tvPairings.deviceCode, deviceCode), eq(tvPairings.approved, true)))
+      .returning();
+    return pairing;
+  }
+
+  async deleteTvPairing(id: string): Promise<void> {
+    await db.delete(tvPairings).where(eq(tvPairings.id, id));
   }
 }
 

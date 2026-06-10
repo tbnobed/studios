@@ -201,6 +201,112 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json(req.user);
   });
 
+  // TV / OTT device pairing (the "scan a QR with your phone" login).
+  //
+  // Flow:
+  //   1. TV calls /start -> gets { deviceCode, userCode } and shows a QR + code.
+  //   2. TV polls /status?deviceCode=... every few seconds.
+  //   3. The user's phone (already logged in) opens /tv/pair?code=USERCODE and
+  //      calls /approve, which links the pairing to their account.
+  //   4. The TV's next /status poll mints a JWT for that account.
+  const TV_PAIRING_TTL_MS = 10 * 60 * 1000; // 10 minutes
+
+  // Short, human-friendly code using an unambiguous alphabet (no 0/O/1/I).
+  function generateUserCode(): string {
+    const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+    const bytes = crypto.randomBytes(8);
+    let raw = "";
+    for (let i = 0; i < 8; i++) raw += alphabet[bytes[i] % alphabet.length];
+    return `${raw.slice(0, 4)}-${raw.slice(4)}`;
+  }
+
+  app.post("/api/tv/pair/start", async (_req, res) => {
+    try {
+      const deviceCode = crypto.randomBytes(32).toString("hex");
+      // Retry a couple times in the (astronomically unlikely) event of a userCode collision.
+      let userCode = generateUserCode();
+      for (let attempt = 0; attempt < 5; attempt++) {
+        const existing = await storage.getTvPairingByUserCode(userCode);
+        if (!existing) break;
+        userCode = generateUserCode();
+      }
+      const expiresAt = new Date(Date.now() + TV_PAIRING_TTL_MS);
+      await storage.createTvPairing(deviceCode, userCode, expiresAt);
+      res.json({
+        deviceCode,
+        userCode,
+        expiresInSeconds: Math.floor(TV_PAIRING_TTL_MS / 1000),
+      });
+    } catch (error) {
+      console.error("TV pair start error:", error);
+      res.status(500).json({ message: "Failed to start pairing" });
+    }
+  });
+
+  app.get("/api/tv/pair/status", async (req, res) => {
+    try {
+      const deviceCode = String(req.query.deviceCode || "");
+      if (!deviceCode) {
+        return res.status(400).json({ message: "deviceCode required" });
+      }
+      const pairing = await storage.getTvPairingByDeviceCode(deviceCode);
+      if (!pairing) {
+        return res.json({ status: "expired" });
+      }
+      if (pairing.expiresAt.getTime() < Date.now()) {
+        await storage.deleteTvPairing(pairing.id);
+        return res.json({ status: "expired" });
+      }
+      if (pairing.approved && pairing.userId) {
+        // Atomically claim the approved pairing so only one poll can ever mint a
+        // token (single-use). If another concurrent poll already consumed it,
+        // `consumed` is undefined and we fall through to "expired".
+        const consumed = await storage.consumeApprovedTvPairing(deviceCode);
+        if (!consumed || !consumed.userId) {
+          return res.json({ status: "expired" });
+        }
+        const user = await storage.getUser(consumed.userId);
+        if (!user || !user.isActive) {
+          return res.json({ status: "expired" });
+        }
+        const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: "24h" });
+        return res.json({ status: "approved", token });
+      }
+      res.json({ status: "pending" });
+    } catch (error) {
+      console.error("TV pair status error:", error);
+      res.status(500).json({ message: "Failed to check pairing status" });
+    }
+  });
+
+  app.post("/api/tv/pair/approve", requireAuth, async (req: any, res) => {
+    try {
+      const rawCode = String(req.body?.userCode || "").trim().toUpperCase();
+      const userCode = rawCode.includes("-")
+        ? rawCode
+        : rawCode.length === 8
+          ? `${rawCode.slice(0, 4)}-${rawCode.slice(4)}`
+          : rawCode;
+      if (!userCode) {
+        return res.status(400).json({ message: "userCode required" });
+      }
+      const pairing = await storage.getTvPairingByUserCode(userCode);
+      if (!pairing || pairing.expiresAt.getTime() < Date.now()) {
+        return res.status(404).json({ message: "This code is invalid or has expired." });
+      }
+      // Conditional false -> true approval; returns undefined if the pairing was
+      // already approved by someone else (prevents approval takeover).
+      const approved = await storage.approveTvPairing(userCode, req.user.id);
+      if (!approved) {
+        return res.status(409).json({ message: "This code has already been used." });
+      }
+      res.json({ status: "approved" });
+    } catch (error) {
+      console.error("TV pair approve error:", error);
+      res.status(500).json({ message: "Failed to approve pairing" });
+    }
+  });
+
   // Change password endpoint
   app.put("/api/auth/change-password", requireAuth, async (req: any, res) => {
     try {

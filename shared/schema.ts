@@ -207,6 +207,27 @@ export const multiviewerShares = pgTable("multiviewer_shares", {
   tokenIdx: uniqueIndex("multiviewer_shares_token_idx").on(table.token),
 }));
 
+// TV / OTT device pairing (the "scan a QR with your phone" login). A TV (Fire
+// TV, Chromecast/Google TV, etc.) asks for a pairing record and shows the QR +
+// short userCode; it then polls by deviceCode. A logged-in phone approves the
+// userCode, which sets userId + approved, and the TV's next poll mints a JWT.
+// Rows are short-lived (expiresAt) and single-use.
+export const tvPairings = pgTable("tv_pairings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  // Secret the TV polls with (never shown to the user).
+  deviceCode: varchar("device_code", { length: 64 }).notNull().unique(),
+  // Short human code shown on the TV and embedded in the QR link (e.g. ABCD-1234).
+  userCode: varchar("user_code", { length: 12 }).notNull().unique(),
+  // Set once a logged-in phone approves the pairing.
+  userId: varchar("user_id").references(() => users.id, { onDelete: "cascade" }),
+  approved: boolean("approved").notNull().default(false),
+  expiresAt: timestamp("expires_at").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  deviceCodeIdx: uniqueIndex("tv_pairings_device_code_idx").on(table.deviceCode),
+  userCodeIdx: uniqueIndex("tv_pairings_user_code_idx").on(table.userCode),
+}));
+
 // Internal grants: make a saved layout viewable (read-only) by a specific
 // logged-in user OR a group. Exactly one of userId/groupId is set per row.
 export const multiviewerLayoutShares = pgTable("multiviewer_layout_shares", {
@@ -462,6 +483,8 @@ export type StreamShareWithStreamAndCreator = StreamShareWithStream & {
 export type MultiviewerLayout = typeof multiviewerLayouts.$inferSelect;
 export type InsertMultiviewerLayout = z.infer<typeof insertMultiviewerLayoutSchema>;
 export type MultiviewerLayoutType = (typeof MULTIVIEWER_LAYOUT_TYPES)[number];
+
+export type TvPairing = typeof tvPairings.$inferSelect;
 
 export type MultiviewerShare = typeof multiviewerShares.$inferSelect;
 export type InsertMultiviewerShare = z.infer<typeof insertMultiviewerShareSchema>;

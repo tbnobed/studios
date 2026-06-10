@@ -15,6 +15,9 @@ import MultiviewerWall from "@/pages/MultiviewerWall";
 import SetPassword from "@/pages/SetPassword";
 import SharedStream from "@/pages/SharedStream";
 import MultiviewerShare from "@/pages/MultiviewerShare";
+import TvLogin from "@/pages/TvLogin";
+import TvHome from "@/pages/TvHome";
+import TvPair from "@/pages/TvPair";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -42,6 +45,12 @@ function Router() {
       {/* Public route: a shared multiview link must work for outside viewers
           with no account, so it lives before the auth gate. */}
       <Route path="/mv/:token" component={MultiviewerShare} />
+      {/* Public TV / OTT routes: the TV ("10-foot UI") manages its own
+          auth_token via QR pairing, and the phone approval page must work
+          regardless of the gate, so these live before the auth gate. */}
+      <Route path="/tv/login" component={TvLogin} />
+      <Route path="/tv/pair" component={TvPair} />
+      <Route path="/tv" component={TvHome} />
       {!isAuthenticated ? (
         // Not logged in (or the session expired): show the login screen for any
         // non-public path instead of a confusing 404. Public routes above still

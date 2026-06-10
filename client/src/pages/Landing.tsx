@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Video, AlertCircle } from "lucide-react";
+import { Video, AlertCircle, Tv } from "lucide-react";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -143,6 +143,12 @@ export default function Landing() {
               <p className="text-center text-xs text-muted-foreground">
                 Need access? Contact your administrator
               </p>
+              <a
+                href="/tv/login"
+                className="flex items-center justify-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <Tv size={16} /> On a TV? Open Living Room Mode
+              </a>
             </div>
           </CardContent>
         </Card>
