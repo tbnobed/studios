@@ -1,0 +1,80 @@
+obtv-admin@studios:~/studios$ docker compose build && docker compose up -d
+WARN[0000] The "REPL_ID" variable is not set. Defaulting to a blank string.
+WARN[0000] The "REPLIT_DOMAINS" variable is not set. Defaulting to a blank string.
+#1 [internal] load local bake definitions
+#1 reading from stdin 509B done
+#1 DONE 0.0s
+
+#2 [internal] load build definition from Dockerfile
+#2 transferring dockerfile: 1.50kB done
+#2 DONE 0.0s
+
+#3 [internal] load metadata for docker.io/library/node:18-alpine
+#3 DONE 0.2s
+
+#4 [internal] load .dockerignore
+#4 transferring context: 467B done
+#4 DONE 0.0s
+
+#5 [builder 1/7] FROM docker.io/library/node:18-alpine@sha256:8d6421d663b4c28fd3ebc498332f249011d118945588d0a35cb9bc4b8ca09d9e
+#5 DONE 0.0s
+
+#6 [internal] load build context
+#6 transferring context: 12.08kB 0.0s done
+#6 DONE 0.0s
+
+#7 [builder 2/7] WORKDIR /app
+#7 CACHED
+
+#8 [builder 3/7] COPY package*.json ./
+#8 CACHED
+
+#9 [builder 4/7] RUN npm ci
+#9 6.683 npm warn deprecated @esbuild-kit/esm-loader@2.6.5: Merged into tsx: https://tsx.is
+#9 6.734 npm warn deprecated @esbuild-kit/core-utils@3.3.2: Merged into tsx: https://tsx.is
+#9 73.83 npm error code ENOTFOUND
+#9 73.83 npm error syscall getaddrinfo
+#9 73.83 npm error errno ENOTFOUND
+#9 73.83 npm error network request to http://package-firewall.replit.local/npm/qrcode.react/-/qrcode.react-4.2.0.tgz failed, reason: getaddrinfo ENOTFOUND package-firewall.replit.local
+#9 73.83 npm error network This is a problem related to network connectivity.
+#9 73.83 npm error network In most cases you are behind a proxy or have bad network settings.
+#9 73.83 npm error network
+#9 73.83 npm error network If you are behind a proxy, please make sure that the
+#9 73.83 npm error network 'proxy' config is set properly.  See: 'npm help config'
+#9 73.83 npm notice
+#9 73.83 npm notice New major version of npm available! 10.8.2 -> 11.16.0
+#9 73.83 npm notice Changelog: https://github.com/npm/cli/releases/tag/v11.16.0
+#9 73.83 npm notice To update run: npm install -g npm@11.16.0
+#9 73.83 npm notice
+#9 73.83 npm error A complete log of this run can be found in: /root/.npm/_logs/2026-06-10T14_48_36_694Z-debug-0.log
+#9 ERROR: process "/bin/sh -c npm ci" did not complete successfully: exit code: 1
+------
+ > [builder 4/7] RUN npm ci:
+73.83 npm error network In most cases you are behind a proxy or have bad network settings.
+73.83 npm error network
+73.83 npm error network If you are behind a proxy, please make sure that the
+73.83 npm error network 'proxy' config is set properly.  See: 'npm help config'
+73.83 npm notice
+73.83 npm notice New major version of npm available! 10.8.2 -> 11.16.0
+73.83 npm notice Changelog: https://github.com/npm/cli/releases/tag/v11.16.0
+73.83 npm notice To update run: npm install -g npm@11.16.0
+73.83 npm notice
+73.83 npm error A complete log of this run can be found in: /root/.npm/_logs/2026-06-10T14_48_36_694Z-debug-0.log
+------
+Dockerfile:11
+
+--------------------
+
+   9 |
+
+  10 |     # Install all dependencies (including dev dependencies for build)
+
+  11 | >>> RUN npm ci
+
+  12 |
+
+  13 |     # Copy source code
+
+--------------------
+
+failed to solve: process "/bin/sh -c npm ci" did not complete successfully: exit code: 1
