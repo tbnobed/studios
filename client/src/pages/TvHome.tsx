@@ -681,10 +681,10 @@ export default function TvHome() {
         )}
       </section>
 
-      <div className="flex-1" />
+      <div className="flex-1 max-h-[6vh]" />
 
       {/* Content grid (4) — the active tab's cards as a focusable row. */}
-      <section className="relative z-10 flex h-[34vh] shrink-0 flex-col px-[4vw] pb-[0.5vh]">
+      <section className="relative z-10 flex h-[40vh] shrink-0 flex-col px-[4vw] pb-[0.5vh]">
         <h2 className="mb-[1vh] flex shrink-0 items-center gap-2.5 text-[clamp(0.95rem,1.3vw,1.3rem)] font-bold tracking-tight text-white/90">
           {activeRow?.key === "favorites" && <Heart size={20} className="text-red-500" />}
           {activeRow?.key === "multiviewers" && <LayoutGrid size={20} className="text-primary" />}
