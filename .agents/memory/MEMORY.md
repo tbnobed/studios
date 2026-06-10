@@ -11,3 +11,4 @@
 - [TV device pairing](tv-device-pairing.md) — QR/phone TV login; approve must be conditional false->true (no takeover) and /status must atomically consume (single-use token).
 - [TV/OTT home surfaces](tv-home-surfaces.md) — the 10-foot home must show Favorites + Multiviewers + Studios (same per-user data as desktop), not just studios; reuses StreamSingleView for parity.
 - [Media-abort overlay](media-abort-overlay.md) — "media resource aborted" overlay = uncaught play() rejection; global suppressor cant beat the plugin, must .catch() every play() (incl mpegts Promise.resolve(player.play())).
+- [Android TV APK wrapper](android-tv-apk.md) — android-tv/ is a WebView kiosk of /tv built CI-only (no SDK in dev) via GitHub Actions; DOM storage required for JWT, leanback launcher for TV.

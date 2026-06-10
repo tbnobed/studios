@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">OBTV Studios</string>
+    <!-- The web address the TV app opens. Change this if your domain changes. -->
+    <string name="app_url">https://studios.obtv.io/tv</string>
+</resources>
