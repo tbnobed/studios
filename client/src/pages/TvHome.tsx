@@ -31,7 +31,7 @@ type HomeRow =
 // the section heading) so a focused card's 8% scale-up + white ring + glow has
 // room to render instead of being clipped flat by overflow-x-auto.
 const ROW_SCROLL =
-  "flex gap-5 overflow-x-auto pt-5 pb-10 -mx-2 px-2 snap-x [scrollbar-width:none] [&::-webkit-scrollbar]:hidden";
+  "flex gap-[1.2vw] overflow-x-auto pt-[1.5vh] pb-[2vh] -mx-2 px-2 snap-x [scrollbar-width:none] [&::-webkit-scrollbar]:hidden";
 const CARD_BASE =
   "group relative shrink-0 snap-start rounded-2xl overflow-hidden text-left transition-all duration-300 ease-out focus:outline-none will-change-transform";
 
@@ -450,7 +450,7 @@ export default function TvHome() {
 
   // Home: Netflix-style rows over a cinematic, focus-reactive backdrop.
   return (
-    <div className="relative min-h-[100dvh] overflow-hidden bg-[#06060a] text-white">
+    <div className="relative flex h-[100dvh] flex-col overflow-hidden bg-[#06060a] text-white">
       {/* Layer 1 — the brand background image, always present. */}
       <div
         className="pointer-events-none fixed inset-0 bg-cover bg-center"
@@ -468,8 +468,8 @@ export default function TvHome() {
       <div className="pointer-events-none fixed inset-0 bg-gradient-to-r from-black via-black/75 to-black/30" />
       <div className="pointer-events-none fixed inset-0 bg-gradient-to-t from-black via-black/30 to-black/60" />
 
-      <header className="relative z-10 flex items-center justify-between px-[4vw] pt-[4vh] pb-2">
-        <img src={tbnLogo} alt="TBN Studios" className="h-[clamp(2.5rem,4vw,4rem)] w-auto" />
+      <header className="relative z-10 flex shrink-0 items-center justify-between px-[4vw] pt-[3vh] pb-[1vh]">
+        <img src={tbnLogo} alt="TBN Studios" className="h-[clamp(2.25rem,3.5vw,3.5rem)] w-auto" />
         <button
           onClick={handleLogout}
           className="flex items-center gap-2 rounded-full bg-white/5 px-4 py-2 text-base text-white/70 ring-1 ring-white/10 transition hover:bg-white/10 hover:text-white focus:outline-none focus:ring-2 focus:ring-white"
@@ -479,28 +479,28 @@ export default function TvHome() {
       </header>
 
       {/* Hero band — mirrors the focused card so the selection is unmistakable. */}
-      <section className="relative z-10 flex min-h-[22vh] flex-col justify-end px-[4vw] pb-[2vh]">
+      <section className="relative z-10 flex shrink-0 flex-col justify-end px-[4vw] pt-[1vh] pb-[1.5vh]">
         {heroTitle ? (
           <div key={heroTitle} className="max-w-3xl animate-in fade-in slide-in-from-bottom-2 duration-500">
-            <p className="mb-2 text-[clamp(0.7rem,1vw,1rem)] font-semibold uppercase tracking-[0.3em] text-primary">
+            <p className="mb-1 text-[clamp(0.65rem,0.9vw,0.95rem)] font-semibold uppercase tracking-[0.3em] text-primary">
               {heroKind}
             </p>
-            <h1 className="text-[clamp(2.25rem,5vw,4.5rem)] font-extrabold leading-none drop-shadow-[0_4px_20px_rgba(0,0,0,0.8)]">
+            <h1 className="text-[clamp(1.75rem,4vw,3.5rem)] font-extrabold leading-none drop-shadow-[0_4px_20px_rgba(0,0,0,0.8)]">
               {heroTitle}
             </h1>
-            <div className="mt-3 flex items-center gap-4 text-[clamp(0.9rem,1.4vw,1.25rem)] text-white/70">
+            <div className="mt-2 flex items-center gap-4 text-[clamp(0.85rem,1.2vw,1.15rem)] text-white/70">
               <span>{heroSub}</span>
-              <span className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-[clamp(0.75rem,1vw,0.95rem)] font-medium text-white/85 ring-1 ring-white/15">
+              <span className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-[clamp(0.7rem,0.95vw,0.9rem)] font-medium text-white/85 ring-1 ring-white/15">
                 <Play size={14} className="fill-current" /> {heroHint}
               </span>
             </div>
           </div>
         ) : (
-          <h1 className="text-[clamp(1.75rem,4vw,3rem)] font-extrabold text-white/90">Welcome to TBN Studios</h1>
+          <h1 className="text-[clamp(1.5rem,3.5vw,2.75rem)] font-extrabold text-white/90">Welcome to TBN Studios</h1>
         )}
       </section>
 
-      <main className="relative z-10 px-[4vw] pb-[5vh] space-y-[3vh]">
+      <main className="relative z-10 flex min-h-0 flex-1 flex-col justify-start gap-[1vh] overflow-y-auto px-[4vw] py-[1vh] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {rows.map((row, ri) => {
           const rowActive = ri === rowIndex;
           return (
@@ -538,7 +538,7 @@ export default function TvHome() {
                             setRowIndex(ri);
                             setColIndex(ci);
                           }}
-                          className={`${CARD_BASE} w-[clamp(15rem,20vw,24rem)] aspect-video ${cardFocus(active)}`}
+                          className={`${CARD_BASE} h-[clamp(7rem,16vh,12rem)] aspect-video ${cardFocus(active)}`}
                         >
                           <div className="absolute inset-0 bg-gradient-to-br from-indigo-900 via-slate-900 to-black" />
                           <div className="absolute inset-0 opacity-30 [background-image:linear-gradient(white_1px,transparent_1px),linear-gradient(90deg,white_1px,transparent_1px)] [background-size:28px_28px]" />
@@ -572,7 +572,7 @@ export default function TvHome() {
                               setRowIndex(ri);
                               setColIndex(ci);
                             }}
-                            className={`${CARD_BASE} w-[clamp(15rem,20vw,24rem)] aspect-video ${cardFocus(active)}`}
+                            className={`${CARD_BASE} h-[clamp(7rem,16vh,12rem)] aspect-video ${cardFocus(active)}`}
                           >
                             <StudioArt studio={studio} />
                             <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent" />
@@ -596,7 +596,7 @@ export default function TvHome() {
                               setRowIndex(ri);
                               setColIndex(ci);
                             }}
-                            className={`${CARD_BASE} w-[clamp(15rem,20vw,24rem)] aspect-video ${cardFocus(active)}`}
+                            className={`${CARD_BASE} h-[clamp(7rem,16vh,12rem)] aspect-video ${cardFocus(active)}`}
                           >
                             <StreamThumbnail stream={stream} />
                             <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent" />
@@ -614,11 +614,11 @@ export default function TvHome() {
           </section>
           );
         })}
-
-        <p className="pt-2 text-center text-sm text-white/35">
-          Use the arrow keys to move · Enter / OK to select · Back to go up
-        </p>
       </main>
+
+      <p className="relative z-10 shrink-0 pb-[2vh] text-center text-[clamp(0.65rem,0.9vw,0.85rem)] text-white/35">
+        Use the arrow keys to move · Enter / OK to select · Back to go up
+      </p>
     </div>
   );
 }
