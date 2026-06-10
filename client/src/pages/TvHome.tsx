@@ -300,7 +300,7 @@ export default function TvHome() {
           {studioStreams.length === 0 ? (
             <div className="text-white/50 text-xl py-20 text-center">No streams in this studio.</div>
           ) : (
-            <div className="grid gap-6 grid-cols-2">
+            <div className="grid gap-4 grid-cols-4">
               {studioStreams.map((stream, idx) => (
                 <button
                   key={stream.id}
@@ -322,8 +322,8 @@ export default function TvHome() {
                     showOverlay={false}
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent pointer-events-none" />
-                  <div className="absolute bottom-0 left-0 right-0 p-5 pointer-events-none">
-                    <div className="text-2xl font-bold">{stream.name}</div>
+                  <div className="absolute bottom-0 left-0 right-0 p-3 pointer-events-none">
+                    <div className="text-base font-bold truncate">{stream.name}</div>
                   </div>
                 </button>
               ))}
