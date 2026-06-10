@@ -12,8 +12,9 @@ import type {
   FavoriteWithStream,
   MultiviewerLayoutWithMeta,
 } from "@shared/schema";
-import { Tv, LogOut, ChevronLeft, Radio, Heart, LayoutGrid } from "lucide-react";
+import { Tv, LogOut, ChevronLeft, Radio, Heart, LayoutGrid, Play } from "lucide-react";
 import tbnLogo from "@/assets/tbnlogo-white_1756354700943.png";
+import tvBackground from "@/assets/auth-background.png";
 
 type Level = "home" | "streams";
 
@@ -34,12 +35,13 @@ const ROW_SCROLL =
 const CARD_BASE =
   "group relative shrink-0 snap-start rounded-2xl overflow-hidden text-left transition-all duration-300 ease-out focus:outline-none will-change-transform";
 
-// Focused cards lift, brighten and gain a soft ring + glow (Apple TV style);
-// the rest sit slightly dimmed so the focused one clearly reads as "selected".
+// Focused cards lift, brighten and gain a bright accent ring + colored glow so
+// the selection reads instantly from across the room; the rest sit dimmed and
+// slightly desaturated so the focused one clearly "pops" forward.
 function cardFocus(active: boolean): string {
   return active
-    ? "z-10 scale-[1.08] ring-4 ring-white shadow-[0_28px_80px_-12px_rgba(0,0,0,0.9)]"
-    : "ring-1 ring-white/10 opacity-70 hover:opacity-100";
+    ? "z-20 scale-[1.1] opacity-100 ring-[3px] ring-primary ring-offset-2 ring-offset-black/40 shadow-[0_24px_70px_-10px_rgba(0,0,0,0.95),0_0_46px_-6px_hsl(var(--primary)/0.7)]"
+    : "opacity-50 saturate-[0.7] ring-1 ring-white/10 hover:opacity-90 hover:saturate-100";
 }
 
 // A studio's artwork: its uploaded image (from Studio Management) or, failing
@@ -292,12 +294,51 @@ export default function TvHome() {
     setLocation("/tv/login");
   };
 
+  // The currently-focused home item drives the hero band + ambient backdrop so
+  // the whole screen reflects what you're pointing at (modern OTT behaviour).
+  const focusedRow = rows[rowIndex];
+  const focusedItem: any = focusedRow?.items[colIndex];
+  let heroKind = "";
+  let heroTitle = "";
+  let heroSub = "";
+  let heroHint = "";
+  let heroBackdrop: string | null = null;
+  if (focusedRow && focusedItem) {
+    if (focusedRow.kind === "studios") {
+      heroKind = "Studio";
+      heroTitle = focusedItem.name;
+      heroSub = `${focusedItem.streams?.length ?? 0} streams`;
+      heroBackdrop = focusedItem.imageUrl || null;
+      heroHint = "Press OK to browse";
+    } else if (focusedRow.kind === "layouts") {
+      heroKind = "Multiviewer";
+      heroTitle = focusedItem.name;
+      const filled = (focusedItem.slots ?? []).filter(Boolean).length;
+      heroSub = `${filled} sources${
+        focusedItem.shared && focusedItem.ownerName ? ` · ${focusedItem.ownerName}` : ""
+      }`;
+      heroHint = "Press OK to open";
+    } else {
+      heroKind = focusedRow.key === "favorites" ? "Favorite" : "Live channel";
+      heroTitle = focusedItem.name;
+      heroSub = "Live now";
+      heroHint = "Press OK to watch";
+    }
+  }
+
   if (authLoading || (isAuthenticated && studiosLoading)) {
     return (
-      <div className="min-h-[100dvh] bg-[#08080c] text-white flex flex-col items-center justify-center gap-6">
-        <img src={tbnLogo} alt="TBN Studios" className="h-14 w-auto opacity-90" />
-        <div className="h-1.5 w-40 overflow-hidden rounded-full bg-white/10">
-          <div className="h-full w-1/3 animate-pulse rounded-full bg-primary" />
+      <div className="relative min-h-[100dvh] overflow-hidden text-white">
+        <div
+          className="absolute inset-0 bg-cover bg-center"
+          style={{ backgroundImage: `url(${tvBackground})` }}
+        />
+        <div className="absolute inset-0 bg-black/60" />
+        <div className="relative flex min-h-[100dvh] flex-col items-center justify-center gap-6">
+          <img src={tbnLogo} alt="TBN Studios" className="h-14 w-auto opacity-90" />
+          <div className="h-1.5 w-40 overflow-hidden rounded-full bg-white/10">
+            <div className="h-full w-1/3 animate-pulse rounded-full bg-primary" />
+          </div>
         </div>
       </div>
     );
@@ -322,7 +363,13 @@ export default function TvHome() {
   // Studio streams drill-down.
   if (level === "streams") {
     return (
-      <div className="relative min-h-[100dvh] bg-[#08080c] text-white">
+      <div className="relative min-h-[100dvh] bg-[#06060a] text-white">
+        {/* Brand background image sits under everything. */}
+        <div
+          className="pointer-events-none fixed inset-0 bg-cover bg-center opacity-60"
+          style={{ backgroundImage: `url(${tvBackground})` }}
+        />
+        <div className="pointer-events-none fixed inset-0 bg-gradient-to-b from-black/70 via-black/80 to-black" />
         {/* Ambient backdrop drawn from the studio's own artwork. */}
         {selectedStudio?.imageUrl && (
           <div className="pointer-events-none absolute inset-0 overflow-hidden">
@@ -401,13 +448,27 @@ export default function TvHome() {
     );
   }
 
-  // Home: Netflix-style rows.
+  // Home: Netflix-style rows over a cinematic, focus-reactive backdrop.
   return (
-    <div className="min-h-[100dvh] bg-[#08080c] text-white">
-      {/* Subtle top spotlight so the header reads as a distinct band. */}
-      <div className="pointer-events-none fixed inset-x-0 top-0 h-72 bg-gradient-to-b from-primary/10 via-white/[0.02] to-transparent" />
+    <div className="relative min-h-[100dvh] overflow-hidden bg-[#06060a] text-white">
+      {/* Layer 1 — the brand background image, always present. */}
+      <div
+        className="pointer-events-none fixed inset-0 bg-cover bg-center"
+        style={{ backgroundImage: `url(${tvBackground})` }}
+      />
+      {/* Layer 2 — ambient artwork of whatever card is focused, crossfading in. */}
+      <div
+        className="pointer-events-none fixed inset-0 bg-cover bg-center blur-xl scale-110 transition-opacity duration-700"
+        style={{
+          backgroundImage: heroBackdrop ? `url(${heroBackdrop})` : "none",
+          opacity: heroBackdrop ? 0.4 : 0,
+        }}
+      />
+      {/* Layer 3 — scrims so text + cards stay legible over any image. */}
+      <div className="pointer-events-none fixed inset-0 bg-gradient-to-r from-black via-black/75 to-black/30" />
+      <div className="pointer-events-none fixed inset-0 bg-gradient-to-t from-black via-black/30 to-black/60" />
 
-      <header className="relative flex items-center justify-between px-12 py-7">
+      <header className="relative z-10 flex items-center justify-between px-12 py-7">
         <img src={tbnLogo} alt="TBN Studios" className="h-12 w-auto" />
         <button
           onClick={handleLogout}
@@ -417,10 +478,43 @@ export default function TvHome() {
         </button>
       </header>
 
-      <main className="relative px-12 pb-16 space-y-12">
-        {rows.map((row, ri) => (
+      {/* Hero band — mirrors the focused card so the selection is unmistakable. */}
+      <section className="relative z-10 flex min-h-[30vh] flex-col justify-end px-12 pb-4">
+        {heroTitle ? (
+          <div key={heroTitle} className="max-w-3xl animate-in fade-in slide-in-from-bottom-2 duration-500">
+            <p className="mb-3 text-sm font-semibold uppercase tracking-[0.3em] text-primary">
+              {heroKind}
+            </p>
+            <h1 className="text-5xl font-extrabold leading-none drop-shadow-[0_4px_20px_rgba(0,0,0,0.8)] md:text-6xl">
+              {heroTitle}
+            </h1>
+            <div className="mt-4 flex items-center gap-4 text-lg text-white/70">
+              <span>{heroSub}</span>
+              <span className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-sm font-medium text-white/85 ring-1 ring-white/15">
+                <Play size={14} className="fill-current" /> {heroHint}
+              </span>
+            </div>
+          </div>
+        ) : (
+          <h1 className="text-4xl font-extrabold text-white/90">Welcome to TBN Studios</h1>
+        )}
+      </section>
+
+      <main className="relative z-10 px-12 pb-16 space-y-10">
+        {rows.map((row, ri) => {
+          const rowActive = ri === rowIndex;
+          return (
           <section key={row.key}>
-            <h2 className="mb-1 flex items-center gap-2.5 text-xl font-bold tracking-tight">
+            <h2
+              className={`mb-1 flex items-center gap-2.5 text-xl font-bold tracking-tight transition-colors duration-200 ${
+                rowActive ? "text-white" : "text-white/45"
+              }`}
+            >
+              <span
+                className={`h-5 w-1 rounded-full transition-all duration-200 ${
+                  rowActive ? "bg-primary" : "bg-transparent"
+                }`}
+              />
               {row.key === "favorites" && <Heart size={22} className="text-red-500" />}
               {row.key === "multiviewers" && <LayoutGrid size={22} className="text-primary" />}
               {row.key === "studios" && <Tv size={22} className="text-white/80" />}
@@ -518,7 +612,8 @@ export default function TvHome() {
               </div>
             )}
           </section>
-        ))}
+          );
+        })}
 
         <p className="pt-2 text-center text-sm text-white/35">
           Use the arrow keys to move · Enter / OK to select · Back to go up
