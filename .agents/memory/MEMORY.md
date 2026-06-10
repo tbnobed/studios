@@ -9,3 +9,4 @@
 - [Auth query retry loop](auth-query-retry-loop.md) — public pages calling useAuth() while logged out loop forever; errored query needs retryOnMount:false (not just refetchOnMount:false).
 - [TV device pairing](tv-device-pairing.md) — QR/phone TV login; approve must be conditional false->true (no takeover) and /status must atomically consume (single-use token).
 - [TV/OTT home surfaces](tv-home-surfaces.md) — the 10-foot home must show Favorites + Multiviewers + Studios (same per-user data as desktop), not just studios; reuses StreamSingleView for parity.
+- [Media-abort overlay](media-abort-overlay.md) — "media resource aborted" overlay = uncaught play() rejection; global suppressor cant beat the plugin, must .catch() every play() (incl mpegts Promise.resolve(player.play())).

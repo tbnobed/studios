@@ -196,11 +196,13 @@ export function StreamPlayer({
 
       player.load();
       if (autoPlay) {
-        try {
-          player.play();
-        } catch {
-          // play() may reject on autoplay policy; the video element handles it
-        }
+        // player.play() returns the media element's play() promise. A bare
+        // try/catch can't catch an async rejection, so the AbortError thrown
+        // when we tear the FLV fetch down mid-load would bubble up as an
+        // "unhandledrejection" (the "media resource was aborted" overlay).
+        // Wrap in Promise.resolve(...).catch so that benign rejection is
+        // swallowed instead of reaching the runtime-error overlay.
+        Promise.resolve(player.play()).catch(() => {});
       }
     };
 
