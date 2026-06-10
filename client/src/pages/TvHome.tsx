@@ -664,8 +664,8 @@ export default function TvHome() {
               {heroTitle}
             </h1>
             <p className="mt-[1.2vh] text-[clamp(0.9rem,1.3vw,1.3rem)] text-white/75">{heroSub}</p>
-            <div className="mt-[2.4vh] inline-flex items-center gap-2 rounded-full bg-white px-[1.8vw] py-[1.1vh] text-[clamp(0.85rem,1.1vw,1.15rem)] font-bold text-gray-900 shadow-[0_10px_34px_rgba(0,0,0,0.55)]">
-              <Play size={18} className="fill-current" /> {heroHint}
+            <div className="mt-[2.4vh] inline-flex items-center gap-2 rounded-full bg-white/10 px-[1.6vw] py-[1vh] text-[clamp(0.8rem,1vw,1.05rem)] font-medium text-white/70 ring-1 ring-white/15 backdrop-blur-sm">
+              <Play size={16} className="fill-current" /> {heroHint}
             </div>
           </div>
         ) : (
