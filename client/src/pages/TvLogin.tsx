@@ -80,7 +80,7 @@ export default function TvLogin() {
       <img
         src={obLogo}
         alt="OB"
-        className="h-[clamp(4.5rem,15vh,11rem)] w-auto object-contain opacity-90"
+        className="h-[clamp(3.5rem,9vh,7rem)] w-auto object-contain opacity-90"
       />
       <h1 className="mt-[1vh] text-[clamp(1.4rem,3vw,2.5rem)] font-extrabold tracking-tight">
         TBN Studios
