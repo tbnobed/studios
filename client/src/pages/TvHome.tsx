@@ -153,7 +153,9 @@ export default function TvHome() {
         ? focusZone === "tabs"
           ? `top-${topIndex}`
           : `g-${colIndex}`
-        : `s-${streamFocus}`;
+        : focusZone === "tabs"
+          ? `s-top-${topIndex}`
+          : `s-${streamFocus}`;
     const el = focusRefs.current.get(key);
     if (el) {
       el.focus();
@@ -161,11 +163,18 @@ export default function TvHome() {
     }
   }, [level, focusZone, topIndex, colIndex, streamFocus, player, rows]);
 
-  const openStudio = useCallback((idx: number) => {
-    setStudioIndex(idx);
-    setLevel("streams");
-    setStreamFocus(0);
-  }, []);
+  const openStudio = useCallback(
+    (idx: number) => {
+      setStudioIndex(idx);
+      setLevel("streams");
+      setStreamFocus(0);
+      setTopIndex(0);
+      // Land on the top bar when the studio has no streams, so the remote still
+      // has something focused (otherwise the empty grid swallows focus).
+      setFocusZone((studios[idx]?.streams?.length ?? 0) > 0 ? "grid" : "tabs");
+    },
+    [studios],
+  );
 
   const selectHome = useCallback(() => {
     const row = rows[tabIndex];
@@ -190,6 +199,7 @@ export default function TvHome() {
     }
     if (level === "streams") {
       setLevel("home");
+      setFocusZone("grid");
     }
   }, [player, level]);
 
@@ -308,6 +318,36 @@ export default function TvHome() {
         return;
       }
 
+      // Studio drill-down. A top bar (Back / Sign out) sits above the grid; the
+      // remote reaches it by pressing Up from the first row of stream cards.
+      if (focusZone === "tabs") {
+        switch (e.key) {
+          case "ArrowRight":
+            e.preventDefault();
+            setTopIndex((t) => Math.min(1, t + 1));
+            break;
+          case "ArrowLeft":
+            e.preventDefault();
+            setTopIndex((t) => Math.max(0, t - 1));
+            break;
+          case "ArrowDown":
+            e.preventDefault();
+            setFocusZone("grid");
+            break;
+          case "Enter":
+            e.preventDefault();
+            if (topIndex === 0) goBack();
+            else handleLogout();
+            break;
+          default:
+            if (isBack) {
+              e.preventDefault();
+              goBack();
+            }
+        }
+        return;
+      }
+
       // Studio streams grid — must match the rendered grid-cols-4 layout so
       // Up/Down moves a full visual row at a time.
       const columns = 4;
@@ -327,7 +367,13 @@ export default function TvHome() {
           break;
         case "ArrowUp":
           e.preventDefault();
-          setStreamFocus((i) => Math.max(0, i - columns));
+          // From the top visual row, Up jumps to the Back / Sign out bar.
+          if (streamFocus < columns) {
+            setTopIndex(0);
+            setFocusZone("tabs");
+          } else {
+            setStreamFocus((i) => Math.max(0, i - columns));
+          }
           break;
         case "Enter":
           e.preventDefault();
@@ -437,14 +483,32 @@ export default function TvHome() {
         <div className="relative">
           <header className="flex items-center justify-between px-[4vw] pt-[4vh] pb-2">
             <button
+              ref={(el) => focusRefs.current.set("s-top-0", el)}
               onClick={goBack}
-              className="flex items-center gap-2 rounded-full bg-white/5 px-4 py-2 text-lg text-white/80 ring-1 ring-white/10 transition hover:bg-white/10 hover:text-white focus:outline-none focus:ring-2 focus:ring-white"
+              onMouseEnter={() => {
+                setTopIndex(0);
+                setFocusZone("tabs");
+              }}
+              className={`flex items-center gap-2 rounded-full px-4 py-2 text-lg transition focus:outline-none ${
+                focusZone === "tabs" && topIndex === 0
+                  ? "scale-105 bg-white text-gray-900 shadow-[0_0_24px_rgba(255,255,255,0.45)]"
+                  : "bg-white/5 text-white/80 ring-1 ring-white/10 hover:bg-white/10 hover:text-white"
+              }`}
             >
               <ChevronLeft size={24} /> Back
             </button>
             <button
+              ref={(el) => focusRefs.current.set("s-top-1", el)}
               onClick={handleLogout}
-              className="flex items-center gap-2 text-base text-white/45 transition hover:text-white focus:text-white focus:outline-none"
+              onMouseEnter={() => {
+                setTopIndex(1);
+                setFocusZone("tabs");
+              }}
+              className={`flex items-center gap-2 rounded-full px-4 py-2 text-base transition focus:outline-none ${
+                focusZone === "tabs" && topIndex === 1
+                  ? "scale-105 bg-white text-gray-900 shadow-[0_0_24px_rgba(255,255,255,0.45)]"
+                  : "bg-white/5 text-white/45 ring-1 ring-white/10 hover:bg-white/10 hover:text-white"
+              }`}
             >
               <LogOut size={20} /> Sign out
             </button>
@@ -475,8 +539,11 @@ export default function TvHome() {
                     key={stream.id}
                     ref={(el) => focusRefs.current.set(`s-${idx}`, el)}
                     onClick={() => setPlayer({ streams: studioStreams, index: idx })}
-                    onMouseEnter={() => setStreamFocus(idx)}
-                    className={`${CARD_BASE} aspect-video ${cardFocus(streamFocus === idx)}`}
+                    onMouseEnter={() => {
+                      setFocusZone("grid");
+                      setStreamFocus(idx);
+                    }}
+                    className={`${CARD_BASE} aspect-video ${cardFocus(focusZone === "grid" && streamFocus === idx)}`}
                   >
                     <StreamThumbnail stream={stream} />
                     <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent" />
@@ -492,7 +559,7 @@ export default function TvHome() {
             )}
 
             <p className="mt-12 text-center text-sm text-white/35">
-              Use the arrow keys to move · Enter / OK to select · Back to go up
+              Use the arrow keys to move · Up for the menu · Enter / OK to select · Back to go up
             </p>
           </main>
         </div>
