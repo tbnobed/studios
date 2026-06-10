@@ -399,6 +399,7 @@ export default function TvHome() {
   let heroKind = "";
   let heroTitle = "";
   let heroSub = "";
+  let heroDesc = "";
   let heroHint = "";
   let heroBackdrop: string | null = null;
   if (focusedRow && focusedItem) {
@@ -406,6 +407,7 @@ export default function TvHome() {
       heroKind = "Studio";
       heroTitle = focusedItem.name;
       heroSub = `${focusedItem.streams?.length ?? 0} streams`;
+      heroDesc = focusedItem.description ?? "";
       heroBackdrop = focusedItem.imageUrl || null;
       heroHint = "Press OK to browse";
     } else if (focusedRow.kind === "layouts") {
@@ -420,6 +422,7 @@ export default function TvHome() {
       heroKind = focusedRow.key === "favorites" ? "Favorite" : "Live channel";
       heroTitle = focusedItem.name;
       heroSub = "Live now";
+      heroDesc = focusedItem.description ?? "";
       heroHint = "Press OK to watch";
     }
   }
@@ -664,6 +667,11 @@ export default function TvHome() {
               {heroTitle}
             </h1>
             <p className="mt-[1.2vh] text-[clamp(0.9rem,1.3vw,1.3rem)] text-white/75">{heroSub}</p>
+            {heroDesc ? (
+              <p className="mt-[1.4vh] line-clamp-3 max-w-[42vw] text-[clamp(0.85rem,1.1vw,1.15rem)] leading-relaxed text-white/65 drop-shadow-[0_2px_12px_rgba(0,0,0,0.7)]">
+                {heroDesc}
+              </p>
+            ) : null}
             <div className="mt-[2.4vh] inline-flex items-center gap-2 text-[clamp(0.8rem,1vw,1.05rem)] font-medium text-white/55">
               <Play size={16} className="fill-current" /> {heroHint}
             </div>
