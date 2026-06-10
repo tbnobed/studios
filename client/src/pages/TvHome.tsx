@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
-import { StreamPlayer } from "@/components/StreamPlayer";
+import { StreamThumbnail } from "@/components/StreamThumbnail";
 import { StreamSingleView } from "@/components/StreamSingleView";
 import { useAuth } from "@/hooks/useAuth";
 import { removeAuthToken } from "@/lib/authUtils";
@@ -16,30 +16,6 @@ import { Tv, LogOut, ChevronLeft, Radio, Heart, LayoutGrid } from "lucide-react"
 import tbnLogo from "@/assets/tbnlogo-white_1756354700943.png";
 
 type Level = "home" | "streams";
-
-// A card's video preview. To keep OTT-device CPU sane we only ever mount a live
-// player for the currently highlighted card — every other card shows a cheap
-// static placeholder (no decoding). As the remote moves the highlight, the live
-// preview follows it, so only one stream is ever decoding at a time.
-function StreamPreview({ stream, active }: { stream: Stream; active: boolean }) {
-  if (active) {
-    return (
-      <StreamPlayer
-        stream={stream}
-        className="absolute inset-0 w-full h-full"
-        controls={false}
-        autoPlay
-        muted
-        showOverlay={false}
-      />
-    );
-  }
-  return (
-    <div className="absolute inset-0 bg-gradient-to-br from-slate-700 to-slate-900 flex items-center justify-center">
-      <Radio className="text-white/25" size={26} />
-    </div>
-  );
-}
 
 // A row on the home screen. Studios always shows; Favorites / Multiviewers only
 // appear when the signed-in user actually has some.
@@ -337,7 +313,7 @@ export default function TvHome() {
                       : "border-transparent opacity-80"
                   }`}
                 >
-                  <StreamPreview stream={stream} active={streamFocus === idx} />
+                  <StreamThumbnail stream={stream} />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent pointer-events-none" />
                   <div className="absolute bottom-0 left-0 right-0 p-3 pointer-events-none">
                     <div className="text-base font-bold truncate">{stream.name}</div>
@@ -465,7 +441,7 @@ export default function TvHome() {
                                 : "border-transparent opacity-80"
                             }`}
                           >
-                            <StreamPreview stream={stream} active={active} />
+                            <StreamThumbnail stream={stream} />
                             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent pointer-events-none" />
                             <div className="absolute bottom-0 left-0 right-0 p-4 pointer-events-none">
                               <div className="text-xl font-bold truncate">{stream.name}</div>
